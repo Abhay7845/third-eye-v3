@@ -1,0 +1,818 @@
+import React, { useState, useRef, useEffect } from "react";
+import { Table, Thead, Tbody, Tr, Th, Td } from "react-super-responsive-table";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import moment from "moment";
+import third_eye from "../../asset/3rdeye.png";
+import "../Styles/pdfCss/NewStorepdf.css";
+import { useSelector } from "react-redux";
+import NewStoreProBarGraph from "../common/graph/NewStoreProBarGraph";
+import PdfLoader from "./PdfLoader";
+import PDFTable from "./PDFTable";
+import { GetChannelLogo } from "../Data/ChannelLogo";
+import { comList, ourBrandList } from "../Data/Data";
+import { axiosInstance } from "../../HostManger/API/Authorization";
+import Loader from "../custom/Loader";
+
+const DashboardPdf = ({
+  inputsPayload,
+  close,
+  cityName,
+  projectionData,
+  cannibalization,
+  top3Stores,
+  userLog,
+  priPincodePopulation,
+  secPincodePopulation,
+  pdfFileName,
+}) => {
+  const newStoreRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const [skeletonLoad, setSkeletonLoad] = useState(false);
+
+  //----------------------------------- REDUX STATE -----------------------------------------
+  const catchmentData = useSelector(
+    (state) => state?.newStoreInputs?.chatchmentData,
+  );
+  const dicisionData = useSelector(
+    (state) => state?.newStoreInputs?.newStoreDecisiontext,
+  );
+  const map_img = useSelector((state) => state?.newStoreMapImg?.newStoreMapImg);
+
+  const logo = GetChannelLogo(userLog?.channel?.toLowerCase());
+
+  // -----------------------------------USER INPUTS DATA --------------------------------------------
+  const {
+    targetPinCode,
+    similerStoreVal,
+    similarPinCode,
+    storeSize,
+    category,
+    anchorLocation,
+    pdfMarkers,
+  } = inputsPayload;
+  const currentDate = moment(new Date()).format("DD-MM-YYYY");
+
+  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR BRAND JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
+  const brandList = pdfMarkers.jewellery.filter((marker) => {
+    const title = marker?.title?.toLowerCase?.() || "";
+    return ourBrandList.some((brand) => title.includes(brand.toLowerCase()));
+  });
+
+  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR COMPETITOR JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
+  const competitorsList = pdfMarkers.jewellery.filter((marker) => {
+    const title = marker?.title?.toLowerCase?.() || "";
+    return comList.some((brand) => title.includes(brand.toLowerCase()));
+  });
+
+  function CategoryFormat(str) {
+    return str
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+  }
+
+  const str_distance = {
+    our_brand: brandList,
+    competitor: competitorsList,
+  };
+
+  const s_pincodes = similarPinCode?.split(",") || [];
+  // --------------------------------DISTANCE CALULATION FOR OUR BRAND -------------------------------
+  // Haversine formula to calculate distance in KM
+
+  function getMarkersWithDistance(anchorLocation, markers) {
+    if (!anchorLocation?.lat || !anchorLocation?.lng || !markers) {
+      return [];
+    }
+    const R = 6371; // Earth's radius in KM
+    // Haversine formula
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((lat1 * Math.PI) / 180) *
+          Math.cos((lat2 * Math.PI) / 180) *
+          Math.sin(dLon / 2) ** 2;
+
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    };
+
+    // Map markers with distance
+    const markersWithDistance = markers.map((m) => {
+      const lat = m?.position?.lat();
+      const lng = m?.position?.lng();
+
+      return {
+        ...m,
+        distance: Number(
+          calculateDistance(
+            anchorLocation.lat,
+            anchorLocation.lng,
+            lat,
+            lng,
+          ).toFixed(1),
+        ),
+      };
+    });
+    const shortStoresbyDistance = markersWithDistance.sort(
+      (a, b) => a.distance - b.distance,
+    );
+    const allSorted_stores = shortStoresbyDistance.map((item) => {
+      const brand_name = item.title.split(" ")[0];
+      return {
+        title: brand_name,
+        distance: item.distance,
+      };
+    });
+    const unique_storesList = Object.values(
+      allSorted_stores.reduce((acc, curr) => {
+        if (!acc[curr.title] || curr.distance < acc[curr.title].distance) {
+          acc[curr.title] = curr;
+        }
+        return acc;
+      }, {}),
+    );
+    return unique_storesList;
+  }
+  // ---------------------OUR NEAREST BRAND DISTACE CALCULATION FUNCTINALITY-------------
+  const nearestOurBrands = getMarkersWithDistance(
+    anchorLocation,
+    str_distance?.our_brand,
+  );
+
+  // ---------------------OUR NEAREST COMPETITORS  DISTACE CALCULATION FUNCTINALITY-------------
+  const nearestCompetitors = getMarkersWithDistance(
+    anchorLocation,
+    str_distance?.competitor,
+  );
+
+  // -------------------------------UPLOAD PDF FUNCTIONALITY ---------------------------
+
+  const UploadPdf = async (file) => {
+    try {
+      const formData = new FormData();
+      if (!(file instanceof Blob)) {
+        throw new Error("Invalid file type passed to UploadPdf");
+      }
+      formData.append("files", file);
+      formData.append("folderName", "ThirdEye");
+      const res = await axiosInstance.post(`/s3/upload`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+    } catch (err) {}
+  };
+
+  // ------------------------------------- PDF GENERATION -------------------------------
+
+  const handleSavePdfHistory = async (pdfFileName) => {
+    try {
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      // Sections to capture in order
+      const sections = [
+        "first_page_separation",
+        "second_page_separation",
+        "third_page_separation",
+      ];
+
+      for (let i = 0; i < sections.length; i++) {
+        const element = document.querySelector(`.${sections[i]}`);
+        if (!element) continue;
+        // ✅ Balanced quality: scale ~2 for sharpness
+        const canvas = await html2canvas(element, {
+          useCORS: true,
+          scale: 2, // higher scale = clearer text/images
+        });
+
+        // ✅ JPEG at 85% quality (good balance for 4–6 MB)
+        const imgData = canvas.toDataURL("image/jpeg", 0.85);
+
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgWidth = pdfWidth * 0.92;
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+        const x = pdfWidth * 0.04;
+        const y = pdfHeight * 0.04;
+
+        if (i > 0) pdf.addPage();
+
+        // ✅ Add JPEG with FAST compression
+        pdf.addImage(
+          imgData,
+          "JPEG",
+          x,
+          y,
+          imgWidth,
+          imgHeight,
+          undefined,
+          "FAST",
+        );
+      }
+
+      // ✅ Create Blob instead of direct save
+      const pdfBlob = pdf.output("blob");
+      const pdfFile = new File([pdfBlob], `${pdfFileName}.pdf`, {
+        type: "application/pdf",
+      });
+      // Upload to server
+      await UploadPdf(pdfFile);
+    } catch (error) {
+      return error;
+    } finally {
+      setSkeletonLoad(false);
+    }
+  };
+
+  useEffect(() => {
+    if (pdfFileName) {
+      setSkeletonLoad(true);
+      setTimeout(() => {
+        handleSavePdfHistory(pdfFileName);
+      }, 1500);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfFileName]);
+
+  const handleDownloadPdf = async () => {
+    setLoading(true);
+    try {
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      // Sections to capture in order
+      const sections = [
+        "first_page_separation",
+        "second_page_separation",
+        "third_page_separation",
+      ];
+
+      for (let i = 0; i < sections.length; i++) {
+        const element = document.querySelector(`.${sections[i]}`);
+        if (!element) continue;
+        // ✅ Balanced quality: scale ~2 for sharpness
+        const canvas = await html2canvas(element, {
+          useCORS: true,
+          scale: 2, // higher scale = clearer text/images
+        });
+
+        // ✅ JPEG at 85% quality (good balance for 4–6 MB)
+        const imgData = canvas.toDataURL("image/jpeg", 0.85);
+
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgWidth = pdfWidth * 0.92;
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+        const x = pdfWidth * 0.04;
+        const y = pdfHeight * 0.04;
+
+        if (i > 0) pdf.addPage();
+
+        // ✅ Add JPEG with FAST compression
+        pdf.addImage(
+          imgData,
+          "JPEG",
+          x,
+          y,
+          imgWidth,
+          imgHeight,
+          undefined,
+          "FAST",
+        );
+      }
+
+      // ✅ Create Blob instead of direct save
+      const pdfBlob = pdf.output("blob");
+      // Also download locally
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(pdfBlob);
+      link.download = `${pdfFileName}.pdf`;
+      link.click();
+    } catch (error) {
+      return error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <React.Fragment>
+      {skeletonLoad && <Loader />}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "end",
+          alignItems: "center",
+          marginBottom: "2px",
+        }}>
+        <div>
+          <button
+            onClick={handleDownloadPdf}
+            className={loading ? "apply_btn_disabled" : "CButton"}
+            disabled={loading}
+            style={{ marginRight: "5px" }}>
+            {loading ? "Preparing PDF..." : "Download"}
+          </button>
+          <button className='CButton' onClick={close}>
+            Close
+          </button>
+        </div>
+      </div>
+      {loading && <PdfLoader />}
+      <div style={{ marginTop: "3%" }} ref={newStoreRef}>
+        {/* ------------------------1ST PAGE -------------------- */}
+        <div
+          className='first_page_separation'
+          style={{
+            padding: "10px",
+            border: "1px solid #000",
+          }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              marginBottom: "5px",
+            }}>
+            <img
+              src={third_eye}
+              height={30}
+              alt='third_eye'
+              style={{ marginTop: "-1%" }}
+            />
+          </div>
+          <div className='pdf_top_header'>
+            <img src={logo} height={26} alt='logo' />
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "end",
+                fontSize: "12px",
+                gap: "4px",
+                fontWeight: "bold",
+              }}>
+              <span>History ID: {pdfFileName?.toUpperCase()}</span>
+              <div>Date: {currentDate}</div>
+            </div>
+          </div>
+          <div className='user_input_box'>
+            <h5 className='user_input_title'>User Input Details</h5>
+            <div className='user_input_grid'>
+              <table>
+                <tbody>
+                  <tr>
+                    <td>Target Pin Codes:</td>
+                    <td>{targetPinCode?.toString()}</td>
+                    <td>Similar Pin Codes:</td>
+                    <td>
+                      {s_pincodes?.slice(0, 2).join(", ")}
+                      {s_pincodes.length > 4 &&
+                        `, +${s_pincodes.length - 2} more`}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Similar Store:</td>
+                    <td>{similerStoreVal}</td>
+                    <td>Similar City:</td>
+                    <td>{cityName}</td>
+                  </tr>
+                  <tr>
+                    <td>Store Size:</td>
+                    <td>{storeSize}</td>
+                    <td>Store Category:</td>
+                    <td>{CategoryFormat(category || "")}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* catchment div  */}
+          <div className='catchment_box'>
+            <h5 className='catchment_title'>Catchment Details</h5>
+            <div className='catchment_grid'>
+              <div className='catchment_col'>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    marginBottom: "5px",
+                    paddingBottom: "3px",
+                  }}>
+                  Target Catchment
+                </div>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "10px",
+                  }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        Encircle Base
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>
+                        {Number(
+                          catchmentData?.t_catch?.targetEB,
+                        ).toLocaleString()}{" "}
+                        <span style={{ color: "#666", fontSize: "11px" }}>
+                          (CAGR:{" "}
+                          {parseFloat(
+                            catchmentData?.t_catch?.targetEB_Cagr * 100,
+                          ).toFixed(1)}
+                          %)
+                        </span>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        {userLog?.channel} Base
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>
+                        {Number(
+                          catchmentData?.t_catch?.targetCB,
+                        ).toLocaleString()}{" "}
+                        <span style={{ color: "#666", fontSize: "11px" }}>
+                          (CAGR:{" "}
+                          {parseFloat(
+                            catchmentData?.t_catch?.targetCB_Cagr * 100,
+                          ).toFixed(1)}
+                          %)
+                        </span>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        Penetration
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>
+                        {parseInt(catchmentData?.t_catch?.penetration * 100)}%
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className='catchment_col'>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    marginBottom: "5px",
+                    paddingBottom: "3px",
+                  }}>
+                  Similar Catchment
+                </div>
+
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "10px",
+                  }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        Encircle Base
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>
+                        {Number(
+                          catchmentData?.s_catch?.targetEB,
+                        ).toLocaleString()}{" "}
+                        <span style={{ color: "#666", fontSize: "11px" }}>
+                          (CAGR:{" "}
+                          {parseFloat(
+                            catchmentData?.s_catch?.targetEB_Cagr * 100,
+                          ).toFixed(1)}
+                          %)
+                        </span>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        {userLog?.channel} Base
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>
+                        {Number(
+                          catchmentData?.s_catch?.targetCB,
+                        ).toLocaleString()}{" "}
+                        <span style={{ color: "#666", fontSize: "11px" }}>
+                          (CAGR:{" "}
+                          {parseFloat(
+                            catchmentData?.s_catch?.targetCB_Cagr * 100,
+                          ).toFixed(1)}
+                          %)
+                        </span>
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        Penetration
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>
+                        {parseInt(catchmentData?.s_catch?.penetration * 100)}%
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* GOOGLE MAP DATA DETAILS */}
+          <div style={{ width: "100%" }}>
+            <img
+              src={map_img}
+              alt='map_Screenshot'
+              style={{ width: "100%", height: "240px", display: "block" }}
+            />
+          </div>
+          <br />
+          {/* PRIMARY CATCHMENT DETAILS */}
+          <div className='user_input_box'>
+            <h5 className='user_input_title'>Primary Catchment Details</h5>
+            {priPincodePopulation?.length > 0 ? (
+              <PDFTable data={priPincodePopulation} userLog={userLog} />
+            ) : (
+              <h6>Data Not Available</h6>
+            )}
+          </div>
+        </div>
+        <br />
+        {/* ------------------------2ND PAGE -------------------- */}
+        <div
+          className='second_page_separation'
+          style={{ padding: "10px", border: "1px solid #000" }}>
+          <div className='user_input_box'>
+            <h5 className='user_input_title'>Secondary Catchment Details</h5>
+            {secPincodePopulation?.length > 0 ? (
+              <PDFTable data={secPincodePopulation} userLog={userLog} />
+            ) : (
+              <h6>Stores Not Available</h6>
+            )}
+          </div>
+          <br />
+          <div className='user_input_box'>
+            <h5 className='user_input_title'>
+              Nearest Our Brand Store Details
+            </h5>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                borderTop: "1px solid black",
+                padding: "8px",
+                fontSize: "12px",
+                gap: "5px",
+                textAlign: "left",
+              }}>
+              {nearestOurBrands.length > 0 ? (
+                nearestOurBrands.map((item, i) => (
+                  <React.Fragment key={i}>
+                    <strong>{item?.title}:</strong>
+                    <span>{item.distance} KM</span>
+                  </React.Fragment>
+                ))
+              ) : (
+                <h6 style={{ textAlign: "center" }}>Stores Not Available</h6>
+              )}
+            </div>
+          </div>
+          <div className='user_input_box'>
+            <h5 className='user_input_title'>
+              Nearest Competitor Store Details
+            </h5>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                borderTop: "1px solid black",
+                padding: "8px",
+                fontSize: "12px",
+                gap: "5px",
+                textAlign: "left",
+              }}>
+              {nearestCompetitors.length > 0 ? (
+                nearestCompetitors.map((item, i) => (
+                  <React.Fragment key={i}>
+                    <strong>{item?.title}:</strong>
+                    <span>{item.distance} KM</span>
+                  </React.Fragment>
+                ))
+              ) : (
+                <h6 style={{ textAlign: "center" }}>Stores Not Available</h6>
+              )}
+            </div>
+          </div>
+          <br />
+          <div className='retail_box'>
+            <div className='retail_heading'>
+              Jew Market Store Count Within 45-Minute Drive Time: 20
+            </div>
+            <div style={{ margin: "6px" }}>
+              <div className='retail_subheading'>Retail Maturity Summary:</div>
+              <div className='retail_section'>
+                <h6 style={{ marginBottom: "0px", marginTop: "5px" }}>
+                  Jewelry Retail Presence
+                </h6>
+                <ul>
+                  <li>
+                    Bengaluru hosted the{" "}
+                    <strong>Retail Jeweller South Forum 2025</strong>,
+                    indicating strong industry engagement
+                  </li>
+                  <li>
+                    The city is home to <strong>numerous jewelry stores</strong>
+                    , including major brands like{" "}
+                    <strong>Tanishq, Malabar Gold, Kalyan Jewellers</strong>,
+                    and <strong>Joyalukkas</strong>, especially concentrated in
+                    areas like <strong>Commercial Street, MG Road</strong>, and{" "}
+                    <strong>Jayanagar</strong>.
+                  </li>
+                </ul>
+              </div>
+              <div className='retail_section'>
+                <h6 style={{ marginBottom: "0px", marginTop: "5px" }}>
+                  Major Retail Brands Present
+                </h6>
+                <ul>
+                  <li>
+                    <strong>Fashion & Lifestyle:</strong> H&M, Zara, Uniqlo,
+                    Lifestyle, Pantaloons.
+                  </li>
+                  <li>
+                    <strong>Tech & Electronics:</strong> Croma, Reliance
+                    Digital, Apple Store.
+                  </li>
+                  <li>
+                    <strong>Luxury & Premium:</strong> Marks & Spencer, Sephora,
+                    MAC, Coach.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ------------------------3RD PAGE -------------------- */}
+        <br />
+        <div
+          className='third_page_separation'
+          style={{ padding: "10px", border: "1px solid #000" }}>
+          <Table
+            className='custom_table'
+            style={{
+              fontSize: "12px",
+              borderCollapse: "collapse",
+              width: "100%",
+            }}>
+            <Thead>
+              <Tr>
+                <Th
+                  colSpan={2}
+                  style={{
+                    background: "#ccc",
+                    fontSize: "12px",
+                    padding: "4px 6px",
+                    textAlign: "center",
+                  }}>
+                  New Store Projection Details
+                </Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {projectionData.map((item, i) => (
+                <Tr key={i} style={{ lineHeight: "1.2" }}>
+                  <Td
+                    style={{
+                      textAlign: "start",
+                      padding: "4px 6px",
+                      fontSize: "10px",
+                    }}>
+                    {item.heading}
+                  </Td>
+                  <Td
+                    style={{
+                      padding: "4px 6px",
+                      textAlign: "center",
+                      fontSize: "10px",
+                    }}>
+                    {i >= projectionData.length - 2
+                      ? `₹${Number(item.value).toFixed(2)}`
+                      : item.value}
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+          <div className='user_input_box' style={{ padding: "5px" }}>
+            <h5 className='user_input_title'>
+              Cannibalization Effect Over Period of 3 Years
+            </h5>
+            <Table
+              className='custom_table'
+              style={{
+                fontSize: "10px",
+                borderCollapse: "collapse",
+              }}>
+              <Thead>
+                <Tr>
+                  <Th
+                    style={{
+                      background: "#ccc",
+                      fontSize: "12px",
+                      padding: "4px 6px",
+                      textAlign: "center",
+                    }}>
+                    Store
+                  </Th>
+                  <Th
+                    style={{
+                      background: "#ccc",
+                      fontSize: "12px",
+                      padding: "4px 6px",
+                      textAlign: "center",
+                    }}>
+                    Store To Pincode Customer(%) Top 3 Stores
+                  </Th>
+                  <Th
+                    style={{
+                      background: "#ccc",
+                      fontSize: "12px",
+                      padding: "4px 6px",
+                      textAlign: "center",
+                    }}>
+                    Store To Pincode Revenue(%) Top 3 Stores
+                  </Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {top3Stores.map((item, i) => (
+                  <Tr key={i} style={{ lineHeight: "1.2" }}>
+                    <Td style={{ padding: "4px 6px", textAlign: "center" }}>
+                      {item?.storeCode}
+                    </Td>
+                    <Td style={{ padding: "4px 6px", textAlign: "center" }}>
+                      {Number(item?.storeToPinCustPerc).toFixed(2)}%
+                    </Td>
+                    <Td style={{ padding: "4px 6px", textAlign: "center" }}>
+                      {Number(item?.storeToPinRevPerc).toFixed(2)}%
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+            <NewStoreProBarGraph
+              cannibalizationPeriod={cannibalization}
+              height={180}
+            />
+          </div>
+          <div className='user_input_box' style={{ padding: "5px" }}>
+            <h5
+              style={{
+                textAlign: "start",
+                margin: "5px",
+                marginBottom: "7px",
+                fontSize: "11px",
+              }}>
+              Conclusion: {dicisionData?.recomendation}.
+            </h5>
+            <div
+              style={{
+                textAlign: "justify",
+                fontSize: "10px",
+                margin: "5px",
+              }}>
+              <span>{dicisionData?.bottom_line}</span>
+              <ul
+                style={{
+                  columns: "1",
+                  columnGap: "2px",
+                  paddingLeft: "15px",
+                  listStyleType: "disc",
+                  textAlign: "justify",
+                }}>
+                {dicisionData?.reason?.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </React.Fragment>
+  );
+};
+
+export default DashboardPdf;

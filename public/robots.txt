@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://uat-tanishqdigitalmerch.titan.in/ThirdEye/sitemap.xml

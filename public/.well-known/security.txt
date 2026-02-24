@@ -1,0 +1,7 @@
+Contact: https://uat-tanishqdigitalmerch.titan.in
+Encryption: https://uat-tanishqdigitalmerch.titan.in/pgp-key.txt
+Acknowledgements: https://uat-tanishqdigitalmerch.titan.in/security/acknowledgements
+Preferred-Languages: en
+Policy: https://uat-tanishqdigitalmerch.titan.in/security/policy
+Hiring: https://uat-tanishqdigitalmerch.titan.in/careers
+

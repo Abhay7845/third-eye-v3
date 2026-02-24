@@ -1,0 +1,112 @@
+/* CSS */
+.button-90 {
+    color: #233044;
+    padding: 10px 25px;
+    border-radius: 100px;
+    background-color:#7dacfc;
+    background-image: radial-gradient(93% 87% at 87% 89%, rgba(0, 0, 0, 0.23) 0%, transparent 86.18%), radial-gradient(66% 87% at 26% 20%, rgba(255, 255, 255, 0.41) 0%, rgba(255, 255, 255, 0) 69.79%, rgba(255, 255, 255, 0) 100%);
+    box-shadow: 1px 15px 25px rgba(0, 0, 0, 0.2);
+    font-weight: bold;
+    font-size: 16px;
+    border: 0;
+    cursor: pointer;
+}
+
+.innerCard{
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #807f7f;
+    border-radius: 8px;
+    font-size: 12px;
+    padding: 2%;
+}
+.outerbox{
+box-shadow:  3.0px 5.9px 5.9px hsl(0deg 0% 0% / 0.41);
+}
+.card-heading{
+    display: flex;
+    justify-content: center;
+    border-radius: 8px;
+    padding: 1%;
+  
+}
+.card-title{
+    font-size: 18px;
+}
+.card-body-content{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+
+.sidebar {
+    flex-shrink: 0;
+    width: 250px;
+    transition: all 0.5s ease;
+    z-index: 100;
+
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 250px;
+    }
+}
+
+/* <<<<<<<<<<<<<<<<<<<<<<<<---side container -->>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+.search_location_form{
+    position: fixed;
+    background-color: #fff;
+     padding: 1%;
+    overflow: hidden;
+    z-index: 1;
+}
+
+
+.map_container_close{
+    position: absolute;
+    margin-top: 13%;
+    width: 93%;
+    padding: 5px;
+    margin-left: 2%; 
+}
+
+.target_chatchment_data{
+    position: absolute;
+    z-index: 1;
+    width: 23%;
+    font-size: 13px;
+    color: #fff;
+    margin-top: 4.5%;
+    border-radius: 2px;
+}
+
+.data_heading{
+    margin: 2px;
+}
+
+
+.sticky_toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: white;
+    padding: 8px 0;
+    transition: box-shadow 0.2s ease;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .sticky_toolbar.scrolled {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .scrollable_container {
+  width: 50vw;
+  height: 95vh;
+  overflow: auto;
+  border: 1px solid #ccc;
+  padding: 10px;
+}

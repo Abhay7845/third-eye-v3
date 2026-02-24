@@ -1,0 +1,49 @@
+.map-loader-overlay {
+  position: absolute;
+  height: 68%;
+  width: 99%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(1px);
+  z-index: 9999;
+}
+
+.loader-box {
+  background: #00000073;
+  padding: 30px 40px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bars {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.bar {
+  width: 8px;
+  height: 25px;
+  background: #eae6e6d8;
+  border-radius: 2px;
+  animation: barBounce 1s infinite ease-in-out;
+}
+
+.bar1 { animation-delay: 0s; }
+.bar2 { animation-delay: 0.2s; }
+.bar3 { animation-delay: 0.4s; }
+
+@keyframes barBounce {
+  0%, 100% { transform: scaleY(0.5); opacity: 0.6; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+.loader-box p {
+  color: #fff;
+  margin-top: 5px;
+  font-size: 18px;
+  font-weight: 500;
+}

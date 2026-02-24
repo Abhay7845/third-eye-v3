@@ -1,0 +1,136 @@
+.pdf_top_header {
+  background-color: #0a667be4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #ffff;
+  padding: 5px;
+}
+
+.user_input_box {
+  border: 1px solid #000;
+  margin: 5px 0;
+  text-align: center;
+}
+
+.user_input_title {
+  margin: 4px 0;
+  font-weight: bold;
+  color: #8b2f00;
+}
+
+/* .user_input_grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-top: 1px solid #000;
+  padding: 8px;
+  text-align: left;
+}
+
+.user_input_grid p {
+  margin: 3px 0;
+  font-size: 11px;
+} */
+
+
+.user_input_grid {
+  border-top: 1px solid #000;
+  padding: 8px;
+}
+
+.user_input_grid table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.user_input_grid td {
+  padding: 3px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+
+/* CATCHMENT DIV CSS  */
+.catchment_box {
+  border: 1px solid #000;
+  margin: 15px 0;
+  text-align: center;
+}
+
+.catchment_title {
+  margin: 5px 0;
+  font-weight: bold;
+  color: #8b2f00;
+}
+
+.catchment_grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #000;
+}
+
+.catchment_col {
+  border-right: 1px solid #000;
+  padding: 8px;
+  text-align: left;
+}
+
+.catchment_col:last-child {
+  border-right: none;
+  /* remove right border for last column */
+}
+
+.catchment_col p {
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+/* JEWELERY MARKETS DETAILS CSS  */
+.retail_box {
+  border: 1px solid #000;
+  font-family: Arial, sans-serif;
+}
+
+.retail_heading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #8b2f00;
+  font-weight: bold;
+  padding: 10px;
+  border-bottom: 1px solid #000;
+  font-size: 12px;
+}
+
+.retail_subheading {
+  font-size: 13px;
+  font-weight: bold;
+  color: #a33c0a;
+  text-align: left;
+  margin-bottom: 7px;
+}
+
+.retail_section {
+  margin: 5px 0;
+  text-align: left;
+  border: 1px solid #000;
+  padding-left: 1%;
+}
+
+.retail_section h6 {
+  margin: 6px 0;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.retail_section ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.retail_section li {
+  margin: 6px 0;
+  font-size: 11px;
+  line-height: 1.5;
+}

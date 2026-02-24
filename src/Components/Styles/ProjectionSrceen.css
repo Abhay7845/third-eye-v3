@@ -1,0 +1,31 @@
+.box_text {
+    display: flex;
+    border: 1px solid #233044;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px;
+    height: 60px;
+    margin-bottom: 5px;
+  }
+
+  .box_text:hover{
+    background-color: #e9e7e7;        
+  }
+  
+
+  .custom_table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+  text-align: center;
+}
+
+.custom_table Th,
+.custom_table Td {
+  border: 1px solid #000;
+  padding: 8px;
+}
+.custom_table Tbody Tr:hover {
+  background-color: #f5f5f5;
+}

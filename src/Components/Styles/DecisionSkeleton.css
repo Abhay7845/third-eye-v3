@@ -1,0 +1,47 @@
+.skeleton_container {
+    display: grid;
+    grid-template-columns: 1fr 3fr;
+    border: 1.5px solid #233044;
+    padding: 5px;
+    gap: 12px;
+    align-items: start;
+}
+
+.skeleton_col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Bars */
+.skeleton_bar {
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #eee 25%, #ddd 50%, #eee 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+/* Different widths for variety */
+.short {
+    width: 60%;
+}
+
+.medium {
+    width: 80%;
+}
+
+.long {
+    width: 100%;
+}
+
+/* Shimmer effect */
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}

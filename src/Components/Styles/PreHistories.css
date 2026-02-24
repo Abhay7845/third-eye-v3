@@ -1,0 +1,17 @@
+.scrollable_container {
+    width: 94.5%;
+    height: 98vh;
+    overflow: auto;
+    overflow-y: scroll;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    background-color: #fff;
+}
+.close_pop_up{
+font-size: 25px;
+cursor: pointer;
+}
+.close_pop_up:hover{
+    background-color: #fff;
+    color: #233044;
+}

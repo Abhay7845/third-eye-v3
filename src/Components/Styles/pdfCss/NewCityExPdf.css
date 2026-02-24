@@ -1,0 +1,20 @@
+.pdf_top_header {
+  background-color: #0a667be4;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #ffff;
+  padding-right: 12px;
+}
+
+.city_title {
+  margin: 5px 0;
+  font-weight: bold;
+  color: #8b2f00;
+}
+
+.score_city_box {
+  border: 1px solid #000;
+  margin: 10px 0;
+  text-align: center;
+}
