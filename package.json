@@ -1,7 +1,7 @@
 {
   "name": "third-eye",
   "version": "0.1.0",
-  "homepage": "https://uat-tanishqdigitalmerch.titan.in/ThirdEye",
+  "homepage": "https://tanishqdigitalmerch.titan.in/ThirdEye",
   "private": true,
   "dependencies": {
     "@azure/msal-browser": "^4.13.2",
