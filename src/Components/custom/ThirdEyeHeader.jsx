@@ -6,7 +6,7 @@ import { IoPersonSharp } from "react-icons/io5";
 import { useSelector } from "react-redux";
 import { GetChannelLogo } from "../Data/ChannelLogo";
 
-const ThirdEyeHeader = ({ city, chl }) => {
+const ThirdEyeHeader = ({ city, chl, cityTier }) => {
   const { pathname } = useLocation();
   const userLog = useSelector((state) => state?.user?.user);
 
@@ -104,7 +104,9 @@ const ThirdEyeHeader = ({ city, chl }) => {
               <div style={{ color: "gray", fontSize: "14px" }}>
                 Target Catchment City
               </div>
-              <div style={{ fontSize: "12px", marginTop: "1%" }}>{city}</div>
+              <div style={{ fontSize: "12px", marginTop: "1%" }}>
+                {city} ({cityTier})
+              </div>
             </div>
           )}
           <div

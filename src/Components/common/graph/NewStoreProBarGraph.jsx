@@ -13,8 +13,8 @@ const color = ["#e71010ff", "#de4b4bf0", "#f5888bff"];
 const NewStoreProBarGraph = ({ cannibalizationPeriod, height }) => {
   const data = cannibalizationPeriod.map((item, i) => {
     return {
-      name: item.storeName,
-      value: item.cannibValue,
+      name: item.storeCode,
+      value: item.f36RevLoss,
       color: color[i],
     };
   });
@@ -38,7 +38,7 @@ const NewStoreProBarGraph = ({ cannibalizationPeriod, height }) => {
         <XAxis
           type='number'
           tick={{ fontSize: 12 }}
-          tickFormatter={(value) => `₹ ${value / 100000}L`}
+          tickFormatter={(value) => `₹ ${value}L`}
         />
         <Bar
           dataKey='value'
@@ -55,7 +55,7 @@ const NewStoreProBarGraph = ({ cannibalizationPeriod, height }) => {
             dataKey='value'
             position='right'
             offset={10}
-            formatter={(value) => `₹ ${(value / 100000).toFixed(1)}L`}
+            formatter={(value) => `₹ ${value}L`}
             style={{ fontWeight: "bold", fontSize: 12 }}
           />
         </Bar>

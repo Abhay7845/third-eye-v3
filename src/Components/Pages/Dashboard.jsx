@@ -64,7 +64,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
   const [scrolled, setScrolled] = useState(false);
   const [channelList, setChannelList] = useState([]);
   const [similerStoreList, setSimilerStoreList] = useState([]);
-  const [channelval, setChannelval] = useState(userLog?.channel);
+  const [channelval, setChannelval] = useState(userLog?.channel || "TANISHQ");
   const [targetPinCode, setTargetPinCode] = useState(
     newStore?.targetPinCode || [],
   );

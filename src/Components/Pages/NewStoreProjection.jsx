@@ -43,13 +43,9 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [isSave, setIsSave] = useState(true);
   const [slideOut, setSlideOut] = useState(false);
-  const [cityName, setCityName] = useState("");
-  const [top3Stores, setTop3Stores] = useState([]);
-  const [enrollTarget, setEnrollTarget] = useState(0);
-  const [custExitStore, setCustExitStore] = useState(0);
-  const [crossChl, setCrossChl] = useState(0);
+  const [revenueData, setRevenueData] = useState(null);
+  const [topStrCanData, setTopStrCanData] = useState([]);
   const [arpcVal, setArpcVal] = useState(0);
-  const [cannibalizationPeriod, setCannibalizationPeriod] = useState([]);
   const [pdfFileName, setPdfFileName] = useState("");
   // -----------------POPULATION CALUCATION SATES
   const [priPincodePopulation, setPriPincodePopulation] = useState([]);
@@ -66,12 +62,22 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     category,
     primarySec,
   } = inputsPayload;
-  const estiCustBase = enrollTarget + custExitStore + crossChl;
+  const estiCustBase =
+    revenueData?.firstYearEnrolls +
+    revenueData?.canniCust +
+    revenueData?.crossCust;
+  const cityName = revenueData?.city;
 
   const projectionData = [
-    { heading: "Enrollments in Target Store in Year 1", value: enrollTarget },
-    { heading: "Customer Coming From Existng Store", value: custExitStore },
-    { heading: "New From Cross-Channel", value: crossChl },
+    {
+      heading: "Enrollments in Target Store in Year 1",
+      value: revenueData?.firstYearEnrolls || 0,
+    },
+    {
+      heading: "Customer Coming From Existng Store",
+      value: revenueData?.canniCust || 0,
+    },
+    { heading: "New From Cross-Channel", value: revenueData?.crossCust || 0 },
     { heading: "First Year Estimated Custome Base", value: estiCustBase },
     { heading: "Average Revenue Per Customer", value: arpcVal },
     { heading: "First Year Revenue Estimate", value: estiCustBase * arpcVal },
@@ -107,13 +113,16 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSave]);
 
-  const GetCityNameByPincode = (t_pin) => {
+  const CannibalizationData = (chl, t_pin) => {
     axiosInstance
-      .get(`/api/projection/fetch/city/by/pin?pincodes=${t_pin}`)
+      .get(
+        `/api/fetch/projection/canni/store-pin?channel=${chl}&targetPin=${t_pin}`,
+      )
       .then((res) => res)
       .then((response) => {
+        console.log("response1234==>", response.data);
         if (response.data.code === "1000") {
-          setCityName(response.data.value.toString());
+          setTopStrCanData(response.data.value);
         }
       })
       .catch((err) => {
@@ -124,40 +133,20 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
 
   useEffect(() => {
     if (setOfPin) {
-      GetCityNameByPincode(setOfPin);
-    }
-  }, [setOfPin]);
-
-  const GetTop3Stores = (chl, t_pin) => {
-    axiosInstance
-      .get(`/api/store/to/pincode/rev?channel=${chl}&pincodes=${t_pin}`)
-      .then((res) => res)
-      .then((response) => {
-        if (response.data.code === "1000") {
-          setTop3Stores(response.data.value);
-        }
-      })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
-  };
-
-  useEffect(() => {
-    if (setOfPin) {
-      GetTop3Stores(channel, setOfPin);
+      CannibalizationData(channel, setOfPin);
     }
   }, [channel, setOfPin]);
 
-  const GetEnrollTargetYear = (s_pin, t_pin, chl) => {
+  const GetRevenueData = (chl, t_pin, s_pin) => {
     axiosInstance
       .get(
-        `/api/new/store/first/yr/prob/enrolls?similarPincodes=${s_pin}&targetPincodes=${t_pin}&channel=${chl}`,
+        `/api/fetch/first/year/results?similarPin=${s_pin}&targetPin=${t_pin}&channel=${chl}`,
       )
       .then((res) => res)
       .then((response) => {
+        console.log("response_results==>", response.data);
         if (response.data.code === "1000") {
-          setEnrollTarget(response.data.value[0] || 0);
+          setRevenueData(response.data.value);
         }
       })
       .catch((err) => {
@@ -167,54 +156,8 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   };
 
   useEffect(() => {
-    if (similarPinCode && setOfPin && channel) {
-      GetEnrollTargetYear(similarPinCode, setOfPin, channel);
-    }
-  }, [similarPinCode, setOfPin, channel]);
-
-  const GetCustExitStore = (t_pin, chl) => {
-    axiosInstance
-      .get(
-        `/api/new/store/cross/cust/movement?pincodes=${t_pin}&channel=${chl}`,
-      )
-      .then((res) => res)
-      .then((response) => {
-        if (response.data.code === "1000") {
-          setCustExitStore(response.data.value[0] || 0);
-        }
-      })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
-  };
-
-  useEffect(() => {
-    if (setOfPin && channel) {
-      GetCustExitStore(setOfPin, channel);
-    }
-  }, [setOfPin, channel]);
-
-  const GetNewCrossChannel = (chl, t_pin, s_pin) => {
-    axiosInstance
-      .get(
-        `api/new/store/cross/channel/movement?channel=${chl}&targetPincodes=${t_pin}&similarPincodes=${s_pin}`,
-      )
-      .then((res) => res)
-      .then((response) => {
-        if (response.data.code === "1000") {
-          setCrossChl(response.data.value[0] || 0);
-        }
-      })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
-  };
-
-  useEffect(() => {
-    if (channel && setOfPin && similarPinCode) {
-      GetNewCrossChannel(channel, setOfPin, similarPinCode);
+    if (setOfPin) {
+      GetRevenueData(channel, setOfPin, similarPinCode);
     }
   }, [channel, setOfPin, similarPinCode]);
 
@@ -240,35 +183,6 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       GetARPCData(channel, cityName, setOfPin);
     }
   }, [channel, cityName, setOfPin]);
-
-  const GetCannibalizationPeriod = (chl, t_pin) => {
-    setLoading(true);
-    axiosInstance
-      .get(`api/new/store/cannib/data?channel=${chl}&pincodes=${t_pin}`)
-      .then((res) => res)
-      .then((response) => {
-        if (response.data.code === "1000") {
-          setCannibalizationPeriod(response.data.value);
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        toast.error("Internal Load Error", {
-          theme: "colored",
-          autoClose: 2000,
-        });
-        setLoading(false);
-        setIsSave(false);
-      });
-  };
-
-  useEffect(() => {
-    if (channel && setOfPin) {
-      GetCannibalizationPeriod(channel, setOfPin);
-    }
-  }, [channel, setOfPin]);
-
-  // -----------------------------------INSEART HISTORY DATA FUNCTION -------------------------------------------
 
   const GetInsertUserInfo = () => {
     setLoading(true);
@@ -315,21 +229,21 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       custCount10m: m_trends[9]?.customers,
       custCount11m: m_trends[10]?.customers,
       custCount12m: m_trends[11]?.customers,
-      firstYrEnrolls: enrollTarget,
-      existingStrCusts: custExitStore,
-      newCrossChannel: crossChl,
+      firstYrEnrolls: revenueData?.firstYearEnrolls || 0,
+      existingStrCusts: revenueData?.canniCust || 0,
+      newCrossChannel: revenueData?.crossCust || 0,
       firstYrEstCustBase: estiCustBase,
       strArpc: arpcVal,
       estRev1Year: estiCustBase * arpcVal,
-      storeToPinCustS1: top3Stores[0]?.storeToPinCustPerc,
-      storeToPinCustS2: top3Stores[1]?.storeToPinCustPerc,
-      storeToPinCustS3: top3Stores[2]?.storeToPinCustPerc,
-      storeToPinRevS1: top3Stores[0]?.storeToPinRevPerc,
-      storeToPinRevS2: top3Stores[1]?.storeToPinRevPerc,
-      storeToPinRevS3: top3Stores[2]?.storeToPinRevPerc,
-      canibalization3yrS1: cannibalizationPeriod[0]?.cannibValue,
-      canibalization3yrS2: cannibalizationPeriod[1]?.cannibValue,
-      canibalization3yrS3: cannibalizationPeriod[2]?.cannibValue,
+      storeToPinCustS1: topStrCanData[0]?.storeToPinCustPerc,
+      storeToPinCustS2: topStrCanData[1]?.storeToPinCustPerc,
+      storeToPinCustS3: topStrCanData[2]?.storeToPinCustPerc,
+      storeToPinRevS1: topStrCanData[0]?.storeToPinRevPerc,
+      storeToPinRevS2: topStrCanData[1]?.storeToPinRevPerc,
+      storeToPinRevS3: topStrCanData[2]?.storeToPinRevPerc,
+      canibalization3yrS1: topStrCanData[0]?.f36RevLoss,
+      canibalization3yrS2: topStrCanData[1]?.f36RevLoss,
+      canibalization3yrS3: topStrCanData[2]?.f36RevLoss,
       targetCatchmentCity: cityName,
       decision: decisionObj?.decision,
       reason: decisionObj?.reason?.toString(),
@@ -498,7 +412,11 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       <div
         className={`main_container ${slideOut ? "slide_animation_back" : ""}`}>
         <div ref={screenshotRef}>
-          <ThirdEyeHeader city={cityName} chl={channel} />
+          <ThirdEyeHeader
+            city={cityName}
+            chl={channel}
+            cityTier={revenueData?.cityTier}
+          />
           <div
             style={{
               border: "1.5px solid #233044",
@@ -528,7 +446,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
                 })}
               </div>
               <div style={{ width: "54.5%" }}>
-                {top3Stores.length > 0 && (
+                {topStrCanData.length > 0 && (
                   <Table className='custom_table'>
                     <Thead>
                       <Tr>
@@ -538,7 +456,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
                       </Tr>
                     </Thead>
                     <Tbody>
-                      {top3Stores.map((item, i) => {
+                      {topStrCanData.map((item, i) => {
                         return (
                           <Tr key={i}>
                             <Td>{item.storeCode}</Td>
@@ -561,7 +479,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
                     Cannibalization Effect Over Period of 3 Years
                   </div>
                   <NewStoreProBarGraph
-                    cannibalizationPeriod={cannibalizationPeriod}
+                    cannibalizationPeriod={topStrCanData}
                     height={200}
                   />
                 </div>
@@ -580,8 +498,8 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
               secPincodePopulation={secPincodePopulation}
               cityName={cityName}
               projectionData={projectionData}
-              cannibalization={cannibalizationPeriod}
-              top3Stores={top3Stores}
+              cannibalization={topStrCanData}
+              top3Stores={topStrCanData}
               userLog={userLog}
               pdfFileName={pdfFileName}
             />
