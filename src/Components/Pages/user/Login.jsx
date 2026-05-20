@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "../user/Login.css";
 import Login_Image from "../../../asset/3rdeye.png";
 import Mic_Icon from "../../Images/mic-icon.png";
@@ -25,6 +25,7 @@ export default function Login() {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [slideOut, setSlideOut] = useState(false);
+  const isAutoLoginAttemptedRef = useRef(false);
   const navigate = useNavigate();
   const isDevMode = window.location.hostname === "localhost";
 
@@ -69,9 +70,13 @@ export default function Login() {
   };
 
   const url = isDevMode ? "/api/dummy/userinfo" : "/api/userinfo";
-  const LoginByAzzure = () => {
+
+  const FetchUserInfoAndLogin = (redirectOnUnauthorized = false) => {
     setLoading(true);
-    ClearUserDetails();
+    if (redirectOnUnauthorized) {
+      ClearUserDetails();
+    }
+
     axiosInstance
       .get(url)
       .then((res) => res)
@@ -79,23 +84,38 @@ export default function Login() {
         if (response?.data?.username) {
           localStorage.setItem("3rd_eye_auth_token", true);
           GetUserLogin(response.data);
+          return;
         }
+        setLoading(false);
       })
       .catch((err) => {
-        if (err?.response?.status === 401) {
+        if (redirectOnUnauthorized && err?.response?.status === 401) {
           setSlideOut(true);
           setTimeout(() => {
             window.location.href = `${HOST_URL}/oauth2/authorization/azure`;
           }, 700);
+          return;
         }
         setLoading(false);
       });
   };
 
-  // Removed clearing of localStorage and sessionStorage on mount to prevent login issues.
+  const LoginByAzzure = () => {
+    FetchUserInfoAndLogin(true);
+  };
+
+  useEffect(() => {
+    if (isAutoLoginAttemptedRef.current || isDevMode) {
+      return;
+    }
+    isAutoLoginAttemptedRef.current = true;
+    FetchUserInfoAndLogin(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDevMode]);
 
   const sentence =
     "  Powerful retail analytics suite designed to help you make smarter, data-driven decisions.";
+
   return (
     <main className='auth-page'>
       <section className={`auth-card ${slideOut ? "slide_animation" : ""}`}>

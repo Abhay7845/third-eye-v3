@@ -15,6 +15,10 @@ import {
   clearNewStoreInputs,
   setNewStoreDecisiontext,
 } from "../../redux/reducer/NewStore";
+import {
+  clearClientSession,
+  invalidateServerSession,
+} from "../../HostManger/API/sessionLogout";
 
 const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
   const sidebarRef = useRef(null);
@@ -51,9 +55,9 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
     };
   }, [toggle, toggle_open]);
 
-  const LogOutUser = () => {
-    localStorage.clear();
-    sessionStorage.clear();
+  const LogOutUser = async () => {
+    await invalidateServerSession();
+    clearClientSession();
     dispatch(logoutUser());
     dispatch(clearNewStoreInputs());
     dispatch(clearNewCityInputs());

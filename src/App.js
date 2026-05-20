@@ -11,28 +11,28 @@ import NewStoreProjection from "./Components/Pages/NewStoreProjection";
 import HistoryPreview from "./Components/Pages/HistoryPreview";
 import StoreCatchmentAnalysis from "./Components/Pages/StoreCatchmentAnalysis";
 import InternetStatus from "./Components/trackOnline/InternetStatus";
+import {
+  clearClientSession,
+  invalidateServerSessionOnUnload,
+} from "./HostManger/API/sessionLogout";
 
 const App = () => {
   const [toggle, setToggle] = useState(false);
   const toggle_open = () => setToggle(!toggle);
 
   useEffect(() => {
-    const handleUnload = () => {
-      localStorage.clear();
+    const handleSessionClearOnUnload = () => {
+      clearClientSession();
+      invalidateServerSessionOnUnload();
     };
-    window.addEventListener("beforeunload", handleUnload);
-    return () => window.removeEventListener("beforeunload", handleUnload);
-  }, []);
 
-  useEffect(() => {
-    const is_logged_in = localStorage.getItem("3rd_eye_auth_token") === "true";
-    if (is_logged_in) {
-      alert("You are already logged in on another Tab.");
-      localStorage.clear();
-      setTimeout(() => {
-        window.location.href = routes.LOGIN;
-      }, 500);
-    }
+    window.addEventListener("beforeunload", handleSessionClearOnUnload);
+    window.addEventListener("pagehide", handleSessionClearOnUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleSessionClearOnUnload);
+      window.removeEventListener("pagehide", handleSessionClearOnUnload);
+    };
   }, []);
 
   return (

@@ -132,6 +132,11 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
     dispatch(clearNewCityInputs());
   });
 
+  const ResetValues = () => {
+    setScrType(null);
+    setHistoryData([]);
+  };
+
   return (
     <React.Fragment>
       <Sidebar
@@ -214,9 +219,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                 <button className='CButton' onClick={handelFilter}>
                   Next
                 </button>
-                <button
-                  style={{ cursor: "pointer" }}
-                  onClick={() => setHistoryData([])}>
+                <button style={{ cursor: "pointer" }} onClick={ResetValues}>
                   Reset
                 </button>
               </div>
