@@ -45,7 +45,6 @@ const App = () => {
           element={<Login toggle_open={toggle_open} toggle={toggle} />}
         />
         <Route element={<PrivateAuth />}>
-          {/* <Route> */}
           <Route
             path={routes.NEW_STORE}
             element={
