@@ -5,19 +5,18 @@ import {
   YAxis,
   ResponsiveContainer,
   LabelList,
-  Cell,
+  Legend,
 } from "recharts";
 
-const color = ["#e71010ff", "#de4b4bf0", "#f5888bff"];
+const color3Y = "#f83e3e"; // 3 Year
+const color1Y = "#f58337"; // 1 Year
 
 const NewStoreProBarGraph = ({ cannibalizationPeriod, height }) => {
-  const data = cannibalizationPeriod.map((item, i) => {
-    return {
-      name: item.storeCode,
-      value: item.f36RevLoss,
-      color: color[i],
-    };
-  });
+  const data = cannibalizationPeriod.map((item) => ({
+    name: item.storeCode,
+    value3Y: item.f36RevLoss, // 3 Year
+    value1Y: item.f12RevLoss, // 1 Year
+  }));
 
   return (
     <ResponsiveContainer
@@ -27,7 +26,9 @@ const NewStoreProBarGraph = ({ cannibalizationPeriod, height }) => {
       <BarChart
         layout='vertical'
         data={data}
-        margin={{ top: 8, right: 100, bottom: 10, left: 10 }}>
+        barCategoryGap={18}
+        margin={{ top: 20, right: 120, bottom: 10, left: 10 }}>
+        {/* Store Names */}
         <YAxis
           type='category'
           dataKey='name'
@@ -35,28 +36,39 @@ const NewStoreProBarGraph = ({ cannibalizationPeriod, height }) => {
           axisLine={false}
           tickLine={false}
         />
+
+        {/* Revenue Axis */}
         <XAxis
           type='number'
           tick={{ fontSize: 12 }}
           tickFormatter={(value) => `₹ ${value}L`}
         />
+        <Legend />
         <Bar
-          dataKey='value'
-          barSize={20}
-          radius={[0, 10, 10, 0]}
-          isAnimationActive={true}
-          animationBegin={200}
-          animationDuration={1000}
-          animationEasing='ease-in-out'>
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.color} />
-          ))}
+          dataKey='value3Y'
+          name='3 Years'
+          fill={color3Y}
+          barSize={14}
+          radius={[0, 8, 8, 0]}>
           <LabelList
-            dataKey='value'
+            dataKey='value3Y'
             position='right'
-            offset={10}
             formatter={(value) => `₹ ${value}L`}
-            style={{ fontWeight: "bold", fontSize: 12 }}
+            style={{ fontWeight: "bold", fontSize: 11 }}
+          />
+        </Bar>
+
+        <Bar
+          dataKey='value1Y'
+          name='1 Year'
+          fill={color1Y}
+          barSize={14}
+          radius={[0, 8, 8, 0]}>
+          <LabelList
+            dataKey='value1Y'
+            position='right'
+            formatter={(value) => `₹ ${value}L`}
+            style={{ fontWeight: "bold", fontSize: 11 }}
           />
         </Bar>
       </BarChart>

@@ -105,10 +105,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setMonthOver([]);
         }
       })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
+      .catch((err) => setLoading(false));
   };
 
   useEffect(() => {
@@ -128,10 +125,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setCityStoreScore([]);
         }
       })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
+      .catch((err) => setLoading(false));
   };
 
   useEffect(() => {
@@ -176,10 +170,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setExtIndecator([]);
         }
       })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
+      .catch((err) => setLoading(false));
   };
 
   useEffect(() => {
@@ -209,10 +200,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
         }
         setLoading(false);
       })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
+      .catch((err) => setLoading(false));
   };
 
   useEffect(() => {
@@ -232,10 +220,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setEnrollTarget(response.data.value[0] || 0);
         }
       })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
+      .catch((err) => setLoading(false));
   };
 
   useEffect(() => {
@@ -254,10 +239,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setCannibilization(response.data.value[0] || 0);
         }
       })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
+      .catch((err) => setLoading(false));
   };
 
   useEffect(() => {
@@ -275,10 +257,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setCustExitStore(response.data.value[0] || 0);
         }
       })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
+      .catch((err) => setLoading(false));
   };
 
   useEffect(() => {
@@ -352,6 +331,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
       reason: decisionObj?.reason?.toString(),
       recommendation: decisionObj?.recomendation,
     };
+    setLoading(true);
     axiosInstance
       .post(`/api/data/insert/new/city`, newCityPylaod)
       .then((res) => res)

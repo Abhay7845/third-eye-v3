@@ -68,8 +68,7 @@ export default function Login() {
       .catch((err) => setLoading(false));
   };
 
-  // const url = isDevMode ? "/api/dummy/userinfo" : "/api/userinfo";
-  const url = "/api/userinfo";
+  const url = isDevMode ? "/api/dummy/userinfo" : "/api/userinfo";
   const LoginByAzzure = () => {
     setLoading(true);
     ClearUserDetails();
@@ -77,19 +76,12 @@ export default function Login() {
       .get(url)
       .then((res) => res)
       .then((response) => {
-        console.log("response==>", response.data);
         if (response?.data?.username) {
           localStorage.setItem("3rd_eye_auth_token", true);
           GetUserLogin(response.data);
         }
       })
       .catch((err) => {
-        console.log("erro==>", err);
-        localStorage.setItem("3rd_eye_auth_token", true);
-
-        setTimeout(() => {
-          navigate(routes.NEW_STORE);
-        }, 700);
         if (err?.response?.status === 401) {
           setSlideOut(true);
           setTimeout(() => {
@@ -102,6 +94,7 @@ export default function Login() {
 
   useEffect(() => {
     localStorage.clear();
+    sessionStorage.clear();
   }, []);
 
   const sentence =

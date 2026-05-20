@@ -11,6 +11,7 @@ import NewStoreProjection from "./Components/Pages/NewStoreProjection";
 import HistoryPreview from "./Components/Pages/HistoryPreview";
 import StoreCatchmentAnalysis from "./Components/Pages/StoreCatchmentAnalysis";
 import InternetStatus from "./Components/trackOnline/InternetStatus";
+import SlowInternetConection from "./Components/trackOnline/SlowInternetConection";
 
 const App = () => {
   const [toggle, setToggle] = useState(false);
@@ -38,14 +39,15 @@ const App = () => {
   return (
     <React.Fragment>
       <InternetStatus />
+      <SlowInternetConection />
       <Routes>
         <Route
           path={routes.LOGIN}
           index
           element={<Login toggle_open={toggle_open} toggle={toggle} />}
         />
-        {/* <Route element={<PrivateAuth />}> */}
-        <Route>
+        <Route element={<PrivateAuth />}>
+          {/* <Route> */}
           <Route
             path={routes.NEW_STORE}
             element={

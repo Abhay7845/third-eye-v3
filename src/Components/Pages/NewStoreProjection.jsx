@@ -52,6 +52,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   const [secPincodePopulation, setSecPincodePopulation] = useState([]);
   // REF DEFINE
   const screenshotRef = useRef();
+
   const {
     channel,
     targetPinCode,
@@ -62,6 +63,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     category,
     primarySec,
   } = inputsPayload;
+
   const estiCustBase =
     revenueData?.firstYearEnrolls +
     revenueData?.canniCust +
@@ -78,9 +80,12 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       value: revenueData?.canniCust || 0,
     },
     { heading: "New From Cross-Channel", value: revenueData?.crossCust || 0 },
-    { heading: "First Year Estimated Custome Base", value: estiCustBase },
+    { heading: "First Year Estimated Custome Base", value: estiCustBase || 0 },
     { heading: "Average Revenue Per Customer", value: arpcVal },
-    { heading: "First Year Revenue Estimate", value: estiCustBase * arpcVal },
+    {
+      heading: "First Year Revenue Estimate",
+      value: estiCustBase || 0 * arpcVal,
+    },
   ];
 
   // your function remains same
@@ -114,21 +119,19 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   }, [isSave]);
 
   const CannibalizationData = (chl, t_pin) => {
+    setLoading(true);
     axiosInstance
       .get(
         `/api/fetch/projection/canni/store-pin?channel=${chl}&targetPin=${t_pin}`,
       )
       .then((res) => res)
       .then((response) => {
-        console.log("response1234==>", response.data);
         if (response.data.code === "1000") {
           setTopStrCanData(response.data.value);
         }
-      })
-      .catch((err) => {
         setLoading(false);
-        setIsSave(false);
-      });
+      })
+      .catch((err) => setLoading(false));
   };
 
   useEffect(() => {
@@ -144,15 +147,11 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       )
       .then((res) => res)
       .then((response) => {
-        console.log("response_results==>", response.data);
         if (response.data.code === "1000") {
           setRevenueData(response.data.value);
         }
       })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
+      .catch((err) => setLoading(false));
   };
 
   useEffect(() => {
@@ -172,10 +171,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
           setArpcVal(response.data.value[0] || 0);
         }
       })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
+      .catch((err) => setLoading(false));
   };
 
   useEffect(() => {
@@ -185,9 +181,8 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   }, [channel, cityName, setOfPin]);
 
   const GetInsertUserInfo = () => {
-    setLoading(true);
     const newStrPylaod = {
-      userName: userLog?.name,
+      userName: userLog?.name || "geust",
       channel: channel,
       targetCatchment: targetPinCode?.toString(),
       similarStore: similerStoreVal,
@@ -232,9 +227,9 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       firstYrEnrolls: revenueData?.firstYearEnrolls || 0,
       existingStrCusts: revenueData?.canniCust || 0,
       newCrossChannel: revenueData?.crossCust || 0,
-      firstYrEstCustBase: estiCustBase,
-      strArpc: arpcVal,
-      estRev1Year: estiCustBase * arpcVal,
+      firstYrEstCustBase: estiCustBase || 0,
+      strArpc: arpcVal || 0,
+      estRev1Year: estiCustBase || 0 * arpcVal,
       storeToPinCustS1: topStrCanData[0]?.storeToPinCustPerc,
       storeToPinCustS2: topStrCanData[1]?.storeToPinCustPerc,
       storeToPinCustS3: topStrCanData[2]?.storeToPinCustPerc,
@@ -249,7 +244,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       reason: decisionObj?.reason?.toString(),
       recommendation: decisionObj?.recomendation,
     };
-
+    setLoading(true);
     axiosInstance
       .post(`/api/data/insert/new/store`, newStrPylaod)
       .then((res) => res)
@@ -268,10 +263,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
         }
         setLoading(false);
       })
-      .catch((err) => {
-        setLoading(false);
-        setIsSave(false);
-      });
+      .catch((err) => setLoading(false));
   };
 
   // PINCODE LEVEL GET POPULATION
@@ -288,7 +280,6 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       }
     } catch (err) {
       setLoading(false);
-      setIsSave(false);
       return [];
     }
   };
@@ -336,7 +327,6 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       }
     } catch (err) {
       setLoading(false);
-      setIsSave(false);
       return [];
     }
   };
@@ -389,7 +379,6 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       }
     } catch (err) {
       setLoading(false);
-      setIsSave(false);
       return [];
     }
   };
@@ -446,7 +435,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
                 })}
               </div>
               <div style={{ width: "54.5%" }}>
-                {topStrCanData.length > 0 && (
+                {topStrCanData.length > 0 ? (
                   <Table className='custom_table'>
                     <Thead>
                       <Tr>
@@ -473,15 +462,27 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
                       })}
                     </Tbody>
                   </Table>
+                ) : (
+                  <div style={{ color: "red", textAlign: "center" }}>
+                    Data not available
+                  </div>
                 )}
                 <div style={{ border: "1px solid #233044", marginTop: "2%" }}>
-                  <div style={{ textAlign: "center", padding: "6px" }}>
-                    Cannibalization Effect Over Period of 3 Years
-                  </div>
-                  <NewStoreProBarGraph
-                    cannibalizationPeriod={topStrCanData}
-                    height={200}
-                  />
+                  {topStrCanData?.length > 0 ? (
+                    <React.Fragment>
+                      <div style={{ textAlign: "center", padding: "6px" }}>
+                        Cannibalization Effect
+                      </div>
+                      <NewStoreProBarGraph
+                        cannibalizationPeriod={topStrCanData}
+                        height={220}
+                      />
+                    </React.Fragment>
+                  ) : (
+                    <div style={{ color: "red", textAlign: "center" }}>
+                      Cannibalization Effect Not Found
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -502,6 +503,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
               top3Stores={topStrCanData}
               userLog={userLog}
               pdfFileName={pdfFileName}
+              cityTier={revenueData?.cityTier}
             />
           </div>
         </Modal>

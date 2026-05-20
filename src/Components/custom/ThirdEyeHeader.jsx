@@ -105,7 +105,7 @@ const ThirdEyeHeader = ({ city, chl, cityTier }) => {
                 Target Catchment City
               </div>
               <div style={{ fontSize: "12px", marginTop: "1%" }}>
-                {city} ({cityTier})
+                {city}, ({cityTier})
               </div>
             </div>
           )}

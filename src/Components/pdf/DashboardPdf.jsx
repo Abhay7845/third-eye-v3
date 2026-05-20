@@ -25,6 +25,7 @@ const DashboardPdf = ({
   priPincodePopulation,
   secPincodePopulation,
   pdfFileName,
+  cityTier,
 }) => {
   const newStoreRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -163,7 +164,10 @@ const DashboardPdf = ({
           "Content-Type": "multipart/form-data",
         },
       });
-    } catch (err) {}
+      return res;
+    } catch (err) {
+      return;
+    }
   };
 
   // ------------------------------------- PDF GENERATION -------------------------------
@@ -190,7 +194,7 @@ const DashboardPdf = ({
           scale: 2, // higher scale = clearer text/images
         });
 
-        // ✅ JPEG at 85% quality (good balance for 4–6 MB)
+        //  JPEG at 85% quality (good balance for 4–6 MB)
         const imgData = canvas.toDataURL("image/jpeg", 0.85);
 
         const imgProps = pdf.getImageProperties(imgData);
@@ -202,7 +206,7 @@ const DashboardPdf = ({
 
         if (i > 0) pdf.addPage();
 
-        // ✅ Add JPEG with FAST compression
+        // Add JPEG with FAST compression
         pdf.addImage(
           imgData,
           "JPEG",
@@ -215,7 +219,7 @@ const DashboardPdf = ({
         );
       }
 
-      // ✅ Create Blob instead of direct save
+      //  Create Blob instead of direct save
       const pdfBlob = pdf.output("blob");
       const pdfFile = new File([pdfBlob], `${pdfFileName}.pdf`, {
         type: "application/pdf",
@@ -381,7 +385,9 @@ const DashboardPdf = ({
                     <td>Similar Store:</td>
                     <td>{similerStoreVal}</td>
                     <td>Similar City:</td>
-                    <td>{cityName}</td>
+                    <td>
+                      {cityName}, ({cityTier})
+                    </td>
                   </tr>
                   <tr>
                     <td>Store Size:</td>
@@ -775,7 +781,7 @@ const DashboardPdf = ({
             </Table>
             <NewStoreProBarGraph
               cannibalizationPeriod={cannibalization}
-              height={180}
+              height={200}
             />
           </div>
           <div className='user_input_box' style={{ padding: "5px" }}>
