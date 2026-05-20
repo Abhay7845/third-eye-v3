@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import "../Styles/InternetStatus.css";
 
 const SlowInternetConection = () => {
-  const [slowNetwork, setSlowNetwork] = useState(true);
+  const [slowNetwork, setSlowNetwork] = useState(false);
+  const [connectionChecked, setConnectionChecked] = useState(false);
 
   useEffect(() => {
     const connection =
@@ -10,28 +11,40 @@ const SlowInternetConection = () => {
       navigator.mozConnection ||
       navigator.webkitConnection;
 
+    const VERY_SLOW_TYPES = ["slow-2g", "2g"];
+    const VERY_SLOW_DOWNLINK_MBPS = 0.7;
+
     const checkNetwork = () => {
-      if (!connection) return;
-      const slowTypes = ["slow-2g", "2g"];
-      if (
-        slowTypes.includes(connection.effectiveType) ||
-        connection.downlink < 1.2
-      ) {
-        setSlowNetwork(true);
+      if (connection) {
+        const isVerySlowType = VERY_SLOW_TYPES.includes(
+          connection.effectiveType,
+        );
+        const isVerySlowDownlink =
+          typeof connection.downlink === "number" &&
+          connection.downlink < VERY_SLOW_DOWNLINK_MBPS;
+        setSlowNetwork(isVerySlowType || isVerySlowDownlink);
+        setConnectionChecked(true);
       } else {
-        setSlowNetwork(false);
+        setSlowNetwork(!navigator.onLine);
+        setConnectionChecked(true);
       }
     };
+
     checkNetwork();
     connection?.addEventListener("change", checkNetwork);
+    window.addEventListener("online", checkNetwork);
+    window.addEventListener("offline", checkNetwork);
+
     return () => {
       connection?.removeEventListener("change", checkNetwork);
+      window.removeEventListener("online", checkNetwork);
+      window.removeEventListener("offline", checkNetwork);
     };
   }, []);
 
   return (
     <React.Fragment>
-      {slowNetwork && (
+      {connectionChecked && slowNetwork && (
         <div className='offline-container'>
           <div className='wifi-loader'>
             <span className='wifi-circle circle-1'></span>

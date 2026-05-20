@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import "../user/Login.css";
 import Login_Image from "../../../asset/3rdeye.png";
 import Mic_Icon from "../../Images/mic-icon.png";
@@ -49,7 +49,7 @@ export default function Login() {
             dispatch(setUser(logCred));
             setSlideOut(true);
             setTimeout(() => {
-              navigate(routes.NEW_STORE);
+              navigate(routes.NEW_STORE, { replace: true });
             }, 700);
           } else {
             toast.error("User Not Active", {
@@ -92,10 +92,7 @@ export default function Login() {
       });
   };
 
-  useEffect(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  }, []);
+  // Removed clearing of localStorage and sessionStorage on mount to prevent login issues.
 
   const sentence =
     "  Powerful retail analytics suite designed to help you make smarter, data-driven decisions.";

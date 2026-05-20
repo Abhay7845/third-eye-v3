@@ -3,7 +3,7 @@
 
 // UAT TESTING URL WITHOUT SSO
 // export const HOST_URL =
-// "https://uat-tanishqdigitalmerch.titan.in:8443/ThirdEyeAppTest";
+//   "https://uat-tanishqdigitalmerch.titan.in:8443/ThirdEyeAppTest";
 
 // UAT TESTING URL WITH SSO
 

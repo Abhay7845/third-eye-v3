@@ -53,6 +53,7 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
 
   const LogOutUser = () => {
     localStorage.clear();
+    sessionStorage.clear();
     dispatch(logoutUser());
     dispatch(clearNewStoreInputs());
     dispatch(clearNewCityInputs());
@@ -60,7 +61,7 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
     dispatch(setNewCityDecisiontext());
     setSlideOut(true);
     setTimeout(() => {
-      navigate(routes.LOGIN);
+      navigate(routes.LOGIN, { replace: true });
     }, 700);
   };
 
