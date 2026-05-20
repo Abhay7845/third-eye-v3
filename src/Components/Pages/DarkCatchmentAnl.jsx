@@ -437,7 +437,7 @@ const DarkCatchmentAnl = ({ toggle_open, toggle }) => {
                       setChannelval(value);
                       setCityName(null);
                     }}
-                    disabled={userLog.role === "ADMIN" ? true : false}
+                    disabled={userLog?.role === "ADMIN" ? true : false}
                   />
                   <div
                     style={{

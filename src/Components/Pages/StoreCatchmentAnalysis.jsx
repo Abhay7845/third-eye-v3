@@ -773,7 +773,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                           setChannelval(value);
                           setStore(null);
                         }}
-                        disabled={userLog.role === "ADMIN"}
+                        disabled={userLog?.role === "ADMIN"}
                       />
                     </div>
                     <div style={{ flex: "1", minWidth: "20%" }}>
