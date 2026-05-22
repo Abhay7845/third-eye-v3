@@ -1259,7 +1259,8 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
                 setLoading(false);
               }, 700);
             }}
-            disabled={projBtnDesabled}>
+            // disabled={projBtnDesabled}
+          >
             PROJECTION
           </button>
         </div>

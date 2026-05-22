@@ -65,7 +65,7 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
     dispatch(setNewCityDecisiontext());
     setSlideOut(true);
     setTimeout(() => {
-      navigate(routes.LOGIN, { replace: true });
+      navigate(routes.LOGIN);
     }, 700);
   };
 

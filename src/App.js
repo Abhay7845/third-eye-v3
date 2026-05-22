@@ -22,6 +22,13 @@ const App = () => {
 
   useEffect(() => {
     const handleSessionClearOnUnload = () => {
+      const isSsoRedirectInProgress =
+        sessionStorage.getItem("sso_redirect_in_progress") === "true";
+
+      if (isSsoRedirectInProgress) {
+        return;
+      }
+
       clearClientSession();
       invalidateServerSessionOnUnload();
     };

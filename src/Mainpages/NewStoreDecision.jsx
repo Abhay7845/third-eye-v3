@@ -171,21 +171,34 @@ const NewStoreDecision = ({
           btnDesabeld(true);
         }
         dispatch(setNewStoreDecisiontext(respData));
+      } else {
+        btnDesabeld(true);
+        const respData = {
+          bottom_line:
+            "Unable to find a decision based on the selected details. Please wait some time and try again.",
+          decision: "",
+          recomendation: "Somthing went wrong!",
+          reason: response?.data?.reason || [],
+        };
+        dispatch(setNewStoreDecisiontext(respData));
       }
       setLoading(false);
     } catch (err) {
       setLoading(false);
-      toast.error(
-        "Something Went wrong while pulling the Decision Data . Pls try after sometime",
-        { theme: "colored", autoClose: 3000 },
-      );
-      dispatch(setNewStoreDecisiontext());
+      btnDesabeld(true);
+      const respData = {
+        bottom_line:
+          "Something Went wrong while pulling the Decision Data . Pls try after sometime",
+        decision: "",
+        recomendation: "Somthing went wrong!",
+        reason: [],
+      };
+      dispatch(setNewStoreDecisiontext(respData));
     }
   };
 
   const max_stores = Math.max(
     jewellers_stores?.length,
-    retails_list?.length,
     inputsPayload?.anchorLocation?.lat,
   );
 
@@ -211,7 +224,7 @@ const NewStoreDecision = ({
       {loading ? (
         <DecisionSkeleton />
       ) : (
-        decisionObj?.decision && (
+        decisionObj?.bottom_line && (
           <div
             style={{
               border: "1.5px solid #233044",
@@ -230,6 +243,7 @@ const NewStoreDecision = ({
                 alignItems: "center",
                 textAlign: "center",
                 fontSize: "13px",
+                color: decisionObj?.reason?.length > 0 ? "#000000" : "#ea0909",
               }}>
               <span>{decisionObj?.recomendation}</span>
             </div>
@@ -257,7 +271,7 @@ const NewStoreDecision = ({
                   ))}
                 </ul>
               )}
-              {decisionObj?.bottom_line && (
+              {decisionObj?.reason.length > 0 && (
                 <span
                   style={{
                     position: "absolute",

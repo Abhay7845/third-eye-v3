@@ -52,7 +52,6 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   const [secPincodePopulation, setSecPincodePopulation] = useState([]);
   // REF DEFINE
   const screenshotRef = useRef();
-
   const {
     channel,
     targetPinCode,
@@ -68,6 +67,8 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     revenueData?.firstYearEnrolls +
     revenueData?.canniCust +
     revenueData?.crossCust;
+
+  const estimate_revenue = arpcVal * estiCustBase;
   const cityName = revenueData?.city;
 
   const projectionData = [
@@ -84,7 +85,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     { heading: "Average Revenue Per Customer", value: arpcVal },
     {
       heading: "First Year Revenue Estimate",
-      value: estiCustBase || 0 * arpcVal,
+      value: estimate_revenue || 0,
     },
   ];
 
@@ -229,7 +230,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       newCrossChannel: revenueData?.crossCust || 0,
       firstYrEstCustBase: estiCustBase || 0,
       strArpc: arpcVal || 0,
-      estRev1Year: estiCustBase || 0 * arpcVal,
+      estRev1Year: estimate_revenue || 0,
       storeToPinCustS1: topStrCanData[0]?.storeToPinCustPerc,
       storeToPinCustS2: topStrCanData[1]?.storeToPinCustPerc,
       storeToPinCustS3: topStrCanData[2]?.storeToPinCustPerc,

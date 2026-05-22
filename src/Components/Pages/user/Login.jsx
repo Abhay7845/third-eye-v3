@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import "../user/Login.css";
 import Login_Image from "../../../asset/3rdeye.png";
 import Mic_Icon from "../../Images/mic-icon.png";
@@ -25,7 +25,6 @@ export default function Login() {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [slideOut, setSlideOut] = useState(false);
-  const isAutoLoginAttemptedRef = useRef(false);
   const navigate = useNavigate();
   const isDevMode = window.location.hostname === "localhost";
 
@@ -50,7 +49,7 @@ export default function Login() {
             dispatch(setUser(logCred));
             setSlideOut(true);
             setTimeout(() => {
-              navigate(routes.NEW_STORE, { replace: true });
+              navigate(routes.NEW_STORE);
             }, 700);
           } else {
             toast.error("User Not Active", {
@@ -70,52 +69,108 @@ export default function Login() {
   };
 
   const url = isDevMode ? "/api/dummy/userinfo" : "/api/userinfo";
+  // const LoginByAzzure = () => {
+  //   setLoading(true);
+  //   ClearUserDetails();
+  //   axiosInstance
+  //     .get(url)
+  //     .then((res) => res)
+  //     .then((response) => {
+  //       if (response?.data?.username) {
+  //         localStorage.setItem("3rd_eye_auth_token", true);
+  //         GetUserLogin(response.data);
+  //       }
+  //     })
+  //     .catch((err) => {
+  //       if (err?.response?.status === 401) {
+  //         setSlideOut(true);
+  //         setTimeout(() => {
+  //           sessionStorage.setItem("sso_redirect_in_progress", "true");
+  //           window.location.href = `${HOST_URL}/oauth2/authorization/azure`;
+  //         }, 700);
+  //       }
+  //       setLoading(false);
+  //     });
+  // };
 
-  const FetchUserInfoAndLogin = (redirectOnUnauthorized = false) => {
-    setLoading(true);
-    if (redirectOnUnauthorized) {
+  // const LoginByAzzure = async () => {
+  //   try {
+  //     setLoading(true);
+  //     ClearUserDetails();
+  //     const response = await axiosInstance.get(url, {
+  //       withCredentials: true,
+  //       headers: {
+  //         Accept: "application/json",
+  //       },
+  //     });
+  //     if (response?.data?.username) {
+  //       localStorage.setItem("3rd_eye_auth_token", "true");
+  //       sessionStorage.removeItem("sso_redirect_in_progress");
+  //       GetUserLogin(response.data);
+  //     }
+  //   } catch (err) {
+  //     if (err?.response?.status === 401) {
+  //       const redirectInProgress = sessionStorage.getItem(
+  //         "sso_redirect_in_progress",
+  //       );
+  //       if (!redirectInProgress) {
+  //         sessionStorage.setItem("sso_redirect_in_progress", "true");
+  //         setSlideOut(true);
+  //         setTimeout(() => {
+  //           window.location.href = `${HOST_URL}/oauth2/authorization/azure`;
+  //         }, 700);
+  //       }
+  //     }
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  const LoginByAzzure = async (retry = true) => {
+    try {
+      setLoading(true);
       ClearUserDetails();
-    }
-
-    axiosInstance
-      .get(url)
-      .then((res) => res)
-      .then((response) => {
-        if (response?.data?.username) {
-          localStorage.setItem("3rd_eye_auth_token", true);
-          GetUserLogin(response.data);
-          return;
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (redirectOnUnauthorized && err?.response?.status === 401) {
+      const response = await axiosInstance.get(url, {
+        withCredentials: true,
+        headers: {
+          Accept: "application/json",
+        },
+      });
+      if (response?.data?.username) {
+        localStorage.setItem("3rd_eye_auth_token", "true");
+        sessionStorage.removeItem("sso_redirect_in_progress");
+        GetUserLogin(response.data);
+      }
+    } catch (err) {
+      // RETRY SAME API ONE MORE TIME
+      if (err?.response?.status === 401 && retry) {
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+        return LoginByAzzure(false);
+      }
+      // FINAL REDIRECT TO AZURE LOGIN
+      if (err?.response?.status === 401) {
+        const redirectInProgress = sessionStorage.getItem(
+          "sso_redirect_in_progress",
+        );
+        if (!redirectInProgress) {
+          sessionStorage.setItem("sso_redirect_in_progress", "true");
           setSlideOut(true);
           setTimeout(() => {
-            window.location.href = `${HOST_URL}/oauth2/authorization/azure`;
+            window.location.replace(`${HOST_URL}/oauth2/authorization/azure`);
           }, 700);
-          return;
         }
-        setLoading(false);
-      });
-  };
-
-  const LoginByAzzure = () => {
-    FetchUserInfoAndLogin(true);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    if (isAutoLoginAttemptedRef.current || isDevMode) {
-      return;
-    }
-    isAutoLoginAttemptedRef.current = true;
-    FetchUserInfoAndLogin(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDevMode]);
+    sessionStorage.removeItem("sso_redirect_in_progress");
+  }, []);
 
   const sentence =
     "  Powerful retail analytics suite designed to help you make smarter, data-driven decisions.";
-
   return (
     <main className='auth-page'>
       <section className={`auth-card ${slideOut ? "slide_animation" : ""}`}>

@@ -102,7 +102,7 @@ const NewStoreDecision = ({
       },
     };
   };
-  let decision_call = 0;
+
   const GetPosibilityDecision = async (chl, t_pin, s_pin) => {
     setLoading(true);
     try {
@@ -185,7 +185,6 @@ const NewStoreDecision = ({
 
   const max_stores = Math.max(
     jewellers_stores?.length,
-    retails_list?.length,
     inputsPayload?.anchorLocation?.lat,
   );
 

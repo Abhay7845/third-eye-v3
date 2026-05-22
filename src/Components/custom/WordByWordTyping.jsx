@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 export default function WordByWordTyping({ sentence }) {
-  const words = sentence.split(" ");
+  const words = sentence?.split(" ");
   const [displayedWords, setDisplayedWords] = useState([]);
   const speed = 40;
   useEffect(() => {
