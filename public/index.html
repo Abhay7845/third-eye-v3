@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -18,7 +18,7 @@
       const nonce = "RbuQC4Hrsky4YHmhE6LK2R==";
       document.currentScript.setAttribute("nonce", nonce);
       const csp =
-        `default-src 'self'; base-uri 'none'; script-src 'strict-dynamic' 'unsafe-inline' 'nonce-RbuQC4Hrsky4YHmhE6LK2R==' 'self' https://tanishqdigitalmerch.titan.in https://maps.googleapis.com https://login.microsoftonline.com; script-src-elem 'unsafe-inline' 'strict-dynamic' 'nonce-RbuQC4Hrsky4YHmhE6LK2R==' 'self' https://tanishqdigitalmerch.titan.in https://maps.googleapis.com https://login.microsoftonline.com; connect-src 'self' https://maps.googleapis.com https://login.microsoftonline.com https://tanishqdigitalmerch.titan.in:8443; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://maps.googleapis.com https://maps.gstatic.com https://maps.google.com; font-src 'self' https://fonts.gstatic.com; manifest-src 'self' https://tanishqdigitalmerch.titan.in:8443;`
+        `default-src 'self'; base-uri 'none'; script-src 'strict-dynamic' 'unsafe-inline' 'nonce-RbuQC4Hrsky4YHmhE6LK2R==' 'self' https://uat-tanishqdigitalmerch.titan.in https://maps.googleapis.com https://login.microsoftonline.com; script-src-elem 'unsafe-inline' 'strict-dynamic' 'nonce-RbuQC4Hrsky4YHmhE6LK2R==' 'self' https://uat-tanishqdigitalmerch.titan.in https://maps.googleapis.com https://login.microsoftonline.com; connect-src 'self' https://maps.googleapis.com https://login.microsoftonline.com https://uat-tanishqdigitalmerch.titan.in:8443; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://maps.googleapis.com https://maps.gstatic.com https://maps.google.com; font-src 'self' https://fonts.gstatic.com; manifest-src 'self' https://uat-tanishqdigitalmerch.titan.in:8443;`
           .replace(/\s+/g, " ")
           .trim();
       document.querySelector("#csp-meta").setAttribute("content", csp);

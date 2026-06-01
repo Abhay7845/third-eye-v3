@@ -50,6 +50,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   // -----------------POPULATION CALUCATION SATES
   const [priPincodePopulation, setPriPincodePopulation] = useState([]);
   const [secPincodePopulation, setSecPincodePopulation] = useState([]);
+  const [estimateRevenue, setEstimateRevenue] = useState(0);
   // REF DEFINE
   const screenshotRef = useRef();
   const {
@@ -64,12 +65,17 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   } = inputsPayload;
 
   const estiCustBase =
-    revenueData?.firstYearEnrolls +
-    revenueData?.canniCust +
-    revenueData?.crossCust;
+    Number(revenueData?.firstYearEnrolls || 0) +
+    Number(revenueData?.canniCust || 0) +
+    Number(revenueData?.crossCust || 0);
 
-  const estimate_revenue = arpcVal * estiCustBase;
   const cityName = revenueData?.city;
+
+  useEffect(() => {
+    if (arpcVal) {
+      setEstimateRevenue(Number(arpcVal * estiCustBase));
+    }
+  }, [arpcVal, estiCustBase]);
 
   const projectionData = [
     {
@@ -85,7 +91,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     { heading: "Average Revenue Per Customer", value: arpcVal },
     {
       heading: "First Year Revenue Estimate",
-      value: estimate_revenue || 0,
+      value: estimateRevenue || 0,
     },
   ];
 
@@ -169,7 +175,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
-          setArpcVal(response.data.value[0] || 0);
+          setArpcVal(Number(response.data.value[0]) || 0);
         }
       })
       .catch((err) => setLoading(false));
@@ -230,7 +236,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       newCrossChannel: revenueData?.crossCust || 0,
       firstYrEstCustBase: estiCustBase || 0,
       strArpc: arpcVal || 0,
-      estRev1Year: estimate_revenue || 0,
+      estRev1Year: estimateRevenue || 0,
       storeToPinCustS1: topStrCanData[0]?.storeToPinCustPerc,
       storeToPinCustS2: topStrCanData[1]?.storeToPinCustPerc,
       storeToPinCustS3: topStrCanData[2]?.storeToPinCustPerc,
