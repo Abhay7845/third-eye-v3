@@ -77,7 +77,15 @@ export const ourBrandList = [
   "Tanishq",
   "Zoya",
   "Mia",
-  "Titan Eye Plus",
+  "Titan Eye+",
+  "Titan Eyeplus",
+  "Titan World",
+  "Titan World",
+  "World of titan",
+  "Fastrack",
+  "Helios Watch",
+  "Helios Watch",
+  "Taneira sarees",
 ];
 
 export const channel_list = [

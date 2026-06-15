@@ -20,15 +20,14 @@ const AnimatedNumber = ({ index, value, data }) => {
     return () => clearInterval(interval);
   }, [value]);
 
-  const formatted = new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(display);
+  const formatted = `${new Intl.NumberFormat("en-IN", {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
+  }).format(display / 10000000)} Cr`;
 
   return (
     <div>
-      {index >= data.length - 2 ? formatted : display.toLocaleString("en-IN")}
+      {index >= data.length - 2 ? formatted : display?.toLocaleString("en-IN")}
     </div>
   );
 };

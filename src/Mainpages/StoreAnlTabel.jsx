@@ -97,7 +97,7 @@ const StoreAnlTabel = ({ data, channel }) => {
                     {item?.channelBase?.toLocaleString("en-IN")} (
                     {parseFloat(item?.channelBaseCagr * 100).toFixed(1)}%)
                   </Td>
-                  <Td>{item?.arpc?.toLocaleString("en-IN")}</Td>
+                  <Td>{(item?.arpc / 100000).toFixed(2)} L</Td>
                   <Td>{item?.dormantBase?.toLocaleString("en-IN")}</Td>
                   <Td>{item?.dormancyRate}%</Td>
                 </Tr>

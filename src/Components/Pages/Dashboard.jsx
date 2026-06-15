@@ -186,6 +186,8 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
     });
   };
 
+  console.log("categoryMarkers==>", categoryMarkers);
+  console.log("pdfMarkers==>", pdfMarkers);
   useEffect(() => {
     if (!newStore?.anchorLocation)
       navigator.geolocation.getCurrentPosition(

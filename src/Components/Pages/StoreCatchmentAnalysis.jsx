@@ -590,9 +590,9 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
           </tr>
           <tr>
             <td style="padding:2px 4px;">ARPC:</td>
-            <td style="padding:2px 4px;"> ${parseInt(
-              arpc,
-            )?.toLocaleString()}</td>
+            <td style="padding:2px 4px;"> ${(arpc / 100000)
+              ?.toFixed(2)
+              ?.toLocaleString()}L</td>
             <tr>
             <td style="padding:2px 4px;">Fill Rate:</td>
             <td style="padding:2px 4px;">${parseFloat(fillRate * 100).toFixed(
