@@ -14,7 +14,13 @@ import {
   setNewStoreDecisiontext,
   setNewStoreInputs,
 } from "../../redux/reducer/NewStore";
-import { comList, ourBrandList } from "../Data/Data";
+import {
+  comList,
+  ourBrandList,
+  ourBrandMatchList,
+  comMatchList,
+  DRIVE_TIME_RADIUS_MAP,
+} from "../Data/Data";
 import { useNavigate } from "react-router-dom";
 import { routes } from "../../routes";
 import ThirdEyeHeader from "../custom/ThirdEyeHeader";
@@ -26,12 +32,6 @@ import {
 } from "../Data/PolygonCentroid";
 import { setNewStoreMapImg } from "../../redux/reducer/MapImgStore";
 import NewStoreDecision from "../../Mainpages/NewStoreDecision";
-
-const DRIVE_TIME_RADIUS_MAP = {
-  15: 3000,
-  30: 5000,
-  45: 8000,
-};
 
 const storeTypes = [
   "Mall Store",
@@ -190,8 +190,6 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
     });
   };
 
-  console.log("categoryMarkers==>", categoryMarkers);
-  console.log("pdfMarkers==>", pdfMarkers);
   useEffect(() => {
     if (!newStore?.anchorLocation)
       navigator.geolocation.getCurrentPosition(
@@ -694,14 +692,56 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
 
     const keywordResults = await Promise.all(keywords.map(fetchByKeyword));
     const flatMarkers = keywordResults.flat();
+
+    // Step 1 — deduplicate by title + position key.
     const seen = new Set();
-    const uniqueMarkers = flatMarkers.filter((marker) => {
+    const deduped = flatMarkers.filter((marker) => {
       const position = marker.getPosition();
       const key = `${marker.title}_${position?.lat?.()}_${position?.lng?.()}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+
+    // Step 2 — for competitor and ourBrand, strictly keep only places whose
+    // title contains at least one keyword from the respective list.
+    // This removes loosely related results that Google returns but that don't
+    // actually match any of our brand names.
+    // Use the match lists (core brand names) for title filtering — NOT the full
+    // search phrases. Google place names are "Tanishq", not "Tanishq Jewelery".
+    const filterListByCategory = {
+      competitor: comMatchList,
+      ourBrand: ourBrandMatchList,
+    };
+    const strictList = filterListByCategory[category];
+    const normalizeForMatch = (value) =>
+      (value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const buildKeywordVariants = (kw) => {
+      const normalized = normalizeForMatch(kw);
+      const trimmedGeneric = normalized
+        .replace(
+          /\b(jewellers?|watches?|eyewear|sunglases|sunglasses|sarees?)\b/g,
+          "",
+        )
+        .replace(/\s+/g, " ")
+        .trim();
+      return [normalized, trimmedGeneric].filter(Boolean);
+    };
+
+    const uniqueMarkers = strictList
+      ? deduped.filter((marker) => {
+          const normalizedTitle = normalizeForMatch(marker.title);
+          return strictList.some((kw) => {
+            const variants = buildKeywordVariants(kw);
+            return variants.some((v) => normalizedTitle.includes(v));
+          });
+        })
+      : deduped;
 
     setPdfMarkers((prev) => ({
       ...prev,

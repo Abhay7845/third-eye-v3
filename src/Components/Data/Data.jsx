@@ -6,6 +6,12 @@ import { MdManageHistory } from "react-icons/md";
 import { SiGoogleanalytics } from "react-icons/si";
 export const GOOGLE_MAP_LIBRARIES = ["places", "geometry", "drawing"];
 
+export const DRIVE_TIME_RADIUS_MAP = {
+  15: 3000,
+  30: 5000,
+  45: 8000,
+};
+
 export const MapContent = {
   disableDefaultUI: true,
   mapTypeControl: false,
@@ -63,15 +69,34 @@ export const colorPairs = [
 ];
 
 export const comList = [
-  "Kalyan",
-  "Malabar",
-  "Joyalukkas",
-  "PC Jeweller",
-  "Reliance Jewels",
+  "Kalyan Jewellers",
+  "Malabar Jewellers",
+  "Joyalukkas Jewellers",
+  "PC Jewellers",
+  "Reliance Jewellers",
   "Bhima Jewellers",
   "Bluestone",
+  "Lalitha Jewellers",
+  "Lalita Jewellers",
+  "Krishniah Chetty Jewellers",
+  "Senco Jewellers",
+  "Indriya Jewellers",
+  "Melorra Jewellers",
+  "Giva Jewellers",
+  "GRT Jewellers",
+  "Agrawal Jewellers",
+  "Ranka Jewellers",
+  "PNG Jewellers",
+  "TBZ Jewellers",
+  "Hazoorilal Jewellers",
+  "Khanna Jewellers",
+  "PC Chandra Jewellers",
+  "MP Jewellers",
+  "DP Abhushan Jewellers",
+  "Anopchand Tilokchand Jewellers",
 ];
 
+// Used for Google nearbySearch keyword — full descriptive phrases get better results.
 export const ourBrandList = [
   "Caratlane Jewelery",
   "Tanishq Jewelery",
@@ -86,6 +111,50 @@ export const ourBrandList = [
   "Fastrack eyewear",
   "Helios watches",
   "Taneira Sarees",
+];
+
+// Core brand names used to filter returned place titles.
+// Separate from ourBrandList so Google search phrases don't break title matching.
+export const ourBrandMatchList = [
+  "Caratlane",
+  "Tanishq",
+  "Zoya",
+  "Mia",
+  "Titan Eye",
+  "Titan World",
+  "World of Titan",
+  "Fastrack",
+  "Helios",
+  "Taneira",
+];
+
+// Core competitor names used to filter returned place titles.
+export const comMatchList = [
+  "Kalyan Jewel",
+  "Malabar Jewel",
+  "Joyalukkas Jewel",
+  "PC Jewel",
+  "Reliance Jewel",
+  "Bhima Jewel",
+  "Bluestone Jewel",
+  "Lalitha Jewel",
+  "Lalita Jewel",
+  "Krishniah Chetty Jewel",
+  "Senco Jewel",
+  "Indriya Jewel",
+  "Melorra Jewel",
+  "Giva Jewel",
+  "GRT Jewel",
+  "Agrawal Jewel",
+  "Ranka Jewel",
+  "PNG Jewel",
+  "TBZ Jewel",
+  "Hazoorilal Jewel",
+  "Khanna Jewel",
+  "PC Chandra Jewel",
+  "MP Jewel",
+  "DP Abhushan Jewel",
+  "Anopchand Tilokchand Jewel",
 ];
 
 export const channel_list = [

@@ -50,6 +50,8 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   // -----------------POPULATION CALUCATION SATES
   const [priPincodePopulation, setPriPincodePopulation] = useState([]);
   const [secPincodePopulation, setSecPincodePopulation] = useState([]);
+  const [pdfDecesion, setPdfDecesion] = useState([]);
+
   const [estimateRevenue, setEstimateRevenue] = useState(0);
   // REF DEFINE
   const screenshotRef = useRef();
@@ -63,7 +65,6 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     category,
     primarySec,
   } = inputsPayload;
-
   const estiCustBase =
     Number(revenueData?.firstYearEnrolls || 0) +
     Number(revenueData?.canniCust || 0) +
@@ -398,6 +399,39 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel, primarySec?.secondary]);
 
+  const GetPdfDecision = async (t_pin) => {
+    try {
+      const payload = {
+        pincode: t_pin?.toString() || "",
+      };
+      const response = await axiosInstance.post(
+        "api/openai/decision_reasoner/v2",
+        payload,
+      );
+
+      if (response?.status === 200) {
+        const formattedData = Object.entries(
+          response?.data?.assessment || {},
+        ).map(([section, items]) => ({
+          title: section
+            .replace(/([A-Z])/g, " $1")
+            .replace(/^./, (str) => str.toUpperCase()),
+          points: items,
+        }));
+        setPdfDecesion(formattedData);
+      }
+    } catch (error) {
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    if (inputsPayload?.targetPinCode) {
+      GetPdfDecision(inputsPayload?.targetPinCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputsPayload?.targetPinCode]);
+
   return (
     <React.Fragment>
       {loading && <Loader />}
@@ -512,6 +546,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
               userLog={userLog}
               pdfFileName={pdfFileName}
               cityTier={revenueData?.cityTier}
+              pdfDecesion={pdfDecesion}
             />
           </div>
         </Modal>

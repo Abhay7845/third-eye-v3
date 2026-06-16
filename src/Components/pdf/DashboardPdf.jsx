@@ -10,9 +10,9 @@ import NewStoreProBarGraph from "../common/graph/NewStoreProBarGraph";
 import PdfLoader from "./PdfLoader";
 import PDFTable from "./PDFTable";
 import { GetChannelLogo } from "../Data/ChannelLogo";
-import { comList, ourBrandList } from "../Data/Data";
 import { axiosInstance } from "../../HostManger/API/Authorization";
 import Loader from "../custom/Loader";
+import { DRIVE_TIME_RADIUS_MAP } from "../Data/Data";
 
 const DashboardPdf = ({
   inputsPayload,
@@ -26,6 +26,7 @@ const DashboardPdf = ({
   secPincodePopulation,
   pdfFileName,
   cityTier,
+  pdfDecesion,
 }) => {
   const newStoreRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -42,6 +43,19 @@ const DashboardPdf = ({
 
   const logo = GetChannelLogo(userLog?.channel?.toLowerCase());
 
+  function getKeyAndValue(value) {
+    const key = Object.keys(DRIVE_TIME_RADIUS_MAP).find(
+      (key) => DRIVE_TIME_RADIUS_MAP[key] === value,
+    );
+    return key
+      ? {
+          key: Number(key),
+          value: DRIVE_TIME_RADIUS_MAP[key],
+        }
+      : null;
+  }
+
+  const drive_time = getKeyAndValue(inputsPayload?.radius);
   // -----------------------------------USER INPUTS DATA --------------------------------------------
   const {
     targetPinCode,
@@ -53,18 +67,10 @@ const DashboardPdf = ({
     pdfMarkers,
   } = inputsPayload;
   const currentDate = moment(new Date()).format("DD-MM-YYYY");
-  console.log("pdfMarkers==>", pdfMarkers);
   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR BRAND JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
-  const brandList = pdfMarkers?.ourBrand?.filter((marker) => {
-    const title = marker?.title?.toLowerCase?.() || "";
-    return ourBrandList.some((brand) => title.includes(brand.toLowerCase()));
-  });
-
+  const brandList = pdfMarkers?.ourBrand || [];
   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR COMPETITOR JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
-  const competitorsList = pdfMarkers?.competitor?.filter((marker) => {
-    const title = marker?.title?.toLowerCase?.() || "";
-    return comList.some((brand) => title.includes(brand.toLowerCase()));
-  });
+  const competitorsList = pdfMarkers?.competitor || [];
 
   function CategoryFormat(str) {
     return str
@@ -148,6 +154,12 @@ const DashboardPdf = ({
     anchorLocation,
     str_distance?.competitor,
   );
+
+  function getFirstSixData(list) {
+    return list.slice(0, 6);
+  }
+  const our_brand_list = getFirstSixData(nearestOurBrands);
+  const competitors_list = getFirstSixData(nearestCompetitors);
 
   // -------------------------------UPLOAD PDF FUNCTIONALITY ---------------------------
 
@@ -583,8 +595,8 @@ const DashboardPdf = ({
                 gap: "5px",
                 textAlign: "left",
               }}>
-              {nearestOurBrands.length > 0 ? (
-                nearestOurBrands.map((item, i) => (
+              {our_brand_list?.length > 0 ? (
+                our_brand_list?.map((item, i) => (
                   <React.Fragment key={i}>
                     <strong>{item?.title}:</strong>
                     <span>{item.distance} KM</span>
@@ -609,10 +621,10 @@ const DashboardPdf = ({
                 gap: "5px",
                 textAlign: "left",
               }}>
-              {nearestCompetitors.length > 0 ? (
-                nearestCompetitors.map((item, i) => (
+              {competitors_list?.length > 0 ? (
+                competitors_list?.map((item, i) => (
                   <React.Fragment key={i}>
-                    <strong>{item?.title}:</strong>
+                    <strong>{item?.title} Jewellers:</strong>
                     <span>{item.distance} KM</span>
                   </React.Fragment>
                 ))
@@ -624,30 +636,16 @@ const DashboardPdf = ({
           <br />
           <div className='retail_box'>
             <div className='retail_heading'>
-              Jew Market Store Count Within 45-Minute Drive Time: 20
+              Jewellery Market Store Count:
+              <strong style={{ margin: "0 5px" }}>
+                {" "}
+                {pdfMarkers?.jewellery?.length}{" "}
+              </strong>{" "}
+              Within Drive Time:
+              <strong style={{ margin: "0 5px" }}> {drive_time?.key}Min</strong>
             </div>
             <div style={{ margin: "6px" }}>
               <div className='retail_subheading'>Retail Maturity Summary:</div>
-              <div className='retail_section'>
-                <h6 style={{ marginBottom: "0px", marginTop: "5px" }}>
-                  Jewelry Retail Presence
-                </h6>
-                <ul>
-                  <li>
-                    Bengaluru hosted the{" "}
-                    <strong>Retail Jeweller South Forum 2025</strong>,
-                    indicating strong industry engagement
-                  </li>
-                  <li>
-                    The city is home to <strong>numerous jewelry stores</strong>
-                    , including major brands like{" "}
-                    <strong>Tanishq, Malabar Gold, Kalyan Jewellers</strong>,
-                    and <strong>Joyalukkas</strong>, especially concentrated in
-                    areas like <strong>Commercial Street, MG Road</strong>, and{" "}
-                    <strong>Jayanagar</strong>.
-                  </li>
-                </ul>
-              </div>
               <div className='retail_section'>
                 <h6 style={{ marginBottom: "0px", marginTop: "5px" }}>
                   Major Retail Brands Present
@@ -666,6 +664,20 @@ const DashboardPdf = ({
                     MAC, Coach.
                   </li>
                 </ul>
+              </div>
+              <div className='retail_section'>
+                {pdfDecesion?.map((section, index) => (
+                  <div key={index}>
+                    <h6 style={{ marginBottom: "0px", marginTop: "5px" }}>
+                      {section.title}
+                    </h6>
+                    <ul>
+                      {section.points?.map((point, idx) => (
+                        <li key={idx}>{point}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
