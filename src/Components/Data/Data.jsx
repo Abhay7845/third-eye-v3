@@ -73,19 +73,19 @@ export const comList = [
 ];
 
 export const ourBrandList = [
-  "Caratlane",
-  "Tanishq",
-  "Zoya",
-  "Mia",
+  "Caratlane Jewelery",
+  "Tanishq Jewelery",
+  "Zoya Jewelery",
+  "Mia Jewelery",
   "Titan Eye+",
   "Titan Eyeplus",
-  "Titan World",
-  "Titan World",
-  "World of titan",
-  "Fastrack",
-  "Helios Watch",
-  "Helios Watch",
-  "Taneira sarees",
+  "Titan World watches",
+  "World of titan watches",
+  "Fastrack watches",
+  "Fastrack sunglases",
+  "Fastrack eyewear",
+  "Helios watches",
+  "Taneira Sarees",
 ];
 
 export const channel_list = [

@@ -11,7 +11,6 @@ const styles = {
 const PDFTable = ({ data, userLog }) => {
   const header = [
     "Pincode",
-    "Population",
     "Encircle Base (CAGR)",
     `${userLog?.channel} Base (CAGR)`,
     "Penetration",
@@ -51,9 +50,6 @@ const PDFTable = ({ data, userLog }) => {
           {data?.map((item, i) => (
             <Tr key={i}>
               <Td style={styles}>{item?.pincode}</Td>
-              <Td style={styles}>
-                {item?.population?.toLocaleString("en-IN")}
-              </Td>
               <Td style={styles}>
                 {item?.encircleBase?.toLocaleString("en-IN")} (
                 {item?.encircleBaseCagr}%)

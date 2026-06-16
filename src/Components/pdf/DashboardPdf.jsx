@@ -53,15 +53,15 @@ const DashboardPdf = ({
     pdfMarkers,
   } = inputsPayload;
   const currentDate = moment(new Date()).format("DD-MM-YYYY");
-
+  console.log("pdfMarkers==>", pdfMarkers);
   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR BRAND JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
-  const brandList = pdfMarkers.jewellery.filter((marker) => {
+  const brandList = pdfMarkers?.ourBrand?.filter((marker) => {
     const title = marker?.title?.toLowerCase?.() || "";
     return ourBrandList.some((brand) => title.includes(brand.toLowerCase()));
   });
 
   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR COMPETITOR JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
-  const competitorsList = pdfMarkers.jewellery.filter((marker) => {
+  const competitorsList = pdfMarkers?.competitor?.filter((marker) => {
     const title = marker?.title?.toLowerCase?.() || "";
     return comList.some((brand) => title.includes(brand.toLowerCase()));
   });
