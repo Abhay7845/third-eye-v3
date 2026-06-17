@@ -222,6 +222,7 @@ const DashboardPdf = ({
     const CAPTURE_SCALE = 2;
     const PDF_TABLE_FONT_BUMP_PX = 1;
     const PDF_MAP_HEIGHT_PX = 320;
+    const PDF_CONCLUSION_FONT_BUMP_PX = 2;
 
     for (let i = 0; i < PDF_SECTIONS.length; i++) {
       const element = document.querySelector(`.${PDF_SECTIONS[i]}`);
@@ -260,6 +261,16 @@ const DashboardPdf = ({
       if (pdfMapImage) {
         pdfMapImage.style.height = `${PDF_MAP_HEIGHT_PX}px`;
       }
+
+      // Increase conclusion section font only for PDF capture (preview remains unchanged).
+      const pdfConclusionNodes = captureNode.querySelectorAll(
+        ".pdf-conclusion-section, .pdf-conclusion-section *",
+      );
+      pdfConclusionNodes.forEach((node) => {
+        const computedSize = parseFloat(window.getComputedStyle(node).fontSize);
+        if (Number.isNaN(computedSize)) return;
+        node.style.fontSize = `${computedSize + PDF_CONCLUSION_FONT_BUMP_PX}px`;
+      });
 
       let canvas;
       try {
@@ -931,7 +942,9 @@ const DashboardPdf = ({
             paddingTop: "20px",
             border: "1px solid #000",
           }}>
-          <div className='user_input_box' style={{ padding: "5px" }}>
+          <div
+            className='user_input_box pdf-conclusion-section'
+            style={{ padding: "5px" }}>
             <h5
               style={{
                 textAlign: "start",

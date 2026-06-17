@@ -15,7 +15,7 @@ import AnimatedNumber from "../accordion/AnimatedNumber";
 import NormalRandmaize from "../accordion/NormalRandmaize";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
-import { formatAssessmentData, pdf_data } from "../Data/Data";
+import { formatAssessmentData } from "../Data/Data";
 
 export const FilePopStyle = {
   position: "absolute",
@@ -63,9 +63,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   // -----------------POPULATION CALUCATION SATES
   const [priPincodePopulation, setPriPincodePopulation] = useState([]);
   const [secPincodePopulation, setSecPincodePopulation] = useState([]);
-  const pdf_list = formatAssessmentData(pdf_data?.assessment);
-  const [pdfDecesion, setPdfDecesion] = useState(pdf_list);
-  console.log("pdfDecesion==>", pdfDecesion);
+  const [pdfDecesion, setPdfDecesion] = useState([]);
   const [estimateRevenue, setEstimateRevenue] = useState(0);
   // REF DEFINE
   const screenshotRef = useRef();
@@ -448,12 +446,12 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     }
   };
 
-  // useEffect(() => {
-  //   if (inputsPayload?.targetPinCode) {
-  //     GetPdfDecision(inputsPayload?.targetPinCode);
-  //   }
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [inputsPayload?.targetPinCode]);
+  useEffect(() => {
+    if (inputsPayload?.targetPinCode) {
+      GetPdfDecision(inputsPayload?.targetPinCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputsPayload?.targetPinCode]);
 
   return (
     <React.Fragment>
