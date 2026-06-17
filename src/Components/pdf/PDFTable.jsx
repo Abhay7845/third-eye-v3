@@ -35,7 +35,7 @@ const PDFTable = ({ data, userLog }) => {
                 style={{
                   background: "#ccc",
                   fontWeight: "bold",
-                  fontSize: "8px",
+                  fontSize: "10px",
                   padding: "4px 6px",
                   lineHeight: "1.2",
                   border: "1px solid #ddd",
@@ -48,7 +48,7 @@ const PDFTable = ({ data, userLog }) => {
         </Thead>
         <Tbody>
           {data?.map((item, i) => (
-            <Tr key={i}>
+            <Tr key={i} style={{ fontSize: "14px" }}>
               <Td style={styles}>{item?.pincode}</Td>
               <Td style={styles}>
                 {item?.encircleBase?.toLocaleString("en-IN")} (
