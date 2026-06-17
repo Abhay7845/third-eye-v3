@@ -407,7 +407,7 @@ const DashboardPdf = ({
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "end",
-                fontSize: "12px",
+                fontSize: "15px",
                 gap: "4px",
                 fontWeight: "bold",
               }}>
@@ -456,7 +456,7 @@ const DashboardPdf = ({
               <div className='catchment_col'>
                 <div
                   style={{
-                    fontSize: "12px",
+                    fontSize: "15px",
                     fontWeight: "600",
                     marginBottom: "5px",
                     paddingBottom: "3px",
@@ -467,7 +467,7 @@ const DashboardPdf = ({
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
-                    fontSize: "10px",
+                    fontSize: "13px",
                   }}>
                   <tbody>
                     <tr>
@@ -478,7 +478,7 @@ const DashboardPdf = ({
                         {Number(
                           catchmentData?.t_catch?.targetEB,
                         ).toLocaleString()}{" "}
-                        <span style={{ color: "#666", fontSize: "11px" }}>
+                        <span style={{ color: "#666", fontSize: "14px" }}>
                           (CAGR:{" "}
                           {parseFloat(
                             catchmentData?.t_catch?.targetEB_Cagr * 100,
@@ -496,7 +496,7 @@ const DashboardPdf = ({
                         {Number(
                           catchmentData?.t_catch?.targetCB,
                         ).toLocaleString()}{" "}
-                        <span style={{ color: "#666", fontSize: "11px" }}>
+                        <span style={{ color: "#666", fontSize: "14px" }}>
                           (CAGR:{" "}
                           {parseFloat(
                             catchmentData?.t_catch?.targetCB_Cagr * 100,
@@ -520,7 +520,7 @@ const DashboardPdf = ({
               <div className='catchment_col'>
                 <div
                   style={{
-                    fontSize: "12px",
+                    fontSize: "15px",
                     fontWeight: "600",
                     marginBottom: "5px",
                     paddingBottom: "3px",
@@ -532,7 +532,7 @@ const DashboardPdf = ({
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
-                    fontSize: "10px",
+                    fontSize: "13px",
                   }}>
                   <tbody>
                     <tr>
@@ -543,7 +543,7 @@ const DashboardPdf = ({
                         {Number(
                           catchmentData?.s_catch?.targetEB,
                         ).toLocaleString()}{" "}
-                        <span style={{ color: "#666", fontSize: "11px" }}>
+                        <span style={{ color: "#666", fontSize: "14px" }}>
                           (CAGR:{" "}
                           {parseFloat(
                             catchmentData?.s_catch?.targetEB_Cagr * 100,
@@ -561,7 +561,7 @@ const DashboardPdf = ({
                         {Number(
                           catchmentData?.s_catch?.targetCB,
                         ).toLocaleString()}{" "}
-                        <span style={{ color: "#666", fontSize: "11px" }}>
+                        <span style={{ color: "#666", fontSize: "14px" }}>
                           (CAGR:{" "}
                           {parseFloat(
                             catchmentData?.s_catch?.targetCB_Cagr * 100,
@@ -714,7 +714,7 @@ const DashboardPdf = ({
             padding: "10px",
             paddingBottom: "30px",
             border: "1px solid #000",
-            fontSize: "10px",
+            fontSize: "13px",
           }}>
           <div className='retail_section' style={{ lineHeight: "1.6" }}>
             {pdfDecesion?.map((section, index) => (
@@ -740,7 +740,7 @@ const DashboardPdf = ({
           <Table
             className='custom_table'
             style={{
-              fontSize: "12px",
+              fontSize: "15px",
               borderCollapse: "collapse",
               width: "100%",
             }}>
@@ -750,7 +750,7 @@ const DashboardPdf = ({
                   colSpan={2}
                   style={{
                     background: "#ccc",
-                    fontSize: "12px",
+                    fontSize: "15px",
                     padding: "4px 6px",
                     textAlign: "center",
                   }}>
@@ -765,7 +765,7 @@ const DashboardPdf = ({
                     style={{
                       textAlign: "start",
                       padding: "4px 6px",
-                      fontSize: "10px",
+                      fontSize: "13px",
                     }}>
                     {item.heading}
                   </Td>
@@ -773,7 +773,7 @@ const DashboardPdf = ({
                     style={{
                       padding: "4px 6px",
                       textAlign: "center",
-                      fontSize: "10px",
+                      fontSize: "13px",
                     }}>
                     {i >= projectionData.length - 2
                       ? `₹${Number(item.value).toFixed(2)}`
@@ -790,7 +790,7 @@ const DashboardPdf = ({
             <Table
               className='custom_table'
               style={{
-                fontSize: "10px",
+                fontSize: "13px",
                 borderCollapse: "collapse",
               }}>
               <Thead>
@@ -798,7 +798,7 @@ const DashboardPdf = ({
                   <Th
                     style={{
                       background: "#ccc",
-                      fontSize: "12px",
+                      fontSize: "15px",
                       padding: "4px 6px",
                       textAlign: "center",
                     }}>
@@ -807,7 +807,7 @@ const DashboardPdf = ({
                   <Th
                     style={{
                       background: "#ccc",
-                      fontSize: "12px",
+                      fontSize: "15px",
                       padding: "4px 6px",
                       textAlign: "center",
                     }}>
@@ -816,7 +816,7 @@ const DashboardPdf = ({
                   <Th
                     style={{
                       background: "#ccc",
-                      fontSize: "12px",
+                      fontSize: "15px",
                       padding: "4px 6px",
                       textAlign: "center",
                     }}>
@@ -862,14 +862,14 @@ const DashboardPdf = ({
                 textAlign: "start",
                 margin: "5px",
                 marginBottom: "7px",
-                fontSize: "11px",
+                fontSize: "14px",
               }}>
               Conclusion: {dicisionData?.recomendation}.
             </h5>
             <div
               style={{
                 textAlign: "justify",
-                fontSize: "10px",
+                fontSize: "13px",
                 margin: "5px",
               }}>
               <span>{dicisionData?.bottom_line}</span>

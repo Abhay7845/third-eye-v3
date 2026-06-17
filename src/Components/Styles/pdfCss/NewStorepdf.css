@@ -29,7 +29,7 @@
 
 .user_input_grid p {
   margin: 3px 0;
-  font-size: 11px;
+  font-size: 14px;
 } */
 
 
@@ -41,7 +41,7 @@
 .user_input_grid table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .user_input_grid td {
@@ -100,7 +100,7 @@
   font-weight: bold;
   padding: 10px;
   border-bottom: 1px solid #000;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .retail_subheading {
@@ -120,7 +120,7 @@
 
 .retail_section h6 {
   margin: 6px 0;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: bold;
 }
 
@@ -131,6 +131,6 @@
 
 .retail_section li {
   margin: 6px 0;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.5;
 }
