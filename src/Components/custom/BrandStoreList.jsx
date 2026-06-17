@@ -12,7 +12,6 @@ const BrandStoreList = ({ stores, brandName, color }) => {
           textAlign: "center",
           fontSize: "12px",
           borderBottom: "1px solid #ccc",
-          border: "1px solid yellow",
         }}>
         {brandName}
       </div>
