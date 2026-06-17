@@ -748,6 +748,7 @@ const DashboardPdf = ({
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr 1fr 1fr",
                 padding: "8px",
+                borderTop: "1px solid black",
                 fontSize: "12px",
                 gap: "5px",
                 textAlign: "left",
@@ -823,7 +824,9 @@ const DashboardPdf = ({
         </div>
         {/* ------------------------3RD PAGE: Footfall / Decision -------------------- */}
         <br />
-        <div className='third_page_separation' style={{ padding: "10px" }}>
+        <div
+          className='third_page_separation'
+          style={{ padding: "10px", border: "1px solid #000" }}>
           <Table
             className='custom_table'
             style={{
