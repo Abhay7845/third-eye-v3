@@ -182,54 +182,133 @@ const DashboardPdf = ({
     }
   };
 
+  const PDF_SECTIONS = [
+    "first_page_separation",
+    "second_page_separation",
+    "third_page_separation",
+    "forth_page_separation",
+    "fifth_page_separation",
+  ];
+
+  const renderSectionsToPdf = async (pdf) => {
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const x = pdfWidth * 0.04;
+    const y = pdfHeight * 0.04;
+    const imgWidth = pdfWidth * 0.92;
+    const usableHeight = pdfHeight * 0.88;
+    const pageBottomY = y + usableHeight;
+
+    const drawPageBorder = () => {
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.3);
+      pdf.rect(x, y, imgWidth, usableHeight);
+    };
+
+    let isFirstPage = true;
+    let cursorY = y;
+
+    const ensureNewPage = () => {
+      if (!isFirstPage) {
+        drawPageBorder();
+        pdf.addPage();
+      }
+      isFirstPage = false;
+      cursorY = y;
+    };
+
+    for (let i = 0; i < PDF_SECTIONS.length; i++) {
+      const element = document.querySelector(`.${PDF_SECTIONS[i]}`);
+      if (!element) continue;
+
+      const canvas = await html2canvas(element, {
+        useCORS: true,
+        scale: 2,
+      });
+
+      const sourceWidth = canvas.width;
+      const sourceHeight = canvas.height;
+      const fullImgHeight = (sourceHeight * imgWidth) / sourceWidth;
+
+      if (fullImgHeight <= usableHeight) {
+        const canFitInCurrentPage =
+          !isFirstPage && cursorY + fullImgHeight <= pageBottomY;
+        if (isFirstPage || !canFitInCurrentPage) {
+          ensureNewPage();
+        }
+        const imgData = canvas.toDataURL("image/jpeg", 0.85);
+        pdf.addImage(
+          imgData,
+          "JPEG",
+          x,
+          cursorY,
+          imgWidth,
+          fullImgHeight,
+          undefined,
+          "FAST",
+        );
+        cursorY += fullImgHeight;
+        continue;
+      }
+
+      const maxSliceHeightPxFloat = (usableHeight * sourceWidth) / imgWidth;
+      const pageSliceHeightPx = Math.max(1, Math.round(maxSliceHeightPxFloat));
+      let offsetY = 0;
+
+      while (offsetY < sourceHeight) {
+        const sliceHeight = Math.min(pageSliceHeightPx, sourceHeight - offsetY);
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = sourceWidth;
+        sliceCanvas.height = sliceHeight;
+
+        const ctx = sliceCanvas.getContext("2d");
+        if (!ctx) break;
+
+        ctx.drawImage(
+          canvas,
+          0,
+          offsetY,
+          sourceWidth,
+          sliceHeight,
+          0,
+          0,
+          sourceWidth,
+          sliceHeight,
+        );
+
+        const sliceImgHeight = (sliceHeight * imgWidth) / sourceWidth;
+        const canFitSliceInCurrentPage =
+          !isFirstPage && cursorY + sliceImgHeight <= pageBottomY;
+        if (isFirstPage || !canFitSliceInCurrentPage) {
+          ensureNewPage();
+        }
+        const sliceImg = sliceCanvas.toDataURL("image/jpeg", 0.85);
+        pdf.addImage(
+          sliceImg,
+          "JPEG",
+          x,
+          cursorY,
+          imgWidth,
+          sliceImgHeight,
+          undefined,
+          "FAST",
+        );
+        cursorY += sliceImgHeight;
+        offsetY += sliceHeight;
+      }
+    }
+
+    if (!isFirstPage) {
+      drawPageBorder();
+    }
+  };
+
   // ------------------------------------- PDF GENERATION -------------------------------
 
   const handleSavePdfHistory = async (pdfFileName) => {
     try {
       const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
-      // Sections to capture in order
-      const sections = [
-        "first_page_separation",
-        "second_page_separation",
-        "third_page_separation",
-      ];
-
-      for (let i = 0; i < sections.length; i++) {
-        const element = document.querySelector(`.${sections[i]}`);
-        if (!element) continue;
-        // ✅ Balanced quality: scale ~2 for sharpness
-        const canvas = await html2canvas(element, {
-          useCORS: true,
-          scale: 2, // higher scale = clearer text/images
-        });
-
-        //  JPEG at 85% quality (good balance for 4–6 MB)
-        const imgData = canvas.toDataURL("image/jpeg", 0.85);
-
-        const imgProps = pdf.getImageProperties(imgData);
-        const imgWidth = pdfWidth * 0.92;
-        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-
-        const x = pdfWidth * 0.04;
-        const y = pdfHeight * 0.04;
-
-        if (i > 0) pdf.addPage();
-
-        // Add JPEG with FAST compression
-        pdf.addImage(
-          imgData,
-          "JPEG",
-          x,
-          y,
-          imgWidth,
-          imgHeight,
-          undefined,
-          "FAST",
-        );
-      }
+      await renderSectionsToPdf(pdf);
 
       //  Create Blob instead of direct save
       const pdfBlob = pdf.output("blob");
@@ -259,49 +338,7 @@ const DashboardPdf = ({
     setLoading(true);
     try {
       const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
-      // Sections to capture in order
-      const sections = [
-        "first_page_separation",
-        "second_page_separation",
-        "third_page_separation",
-      ];
-
-      for (let i = 0; i < sections.length; i++) {
-        const element = document.querySelector(`.${sections[i]}`);
-        if (!element) continue;
-        // ✅ Balanced quality: scale ~2 for sharpness
-        const canvas = await html2canvas(element, {
-          useCORS: true,
-          scale: 2, // higher scale = clearer text/images
-        });
-
-        // ✅ JPEG at 85% quality (good balance for 4–6 MB)
-        const imgData = canvas.toDataURL("image/jpeg", 0.85);
-
-        const imgProps = pdf.getImageProperties(imgData);
-        const imgWidth = pdfWidth * 0.92;
-        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-
-        const x = pdfWidth * 0.04;
-        const y = pdfHeight * 0.04;
-
-        if (i > 0) pdf.addPage();
-
-        // ✅ Add JPEG with FAST compression
-        pdf.addImage(
-          imgData,
-          "JPEG",
-          x,
-          y,
-          imgWidth,
-          imgHeight,
-          undefined,
-          "FAST",
-        );
-      }
+      await renderSectionsToPdf(pdf);
 
       // ✅ Create Blob instead of direct save
       const pdfBlob = pdf.output("blob");
@@ -665,28 +702,40 @@ const DashboardPdf = ({
                   </li>
                 </ul>
               </div>
-              <div className='retail_section'>
-                {pdfDecesion?.map((section, index) => (
-                  <div key={index}>
-                    <h6 style={{ marginBottom: "0px", marginTop: "5px" }}>
-                      {section.title}
-                    </h6>
-                    <ul>
-                      {section.points?.map((point, idx) => (
-                        <li key={idx}>{point}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
 
-        {/* ------------------------3RD PAGE -------------------- */}
+        {/* ------------------------3RD PAGE: Footfall / Decision -------------------- */}
         <br />
         <div
           className='third_page_separation'
+          style={{
+            padding: "10px",
+            paddingBottom: "30px",
+            border: "1px solid #000",
+            fontSize: "10px",
+          }}>
+          <div className='retail_section' style={{ lineHeight: "1.6" }}>
+            {pdfDecesion?.map((section, index) => (
+              <div key={index}>
+                <h6 style={{ marginBottom: "0px", marginTop: "5px" }}>
+                  {section.title}
+                </h6>
+                <ul>
+                  {section.points?.map((point, idx) => (
+                    <li key={idx}>{point}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ------------------------4TH PAGE: Projection + Cannibalization -------------------- */}
+        <br />
+        <div
+          className='forth_page_separation'
           style={{ padding: "10px", border: "1px solid #000" }}>
           <Table
             className='custom_table'
@@ -796,6 +845,17 @@ const DashboardPdf = ({
               height={200}
             />
           </div>
+        </div>
+
+        {/* ------------------------5TH PAGE: Conclusion -------------------- */}
+        <br />
+        <div
+          className='fifth_page_separation'
+          style={{
+            padding: "10px",
+            paddingTop: "20px",
+            border: "1px solid #000",
+          }}>
           <div className='user_input_box' style={{ padding: "5px" }}>
             <h5
               style={{

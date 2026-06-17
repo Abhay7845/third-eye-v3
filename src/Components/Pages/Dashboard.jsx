@@ -725,7 +725,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
       const normalized = normalizeForMatch(kw);
       const trimmedGeneric = normalized
         .replace(
-          /\b(jewellers?|watches?|eyewear|sunglases|sunglasses|sarees?)\b/g,
+          /\b(jewels?|jewellers?|watches?|eyewear|sunglases|sunglasses|sarees?)\b/g,
           "",
         )
         .replace(/\s+/g, " ")

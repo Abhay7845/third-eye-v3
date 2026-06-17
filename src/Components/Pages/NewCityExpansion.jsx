@@ -15,19 +15,19 @@ import {
   setNewCityDecisiontext,
   setNewCityInputs,
 } from "../../redux/reducer/NewCity";
-import { comList, ourBrandList } from "../Data/Data";
+import {
+  comList,
+  ourBrandList,
+  ourBrandMatchList,
+  comMatchList,
+  DRIVE_TIME_RADIUS_MAP,
+} from "../Data/Data";
 import { routes } from "../../routes";
 import { useNavigate } from "react-router-dom";
 import Tippy from "@tippyjs/react";
 import { setNewStoreMapImg } from "../../redux/reducer/MapImgStore";
 import NewCityDecision from "../../Mainpages/NewCityDecision";
 import { geocodeAddress } from "../Data/PolygonCentroid";
-
-const DRIVE_TIME_RADIUS_MAP = {
-  15: 5000,
-  30: 10000,
-  45: 15000,
-};
 
 const NewCityExpansion = ({ toggle_open, toggle }) => {
   const dispatch = useDispatch();
@@ -67,6 +67,8 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
   const [pdfMarkers, setPdfMarkers] = useState({
     jewellery: ciyInputs?.pdfMarkers?.jewellery || [],
     retail: ciyInputs?.pdfMarkers?.retail || [],
+    competitor: ciyInputs?.pdfMarkers?.competitor || [],
+    ourBrand: ciyInputs?.pdfMarkers?.ourBrand || [],
   });
   const [categoryMarkers, setCategoryMarkers] = useState({
     jewellery: [],
@@ -100,7 +102,7 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
   const selectedDriveTimesRef = useRef(driveTime);
   const map_img = useRef(null);
   const radius = DRIVE_TIME_RADIUS_MAP[Math.max(...driveTime)] || 15000;
-
+  console.log("pdfMarkers==>", pdfMarkers);
   const inputsPayload = {
     targetPinCode: channelval,
     similerStoreVal: targetCity,
@@ -147,6 +149,8 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
     setPdfMarkers({
       jewellery: [],
       retail: [],
+      competitor: [],
+      ourBrand: [],
     });
   };
 
@@ -461,7 +465,7 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
   };
 
   // ========================================= FIND DEFAULT NEAR BY AREA ================
-  const DefaultAreaNearBy = (category, anchorLocation, radius) => {
+  const DefaultAreaNearBy = async (category, anchorLocation, radius) => {
     if (!googleMapInstance || !window.google?.maps) {
       return;
     }
@@ -469,78 +473,127 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
     const service = new window.google.maps.places.PlacesService(
       googleMapInstance,
     );
-    let allMarkers = [];
-    const fetchPage = (request) => {
-      service.nearbySearch(request, (results, status, nextPage) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-          results.forEach((place) => {
-            const name = place.name?.toLowerCase() || "";
-            const location = place.geometry.location;
 
-            const match =
-              (category === "jewellery" &&
-                /jewellers|jewellery|jewel/.test(name)) ||
-              (category === "retail" && /retailmass|retail/.test(name));
+    const keywordByCategory = {
+      jewellery: ["jewellery", "jewellers", "jewel"],
+      retail: ["retail", "retailmass"],
+      competitor: comList,
+      ourBrand: ourBrandList,
+    };
 
-            const distance =
-              window.google.maps.geometry.spherical.computeDistanceBetween(
-                anchorLocation,
-                location,
-              );
+    const keywords = keywordByCategory[category] || [category];
 
-            if (match && distance <= 15000) {
-              const marker = new window.google.maps.Marker({
-                position: location,
-                title: place.name,
-                icon: { url: "22" },
+    const fetchByKeyword = (keyword) =>
+      new Promise((resolve) => {
+        const markers = [];
+        const request = {
+          location: anchorLocation,
+          radius: radius,
+          keyword,
+        };
+
+        const fetchPage = (req) => {
+          service.nearbySearch(req, (results, status, nextPage) => {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+              results.forEach((place) => {
+                const location = place.geometry.location;
+                const distance =
+                  window.google.maps.geometry.spherical.computeDistanceBetween(
+                    anchorLocation,
+                    location,
+                  );
+                if (distance <= radius) {
+                  const marker = new window.google.maps.Marker({
+                    position: location,
+                    title: place.name,
+                    icon: { url: "22" },
+                  });
+                  marker.setMap(null);
+                  markers.push(marker);
+                }
               });
-              marker.setMap(null);
-              allMarkers.push(marker);
+              if (nextPage && nextPage.hasNextPage) {
+                nextPage.nextPage();
+              } else {
+                resolve(markers);
+              }
+            } else {
+              resolve(markers);
             }
           });
+        };
 
-          if (nextPage && nextPage.hasNextPage) {
-            nextPage.nextPage();
-          } else {
-            setPdfMarkers((prev) => ({
-              ...prev,
-              [category]: allMarkers,
-            }));
-            setLoading(false);
-            setDefaultLoad(true);
-          }
-        } else {
-          setLoading(false);
-        }
+        fetchPage(request);
       });
+
+    const keywordResults = await Promise.all(keywords.map(fetchByKeyword));
+    const flatMarkers = keywordResults.flat();
+
+    const seen = new Set();
+    const deduped = flatMarkers.filter((marker) => {
+      const position = marker.getPosition();
+      const key = `${marker.title}_${position?.lat?.()}_${position?.lng?.()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    const filterListByCategory = {
+      competitor: comMatchList,
+      ourBrand: ourBrandMatchList,
+    };
+    const strictList = filterListByCategory[category];
+
+    const normalizeForMatch = (value) =>
+      (value || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const buildKeywordVariants = (kw) => {
+      const normalized = normalizeForMatch(kw);
+      const trimmedGeneric = normalized
+        .replace(
+          /\b(jewels?|jewellers?|watches?|eyewear|sunglases|sunglasses|sarees?)\b/g,
+          "",
+        )
+        .replace(/\s+/g, " ")
+        .trim();
+      return [normalized, trimmedGeneric].filter(Boolean);
     };
 
-    const request = {
-      location: anchorLocation,
-      radius: radius,
-      keyword: category,
-    };
-    fetchPage(request);
+    const uniqueMarkers = strictList
+      ? deduped.filter((marker) => {
+          const normalizedTitle = normalizeForMatch(marker.title);
+          return strictList.some((kw) => {
+            const variants = buildKeywordVariants(kw);
+            return variants.some((v) => normalizedTitle.includes(v));
+          });
+        })
+      : deduped;
+
+    setPdfMarkers((prev) => ({
+      ...prev,
+      [category]: uniqueMarkers,
+    }));
+    setLoading(false);
+    setDefaultLoad(true);
   };
+
   useEffect(() => {
     if (defaultLoad) {
       DefaultAreaNearBy("jewellery", anchorLocation, radius);
       DefaultAreaNearBy("retail", anchorLocation, radius);
+      DefaultAreaNearBy("competitor", anchorLocation, radius);
+      DefaultAreaNearBy("ourBrand", anchorLocation, radius);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [radius, anchorLocation]);
 
-  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR COMPETITOR JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
-  const j_list = pdfMarkers?.jewellery;
-  const competitorsList = j_list?.filter((marker) => {
-    const title = marker?.title?.toLowerCase?.() || "";
-    return comList.some((brand) => title.includes(brand.toLowerCase()));
-  });
-
-  const brandList = j_list?.filter((marker) => {
-    const title = marker?.title?.toLowerCase?.() || "";
-    return ourBrandList.some((brand) => title.includes(brand.toLowerCase()));
-  });
+  // competitor and ourBrand are stored directly in pdfMarkers by DefaultAreaNearBy
+  const competitorsList = pdfMarkers?.competitor || [];
+  const brandList = pdfMarkers?.ourBrand || [];
 
   // ================================JEWELLERY CHECKLIST FUNCTIONALITY ===========================================
   const GetJewelleryMark = (checked, category) => {
@@ -597,7 +650,7 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
       }));
       setCategoryMarkers((prev) => ({
         ...prev,
-        competitor: competitorsList,
+        competitor: pdfMarkers?.competitor || [],
       }));
     } else {
       setCategoryMarkers((prev) => ({
@@ -620,7 +673,7 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
       }));
       setCategoryMarkers((prev) => ({
         ...prev,
-        ourBrand: brandList,
+        ourBrand: pdfMarkers?.ourBrand || [],
       }));
     } else {
       setCategoryMarkers((prev) => ({
@@ -730,9 +783,12 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
           setAnchorLocation(t_location);
         }
         if (!ciyInputs?.targetCity) {
+          const activeAnchor = t_location || anchorLocation;
           setDefaultLoad(true);
-          DefaultAreaNearBy("jewellery", t_location, radius);
-          DefaultAreaNearBy("retail", t_location, radius);
+          DefaultAreaNearBy("jewellery", activeAnchor, radius);
+          DefaultAreaNearBy("retail", activeAnchor, radius);
+          DefaultAreaNearBy("competitor", activeAnchor, radius);
+          DefaultAreaNearBy("ourBrand", activeAnchor, radius);
         }
         setLockBtn(true);
         const data = response.data.value;
@@ -813,6 +869,8 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
                     setPdfMarkers({
                       jewellery: [],
                       retail: [],
+                      competitor: [],
+                      ourBrand: [],
                     });
                     await handleDriveTimeSearch(clickedLocation);
                   },

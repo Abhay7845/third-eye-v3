@@ -15,6 +15,7 @@ import AnimatedNumber from "../accordion/AnimatedNumber";
 import NormalRandmaize from "../accordion/NormalRandmaize";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
+import { formatAssessmentData, pdf_data } from "../Data/Data";
 
 export const FilePopStyle = {
   position: "absolute",
@@ -40,6 +41,18 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   const s_catch = catchmentData?.s_catch;
   const m_trends = catchmentData?.m_trends;
   const [loading, setLoading] = useState(false);
+
+  // Tracks how many API calls are still in-flight.
+  // Loader stays visible until every call has completed.
+  const pendingRef = useRef(0);
+  const startLoading = () => {
+    pendingRef.current += 1;
+    setLoading(true);
+  };
+  const stopLoading = () => {
+    pendingRef.current = Math.max(0, pendingRef.current - 1);
+    if (pendingRef.current === 0) setLoading(false);
+  };
   const [modalOpen, setModalOpen] = useState(false);
   const [isSave, setIsSave] = useState(true);
   const [slideOut, setSlideOut] = useState(false);
@@ -50,8 +63,9 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   // -----------------POPULATION CALUCATION SATES
   const [priPincodePopulation, setPriPincodePopulation] = useState([]);
   const [secPincodePopulation, setSecPincodePopulation] = useState([]);
-  const [pdfDecesion, setPdfDecesion] = useState([]);
-
+  const pdf_list = formatAssessmentData(pdf_data?.assessment);
+  const [pdfDecesion, setPdfDecesion] = useState(pdf_list);
+  console.log("pdfDecesion==>", pdfDecesion);
   const [estimateRevenue, setEstimateRevenue] = useState(0);
   // REF DEFINE
   const screenshotRef = useRef();
@@ -127,7 +141,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   }, [isSave]);
 
   const CannibalizationData = (chl, t_pin) => {
-    setLoading(true);
+    startLoading();
     axiosInstance
       .get(
         `/api/fetch/projection/canni/store-pin?channel=${chl}&targetPin=${t_pin}`,
@@ -137,18 +151,20 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
         if (response.data.code === "1000") {
           setTopStrCanData(response.data.value);
         }
-        setLoading(false);
+        stopLoading();
       })
-      .catch((err) => setLoading(false));
+      .catch(() => stopLoading());
   };
 
   useEffect(() => {
     if (setOfPin) {
       CannibalizationData(channel, setOfPin);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel, setOfPin]);
 
   const GetRevenueData = (chl, t_pin, s_pin) => {
+    startLoading();
     axiosInstance
       .get(
         `/api/fetch/first/year/results?similarPin=${s_pin}&targetPin=${t_pin}&channel=${chl}`,
@@ -158,17 +174,20 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
         if (response.data.code === "1000") {
           setRevenueData(response.data.value);
         }
+        stopLoading();
       })
-      .catch((err) => setLoading(false));
+      .catch(() => stopLoading());
   };
 
   useEffect(() => {
     if (setOfPin) {
       GetRevenueData(channel, setOfPin, similarPinCode);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel, setOfPin, similarPinCode]);
 
   const GetARPCData = (chl, city, t_pin) => {
+    startLoading();
     axiosInstance
       .get(
         `/api/new/store/projection/arpc?channel=${chl}&city=${city}&pincodes=${t_pin}`,
@@ -178,14 +197,16 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
         if (response.data.code === "1000") {
           setArpcVal(Number(response.data.value[0]) || 0);
         }
+        stopLoading();
       })
-      .catch((err) => setLoading(false));
+      .catch(() => stopLoading());
   };
 
   useEffect(() => {
     if (channel && cityName && setOfPin) {
       GetARPCData(channel, cityName, setOfPin);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel, cityName, setOfPin]);
 
   const GetInsertUserInfo = () => {
@@ -295,6 +316,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
 
   // -----------------------PRIMARY PINCODE LEVEL POPULATION------------------
   const PriPincodeSummary = async (chl, p_code) => {
+    startLoading();
     try {
       const response = await axiosInstance.get(
         `/api/fetch/catch/analysis/pincode/summary?channel=${chl}&pincodes=${p_code}`,
@@ -331,11 +353,13 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
         }
         const mergedData = await PinPopulation(pincod_level_pop, pin_summary);
         setPriPincodePopulation(mergedData);
+        stopLoading();
       } else {
+        stopLoading();
         return [];
       }
     } catch (err) {
-      setLoading(false);
+      stopLoading();
       return [];
     }
   };
@@ -349,6 +373,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
 
   // -----------------------SECONDARY PINCODE LEVEL POPULATION------------------
   const SecPincodeSummary = async (chl, p_code) => {
+    startLoading();
     try {
       const response = await axiosInstance.get(
         `/api/fetch/catch/analysis/pincode/summary?channel=${chl}&pincodes=${p_code}`,
@@ -383,11 +408,13 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
         }
         const mergedData = await PinPopulation(pincod_level_pop, pin_summary);
         setSecPincodePopulation(mergedData);
+        stopLoading();
       } else {
+        stopLoading();
         return [];
       }
     } catch (err) {
-      setLoading(false);
+      stopLoading();
       return [];
     }
   };
@@ -400,37 +427,33 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   }, [channel, primarySec?.secondary]);
 
   const GetPdfDecision = async (t_pin) => {
+    startLoading();
     try {
       const payload = {
         pincode: t_pin?.toString() || "",
       };
       const response = await axiosInstance.post(
-        "api/openai/decision_reasoner/v2",
+        "/api/openai/decision_reasoner/v2",
         payload,
       );
 
       if (response?.status === 200) {
-        const formattedData = Object.entries(
-          response?.data?.assessment || {},
-        ).map(([section, items]) => ({
-          title: section
-            .replace(/([A-Z])/g, " $1")
-            .replace(/^./, (str) => str.toUpperCase()),
-          points: items,
-        }));
+        const formattedData = formatAssessmentData(response?.data?.assessment);
         setPdfDecesion(formattedData);
       }
+      stopLoading();
     } catch (error) {
+      stopLoading();
       return [];
     }
   };
 
-  useEffect(() => {
-    if (inputsPayload?.targetPinCode) {
-      GetPdfDecision(inputsPayload?.targetPinCode);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputsPayload?.targetPinCode]);
+  // useEffect(() => {
+  //   if (inputsPayload?.targetPinCode) {
+  //     GetPdfDecision(inputsPayload?.targetPinCode);
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [inputsPayload?.targetPinCode]);
 
   return (
     <React.Fragment>
