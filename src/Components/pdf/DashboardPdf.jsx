@@ -922,8 +922,6 @@ const DashboardPdf = ({
             />
           </div>
         </div>
-
-        {/* ------------------------5TH PAGE: Conclusion -------------------- */}
         <br />
         {/* ------------------------4TH PAGE: Projection + Cannibalization -------------------- */}
         <div
