@@ -22,8 +22,9 @@ const PDFTable = ({ data, userLog }) => {
   return (
     <React.Fragment>
       <Table
+        className='pdf-font-up-table'
         style={{
-          fontSize: "12px",
+          fontSize: "10px",
           borderCollapse: "collapse",
           width: "100%",
         }}>
@@ -48,7 +49,7 @@ const PDFTable = ({ data, userLog }) => {
         </Thead>
         <Tbody>
           {data?.map((item, i) => (
-            <Tr key={i} style={{ fontSize: "14px" }}>
+            <Tr key={i} style={{ fontSize: "12px" }}>
               <Td style={styles}>{item?.pincode}</Td>
               <Td style={styles}>
                 {item?.encircleBase?.toLocaleString("en-IN")} (

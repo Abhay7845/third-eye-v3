@@ -187,7 +187,6 @@ const DashboardPdf = ({
     "second_page_separation",
     "third_page_separation",
     "forth_page_separation",
-    "fifth_page_separation",
   ];
 
   const renderSectionsToPdf = async (pdf) => {
@@ -217,14 +216,65 @@ const DashboardPdf = ({
       cursorY = y;
     };
 
+    // Use a fixed offscreen capture surface so PDF output does not change with
+    // window resize, zoom, viewport changes, or DevTools open/close.
+    const CAPTURE_WIDTH_PX = 1100;
+    const CAPTURE_SCALE = 2;
+    const PDF_TABLE_FONT_BUMP_PX = 1;
+    const PDF_MAP_HEIGHT_PX = 320;
+
     for (let i = 0; i < PDF_SECTIONS.length; i++) {
       const element = document.querySelector(`.${PDF_SECTIONS[i]}`);
       if (!element) continue;
 
-      const canvas = await html2canvas(element, {
-        useCORS: true,
-        scale: 2,
+      const captureHost = document.createElement("div");
+      captureHost.style.position = "fixed";
+      captureHost.style.left = "-20000px";
+      captureHost.style.top = "0";
+      captureHost.style.width = `${CAPTURE_WIDTH_PX}px`;
+      captureHost.style.maxWidth = `${CAPTURE_WIDTH_PX}px`;
+      captureHost.style.minWidth = `${CAPTURE_WIDTH_PX}px`;
+      captureHost.style.background = "#fff";
+      captureHost.style.zIndex = "-1";
+
+      const captureNode = element.cloneNode(true);
+      captureNode.style.width = `${CAPTURE_WIDTH_PX}px`;
+      captureNode.style.maxWidth = `${CAPTURE_WIDTH_PX}px`;
+      captureNode.style.minWidth = `${CAPTURE_WIDTH_PX}px`;
+      captureNode.style.boxSizing = "border-box";
+      captureHost.appendChild(captureNode);
+      document.body.appendChild(captureHost);
+
+      // Increase font only for PDFTable in cloned DOM (preview remains unchanged).
+      const pdfTableNodes = captureNode.querySelectorAll(
+        ".pdf-font-up-table, .pdf-font-up-table *",
+      );
+      pdfTableNodes.forEach((node) => {
+        const computedSize = parseFloat(window.getComputedStyle(node).fontSize);
+        if (Number.isNaN(computedSize)) return;
+        node.style.fontSize = `${computedSize + PDF_TABLE_FONT_BUMP_PX}px`;
       });
+
+      // Increase map image height only for PDF capture (preview remains unchanged).
+      const pdfMapImage = captureNode.querySelector(".pdf-map-screenshot");
+      if (pdfMapImage) {
+        pdfMapImage.style.height = `${PDF_MAP_HEIGHT_PX}px`;
+      }
+
+      let canvas;
+      try {
+        canvas = await html2canvas(captureNode, {
+          useCORS: true,
+          scale: CAPTURE_SCALE,
+          width: CAPTURE_WIDTH_PX,
+          windowWidth: CAPTURE_WIDTH_PX,
+          scrollX: 0,
+          scrollY: 0,
+          backgroundColor: "#ffffff",
+        });
+      } finally {
+        document.body.removeChild(captureHost);
+      }
 
       const sourceWidth = canvas.width;
       const sourceHeight = canvas.height;
@@ -393,12 +443,7 @@ const DashboardPdf = ({
               alignItems: "center",
               marginBottom: "5px",
             }}>
-            <img
-              src={third_eye}
-              height={30}
-              alt='third_eye'
-              style={{ marginTop: "-1%" }}
-            />
+            <img src={third_eye} height={30} alt='third_eye' />
           </div>
           <div className='pdf_top_header'>
             <img src={logo} height={26} alt='logo' />
@@ -588,9 +633,10 @@ const DashboardPdf = ({
           {/* GOOGLE MAP DATA DETAILS */}
           <div style={{ width: "100%" }}>
             <img
+              className='pdf-map-screenshot'
               src={map_img}
               alt='map_Screenshot'
-              style={{ width: "100%", height: "240px", display: "block" }}
+              style={{ width: "100%", height: "250px", display: "block" }}
             />
           </div>
           <br />
@@ -603,12 +649,7 @@ const DashboardPdf = ({
               <h6>Data Not Available</h6>
             )}
           </div>
-        </div>
-        <br />
-        {/* ------------------------2ND PAGE -------------------- */}
-        <div
-          className='second_page_separation'
-          style={{ padding: "10px", border: "1px solid #000" }}>
+          <br />
           <div className='user_input_box'>
             <h5 className='user_input_title'>Secondary Catchment Details</h5>
             {secPincodePopulation?.length > 0 ? (
@@ -644,6 +685,7 @@ const DashboardPdf = ({
               )}
             </div>
           </div>
+          <br />
           <div className='user_input_box'>
             <h5 className='user_input_title'>
               Nearest Competitor Store Details
@@ -652,7 +694,6 @@ const DashboardPdf = ({
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                borderTop: "1px solid black",
                 padding: "8px",
                 fontSize: "12px",
                 gap: "5px",
@@ -670,7 +711,12 @@ const DashboardPdf = ({
               )}
             </div>
           </div>
-          <br />
+        </div>
+        <br />
+        {/* ------------------------2ND PAGE SAPARATION -------------------- */}
+        <div
+          className='second_page_separation'
+          style={{ padding: "10px", border: "1px solid #000" }}>
           <div className='retail_box'>
             <div className='retail_heading'>
               Jewellery Market Store Count:
@@ -704,22 +750,12 @@ const DashboardPdf = ({
               </div>
             </div>
           </div>
-        </div>
-
-        {/* ------------------------3RD PAGE: Footfall / Decision -------------------- */}
-        <br />
-        <div
-          className='third_page_separation'
-          style={{
-            padding: "10px",
-            paddingBottom: "30px",
-            border: "1px solid #000",
-            fontSize: "13px",
-          }}>
-          <div className='retail_section' style={{ lineHeight: "1.6" }}>
+          <br />
+          <br />
+          <div className='retail_section' style={{ lineHeight: "1.7" }}>
             {pdfDecesion?.map((section, index) => (
               <div key={index}>
-                <h6 style={{ marginBottom: "0px", marginTop: "5px" }}>
+                <h6 style={{ marginBottom: "5px", marginTop: "5px" }}>
                   {section.title}
                 </h6>
                 <ul>
@@ -730,13 +766,11 @@ const DashboardPdf = ({
               </div>
             ))}
           </div>
+          <br />
         </div>
-
-        {/* ------------------------4TH PAGE: Projection + Cannibalization -------------------- */}
+        {/* ------------------------3RD PAGE: Footfall / Decision -------------------- */}
         <br />
-        <div
-          className='forth_page_separation'
-          style={{ padding: "10px", border: "1px solid #000" }}>
+        <div className='third_page_separation' style={{ padding: "10px" }}>
           <Table
             className='custom_table'
             style={{
@@ -849,8 +883,9 @@ const DashboardPdf = ({
 
         {/* ------------------------5TH PAGE: Conclusion -------------------- */}
         <br />
+        {/* ------------------------4TH PAGE: Projection + Cannibalization -------------------- */}
         <div
-          className='fifth_page_separation'
+          className='forth_page_separation'
           style={{
             padding: "10px",
             paddingTop: "20px",
@@ -869,7 +904,7 @@ const DashboardPdf = ({
             <div
               style={{
                 textAlign: "justify",
-                fontSize: "13px",
+                fontSize: "15px",
                 margin: "5px",
               }}>
               <span>{dicisionData?.bottom_line}</span>
