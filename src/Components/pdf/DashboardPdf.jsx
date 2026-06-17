@@ -460,40 +460,82 @@ const DashboardPdf = ({
               <div>Date: {currentDate}</div>
             </div>
           </div>
-          <div className='user_input_box'>
-            <h5 className='user_input_title'>User Input Details</h5>
-            <div className='user_input_grid'>
-              <table>
-                <tbody>
-                  <tr>
-                    <td>Target Pin Codes:</td>
-                    <td>{targetPinCode?.toString()}</td>
-                    <td>Similar Pin Codes:</td>
-                    <td>
-                      {s_pincodes?.slice(0, 2).join(", ")}
-                      {s_pincodes.length > 4 &&
-                        `, +${s_pincodes.length - 2} more`}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Similar Store:</td>
-                    <td>{similerStoreVal}</td>
-                    <td>Similar City:</td>
-                    <td>
-                      {cityName}, ({cityTier})
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Store Size:</td>
-                    <td>{storeSize}</td>
-                    <td>Store Category:</td>
-                    <td>{CategoryFormat(category || "")}</td>
-                  </tr>
-                </tbody>
-              </table>
+          <div className='catchment_box'>
+            <h5 className='catchment_title'>User Inputs Details</h5>
+            <div className='catchment_grid'>
+              <div className='catchment_col'>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "13px",
+                  }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        Target Pin Codes:
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>
+                        {targetPinCode?.toString()}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        Similar Store:
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>{similerStoreVal}</td>
+                    </tr>
+
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        Store Size:
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>{storeSize}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className='catchment_col'>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "13px",
+                  }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        Similar Pin Codes:
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>
+                        {s_pincodes?.slice(0, 2).join(", ")}
+                        {s_pincodes.length > 4 &&
+                          `, +${s_pincodes.length - 2} more`}
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        Similar City:
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>
+                        {cityName}, ({cityTier})
+                      </td>
+                    </tr>
+
+                    <tr>
+                      <td style={{ padding: "3px 4px", fontWeight: "500" }}>
+                        Store Category:
+                      </td>
+                      <td style={{ padding: "3px 4px" }}>
+                        {CategoryFormat(category || "")}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-
           {/* catchment div  */}
           <div className='catchment_box'>
             <h5 className='catchment_title'>Catchment Details</h5>
@@ -904,7 +946,7 @@ const DashboardPdf = ({
             <div
               style={{
                 textAlign: "justify",
-                fontSize: "15px",
+                fontSize: "12px",
                 margin: "5px",
               }}>
               <span>{dicisionData?.bottom_line}</span>
