@@ -12,7 +12,7 @@ import PDFTable from "./PDFTable";
 import { GetChannelLogo } from "../Data/ChannelLogo";
 import { axiosInstance } from "../../HostManger/API/Authorization";
 import Loader from "../custom/Loader";
-import { DRIVE_TIME_RADIUS_MAP } from "../Data/Data";
+import { getKeyAndValue } from "../Data/Data";
 
 const DashboardPdf = ({
   inputsPayload,
@@ -42,18 +42,6 @@ const DashboardPdf = ({
   const map_img = useSelector((state) => state?.newStoreMapImg?.newStoreMapImg);
 
   const logo = GetChannelLogo(userLog?.channel?.toLowerCase());
-
-  function getKeyAndValue(value) {
-    const key = Object.keys(DRIVE_TIME_RADIUS_MAP).find(
-      (key) => DRIVE_TIME_RADIUS_MAP[key] === value,
-    );
-    return key
-      ? {
-          key: Number(key),
-          value: DRIVE_TIME_RADIUS_MAP[key],
-        }
-      : null;
-  }
 
   const drive_time = getKeyAndValue(inputsPayload?.radius);
   // -----------------------------------USER INPUTS DATA --------------------------------------------

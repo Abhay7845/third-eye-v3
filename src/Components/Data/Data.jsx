@@ -230,3 +230,15 @@ export const formatAssessmentData = (assessment = {}) => {
     points: items,
   }));
 };
+
+export function getKeyAndValue(value) {
+  const key = Object.keys(DRIVE_TIME_RADIUS_MAP).find(
+    (key) => DRIVE_TIME_RADIUS_MAP[key] === value,
+  );
+  return key
+    ? {
+        key: Number(key),
+        value: DRIVE_TIME_RADIUS_MAP[key],
+      }
+    : null;
+}

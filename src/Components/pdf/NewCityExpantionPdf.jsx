@@ -14,6 +14,7 @@ import { useSelector } from "react-redux";
 import { GetChannelLogo } from "../Data/ChannelLogo";
 import { axiosInstance } from "../../HostManger/API/Authorization";
 import Loader from "../custom/Loader";
+import { getKeyAndValue } from "../Data/Data";
 
 const NewCityExpantionPdf = ({
   inputsPayload,
@@ -40,6 +41,14 @@ const NewCityExpantionPdf = ({
   );
   const logo = GetChannelLogo(userLog?.channel?.toLowerCase());
 
+  const drive_time = getKeyAndValue(inputsPayload?.radius);
+
+  const { anchorLocation, pdfMarkers } = inputsPayload;
+  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR BRAND JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
+  const brandList = pdfMarkers?.ourBrand || [];
+  // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR COMPETITOR JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
+  const competitorsList = pdfMarkers?.competitor || [];
+
   // -------------------------------UPLOAD PDF FUNCTIONALITY ---------------------------
   const UploadPdf = async (file) => {
     try {
@@ -49,7 +58,7 @@ const NewCityExpantionPdf = ({
       }
       formData.append("files", file);
       formData.append("folderName", "ThirdEye");
-      const res = await axiosInstance.post(`/s3/upload`, formData, {
+      await axiosInstance.post(`/s3/upload`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -60,72 +69,156 @@ const NewCityExpantionPdf = ({
   };
 
   // ------------------------------------- PDF GENERATION -------------------------------
-  const handleSavePdfHistory = async () => {
-    try {
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+  // Fixed capture width — makes html2canvas output identical regardless of
+  // browser window size, zoom, viewport changes, or DevTools open/close.
+  const CAPTURE_WIDTH_PX = 1100;
+  const CAPTURE_SCALE = 2;
+  const PDF_SECTIONS = ["first_page_separation", "second_page_separation"];
 
-      // Sections to capture in order
-      const sections = ["first_page_separation", "second_page_separation"];
+  const renderSectionsToPdf = async () => {
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const x = pdfWidth * 0.04;
+    const y = pdfHeight * 0.04;
+    const imgWidth = pdfWidth * 0.92;
+    const usableHeight = pdfHeight * 0.92;
+    let isFirstPage = true;
+    const drawPageTopBottomBorder = () => {
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.2646);
+      pdf.line(x, y, x + imgWidth, y);
+      pdf.line(x, y + usableHeight, x + imgWidth, y + usableHeight);
+    };
 
-      for (let i = 0; i < sections.length; i++) {
-        const element = document.querySelector(`.${sections[i]}`);
-        if (!element) continue;
+    for (let i = 0; i < PDF_SECTIONS.length; i++) {
+      const element = document.querySelector(`.${PDF_SECTIONS[i]}`);
+      if (!element) continue;
 
-        // ✅ Higher scale for sharper rendering
-        const canvas = await html2canvas(element, {
+      const captureHost = document.createElement("div");
+      captureHost.style.position = "fixed";
+      captureHost.style.left = "-20000px";
+      captureHost.style.top = "0";
+      captureHost.style.width = `${CAPTURE_WIDTH_PX}px`;
+      captureHost.style.maxWidth = `${CAPTURE_WIDTH_PX}px`;
+      captureHost.style.minWidth = `${CAPTURE_WIDTH_PX}px`;
+      captureHost.style.background = "#fff";
+      captureHost.style.zIndex = "-1";
+
+      const captureNode = element.cloneNode(true);
+      captureNode.style.width = `${CAPTURE_WIDTH_PX}px`;
+      captureNode.style.maxWidth = `${CAPTURE_WIDTH_PX}px`;
+      captureNode.style.minWidth = `${CAPTURE_WIDTH_PX}px`;
+      captureNode.style.boxSizing = "border-box";
+      captureHost.appendChild(captureNode);
+      document.body.appendChild(captureHost);
+
+      let canvas;
+      try {
+        canvas = await html2canvas(captureNode, {
           useCORS: true,
-          scale: 1.8, // was 1.2, increase for quality
+          scale: CAPTURE_SCALE,
+          width: CAPTURE_WIDTH_PX,
+          windowWidth: CAPTURE_WIDTH_PX,
+          scrollX: 0,
+          scrollY: 0,
+          backgroundColor: "#ffffff",
         });
+      } finally {
+        document.body.removeChild(captureHost);
+      }
 
-        // ✅ Better quality JPEG (80%)
+      const sourceWidth = canvas.width;
+      const sourceHeight = canvas.height;
+      const fullImgHeight = (sourceHeight * imgWidth) / sourceWidth;
+
+      if (fullImgHeight <= usableHeight) {
+        if (!isFirstPage) pdf.addPage();
         const imgData = canvas.toDataURL("image/jpeg", 0.8);
-
-        const imgProps = pdf.getImageProperties(imgData);
-        const imgWidth = pdfWidth * 0.92;
-        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-
-        const x = pdfWidth * 0.04;
-        const y = pdfHeight * 0.04;
-
-        if (i > 0) pdf.addPage();
-
         pdf.addImage(
           imgData,
           "JPEG",
           x,
           y,
           imgWidth,
-          imgHeight,
+          fullImgHeight,
           undefined,
           "FAST",
         );
+        drawPageTopBottomBorder();
+        isFirstPage = false;
+        continue;
       }
 
-      // ✅ Get initial PDF Blob
+      const pageSliceHeightPx = Math.max(
+        1,
+        Math.floor((usableHeight * sourceWidth) / imgWidth),
+      );
+      let offsetY = 0;
+
+      while (offsetY < sourceHeight) {
+        const sliceHeight = Math.min(pageSliceHeightPx, sourceHeight - offsetY);
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = sourceWidth;
+        sliceCanvas.height = sliceHeight;
+
+        const ctx = sliceCanvas.getContext("2d");
+        if (!ctx) break;
+
+        ctx.drawImage(
+          canvas,
+          0,
+          offsetY,
+          sourceWidth,
+          sliceHeight,
+          0,
+          0,
+          sourceWidth,
+          sliceHeight,
+        );
+
+        if (!isFirstPage) pdf.addPage();
+        const sliceImg = sliceCanvas.toDataURL("image/jpeg", 0.8);
+        const sliceImgHeight = (sliceHeight * imgWidth) / sourceWidth;
+        pdf.addImage(
+          sliceImg,
+          "JPEG",
+          x,
+          y,
+          imgWidth,
+          sliceImgHeight,
+          undefined,
+          "FAST",
+        );
+        drawPageTopBottomBorder();
+
+        isFirstPage = false;
+        offsetY += sliceHeight;
+      }
+    }
+
+    return pdf;
+  };
+
+  const handleSavePdfHistory = async () => {
+    try {
+      const pdf = await renderSectionsToPdf();
       const pdfBlob = pdf.output("blob");
 
-      // ✅ Further compress with pdf-lib
       const arrayBuffer = await pdfBlob.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer, {
         ignoreEncryption: true,
       });
-
-      // Metadata optimization
       pdfDoc.setProducer("Optimized PDF");
       pdfDoc.setCreator("");
-
       const compressedBytes = await pdfDoc.save({ useObjectStreams: true });
       const compressedBlob = new Blob([compressedBytes], {
         type: "application/pdf",
       });
 
-      // ✅ Create file from compressed PDF
       const pdfFile = new File([compressedBlob], `${pdfFileName}.pdf`, {
         type: "application/pdf",
       });
-      // Upload internally
       await UploadPdf(pdfFile);
     } catch (error) {
       return;
@@ -147,57 +240,13 @@ const NewCityExpantionPdf = ({
   const handleDownloadPdf = async () => {
     setLoading(true);
     try {
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
-      // Sections to capture in order
-      const sections = ["first_page_separation", "second_page_separation"];
-
-      for (let i = 0; i < sections.length; i++) {
-        const element = document.querySelector(`.${sections[i]}`);
-        if (!element) continue;
-
-        // ✅ Higher scale for sharper rendering
-        const canvas = await html2canvas(element, {
-          useCORS: true,
-          scale: 1.8, // was 1.2, increase for quality
-        });
-
-        // ✅ Better quality JPEG (80%)
-        const imgData = canvas.toDataURL("image/jpeg", 0.8);
-
-        const imgProps = pdf.getImageProperties(imgData);
-        const imgWidth = pdfWidth * 0.92;
-        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-
-        const x = pdfWidth * 0.04;
-        const y = pdfHeight * 0.04;
-
-        if (i > 0) pdf.addPage();
-
-        pdf.addImage(
-          imgData,
-          "JPEG",
-          x,
-          y,
-          imgWidth,
-          imgHeight,
-          undefined,
-          "FAST",
-        );
-      }
-
-      // ✅ Get initial PDF Blob
+      const pdf = await renderSectionsToPdf();
       const pdfBlob = pdf.output("blob");
 
-      // ✅ Further compress with pdf-lib
       const arrayBuffer = await pdfBlob.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer, {
         ignoreEncryption: true,
       });
-
-      // Metadata optimization
       pdfDoc.setProducer("Optimized PDF");
       pdfDoc.setCreator("");
       const compressedBytes = await pdfDoc.save({ useObjectStreams: true });
@@ -205,7 +254,6 @@ const NewCityExpantionPdf = ({
         type: "application/pdf",
       });
 
-      // Download to user machine
       const link = document.createElement("a");
       link.href = URL.createObjectURL(compressedBlob);
       link.download = `${pdfFileName}.pdf`;
@@ -216,6 +264,87 @@ const NewCityExpantionPdf = ({
       setLoading(false);
     }
   };
+
+  // --------------------------------DISTANCE CALULATION FOR OUR BRAND -------------------------------
+  // Haversine formula to calculate distance in KM
+
+  const str_distance = {
+    our_brand: brandList,
+    competitor: competitorsList,
+  };
+
+  function getMarkersWithDistance(anchorLocation, markers) {
+    if (!anchorLocation?.lat || !anchorLocation?.lng || !markers) {
+      return [];
+    }
+    const R = 6371; // Earth's radius in KM
+    // Haversine formula
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+      const dLat = ((lat2 - lat1) * Math.PI) / 180;
+      const dLon = ((lon2 - lon1) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((lat1 * Math.PI) / 180) *
+          Math.cos((lat2 * Math.PI) / 180) *
+          Math.sin(dLon / 2) ** 2;
+
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    };
+
+    // Map markers with distance
+    const markersWithDistance = markers.map((m) => {
+      const lat = m?.position?.lat();
+      const lng = m?.position?.lng();
+
+      return {
+        ...m,
+        distance: Number(
+          calculateDistance(
+            anchorLocation.lat,
+            anchorLocation.lng,
+            lat,
+            lng,
+          ).toFixed(1),
+        ),
+      };
+    });
+    const shortStoresbyDistance = markersWithDistance.sort(
+      (a, b) => a.distance - b.distance,
+    );
+    const allSorted_stores = shortStoresbyDistance.map((item) => {
+      const brand_name = item.title.split(" ")[0];
+      return {
+        title: brand_name,
+        distance: item.distance,
+      };
+    });
+    const unique_storesList = Object.values(
+      allSorted_stores.reduce((acc, curr) => {
+        if (!acc[curr.title] || curr.distance < acc[curr.title].distance) {
+          acc[curr.title] = curr;
+        }
+        return acc;
+      }, {}),
+    );
+    return unique_storesList;
+  }
+  // ---------------------OUR NEAREST BRAND DISTACE CALCULATION FUNCTINALITY-------------
+  const nearestOurBrands = getMarkersWithDistance(
+    anchorLocation,
+    str_distance?.our_brand,
+  );
+
+  // ---------------------OUR NEAREST COMPETITORS  DISTACE CALCULATION FUNCTINALITY-------------
+  const nearestCompetitors = getMarkersWithDistance(
+    anchorLocation,
+    str_distance?.competitor,
+  );
+
+  function getFirstSixData(list) {
+    return list.slice(0, 6);
+  }
+  const our_brand_list = getFirstSixData(nearestOurBrands);
+  const competitors_list = getFirstSixData(nearestCompetitors);
 
   return (
     <React.Fragment>
@@ -242,6 +371,7 @@ const NewCityExpantionPdf = ({
       </div>
       {loading && <PdfLoader />}
       <div style={{ marginTop: "2%" }} ref={newCityRef}>
+        {/* ---------------------------------PDF RIRST PAGE SEPRATION ------------------------------ */}
         <div
           className='first_page_separation'
           style={{
@@ -262,9 +392,8 @@ const NewCityExpantionPdf = ({
               style={{ marginTop: "-1%" }}
             />
           </div>
-
           <div className='pdf_top_header'>
-            <img src={logo} height={26} alt='logo' />
+            <img src={logo} height={30} alt='logo' />
             <div
               style={{
                 display: "flex",
@@ -304,7 +433,6 @@ const NewCityExpantionPdf = ({
                         {s_city?.targetEB?.toLocaleString()}
                       </td>
                     </tr>
-
                     <tr>
                       <td style={{ padding: "2px 4px" }}>
                         {userLog?.channel} Base:
@@ -313,21 +441,18 @@ const NewCityExpantionPdf = ({
                         {s_city?.targetCB?.toLocaleString()}
                       </td>
                     </tr>
-
                     <tr>
                       <td style={{ padding: "2px 4px" }}>ARPC:</td>
                       <td style={{ padding: "2px 4px" }}>
                         {parseInt(s_city?.arpc)?.toLocaleString()}
                       </td>
                     </tr>
-
                     <tr>
                       <td style={{ padding: "2px 4px" }}>Penetration:</td>
                       <td style={{ padding: "2px 4px" }}>
                         {parseInt(s_city?.penetration * 100)}%
                       </td>
                     </tr>
-
                     <tr>
                       <td style={{ padding: "2px 4px" }}>CAGR:</td>
                       <td style={{ padding: "2px 4px" }}>
@@ -499,7 +624,56 @@ const NewCityExpantionPdf = ({
               )}
             </Tbody>
           </Table>
+          <div className='score_city_box'>
+            <h5 className='city_title'> City Score</h5>
+            <CityStoresBar data={CityStoreScore} />
+          </div>
+          <br />
+          <div style={{ border: "1px solid #233044" }}>
+            <div style={{ textAlign: "center", padding: "6px" }}>
+              External Indicators
+            </div>
+            <CityProjectionPopulationGraph data={extIndecator} height={200} />
+          </div>
+          <br />
+          <div style={{ border: "1px solid #233044", marginTop: "5px" }}>
+            <div style={{ textAlign: "center", padding: "6px" }}>
+              Customers Vs Revenue Trends For City
+            </div>
+            <CustomerRevenueBar monthOver={monthOver} height={190} />
+          </div>
+          <br />
+          <div className='user_input_box'>
+            <h5 className='user_input_title'>
+              Nearest Our Brand Store Details
+            </h5>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                borderTop: "1px solid black",
+                padding: "8px",
+                fontSize: "12px",
+                gap: "5px",
+                textAlign: "left",
+              }}>
+              {our_brand_list?.length > 0 ? (
+                our_brand_list?.map((item, i) => (
+                  <React.Fragment key={i}>
+                    <strong>{item?.title}:</strong>
+                    <span>{item.distance} KM</span>
+                  </React.Fragment>
+                ))
+              ) : (
+                <h6 style={{ textAlign: "center", color: "red" }}>
+                  Stores Not Available
+                </h6>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* ---------------------------------PDF SECOND PAGE SEPRATION ------------------------------ */}
         <br />
         <div
           className='second_page_separation'
@@ -507,37 +681,100 @@ const NewCityExpantionPdf = ({
             padding: "10px",
             border: "1px solid #000",
           }}>
-          <div className='score_city_box'>
-            <h5 className='city_title'> City Score</h5>
-            <CityStoresBar data={CityStoreScore} />
-          </div>
-          <div style={{ border: "1px solid #233044" }}>
-            <div style={{ textAlign: "center", padding: "6px" }}>
-              External Indicators
+          <div className='user_input_box'>
+            <h5 className='user_input_title'>
+              Nearest Competitor Store Details
+            </h5>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                padding: "8px",
+                borderTop: "1px solid black",
+                fontSize: "12px",
+                gap: "5px",
+                textAlign: "left",
+              }}>
+              {competitors_list?.length > 0 ? (
+                competitors_list?.map((item, i) => (
+                  <React.Fragment key={i}>
+                    <strong>{item?.title} Jewellers:</strong>
+                    <span>{item.distance} KM</span>
+                  </React.Fragment>
+                ))
+              ) : (
+                <h6 style={{ textAlign: "center", color: "red" }}>
+                  Stores Not Available
+                </h6>
+              )}
             </div>
-            <CityProjectionPopulationGraph data={extIndecator} height={200} />
           </div>
-          <div style={{ border: "1px solid #233044", marginTop: "5px" }}>
-            <div style={{ textAlign: "center", padding: "6px" }}>
-              Customers Vs Revenue Trends For City
+          <br />
+          <div className='retail_box'>
+            <div className='retail_heading'>
+              Jewellery Market Store Count:
+              <strong style={{ margin: "0 5px" }}>
+                {" "}
+                {pdfMarkers?.jewellery?.length}{" "}
+              </strong>{" "}
+              Within Drive Time:
+              <strong style={{ margin: "0 5px" }}> {drive_time?.key}Min</strong>
             </div>
-            <CustomerRevenueBar monthOver={monthOver} height={190} />
+            <div style={{ margin: "6px" }}>
+              <div className='retail_subheading'>Retail Maturity Summary:</div>
+              <div className='retail_section'>
+                <h6 style={{ marginBottom: "0px", marginTop: "5px" }}>
+                  Major Retail Brands Present
+                </h6>
+                <ul>
+                  <li>
+                    <strong>Fashion & Lifestyle:</strong> H&M, Zara, Uniqlo,
+                    Lifestyle, Pantaloons.
+                  </li>
+                  <li>
+                    <strong>Tech & Electronics:</strong> Croma, Reliance
+                    Digital, Apple Store.
+                  </li>
+                  <li>
+                    <strong>Luxury & Premium:</strong> Marks & Spencer, Sephora,
+                    MAC, Coach.
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
+          <br />
+          <div className='retail_section' style={{ lineHeight: "1.5" }}>
+            {pdfDecesion?.map((section, index) => (
+              <div key={index}>
+                <h6 style={{ marginBottom: "5px", marginTop: "5px" }}>
+                  {section.title}
+                </h6>
+                <ul>
+                  {section.points?.map((point, idx) => (
+                    <li key={idx}>{point}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <br />
           <div className='user_input_box' style={{ padding: "5px" }}>
             <h5
               style={{
                 textAlign: "start",
                 margin: "5px",
                 marginBottom: "7px",
-                fontSize: "11px",
+                fontSize: "14px",
               }}>
               Conclusion: {dicisionData?.recomendation}.
             </h5>
             <div
               style={{
                 textAlign: "justify",
-                fontSize: "10px",
                 margin: "5px",
+                fontSize: "13px",
+                lineHeight: "1.5",
               }}>
               <span>{dicisionData?.bottom_line}</span>
               <ul
@@ -555,6 +792,10 @@ const NewCityExpantionPdf = ({
             </div>
           </div>
         </div>
+        {/* ---------------------------------PDF THIRD PAGE SEPRATION ------------------------------ */}
+        {/* <div
+          className='third_page_separation'
+          style={{ padding: "10px", border: "1px solid #000" }}></div> */}
       </div>
     </React.Fragment>
   );
