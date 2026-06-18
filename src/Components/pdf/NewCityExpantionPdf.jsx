@@ -73,6 +73,8 @@ const NewCityExpantionPdf = ({
   // browser window size, zoom, viewport changes, or DevTools open/close.
   const CAPTURE_WIDTH_PX = 1100;
   const CAPTURE_SCALE = 2;
+  const PDF_EXTERNAL_INDICATOR_WIDTH = 1048;
+  const PDF_CUSTOMER_REVENUE_WIDTH = 1048;
   const PDF_SECTIONS = ["first_page_separation", "second_page_separation"];
 
   const renderSectionsToPdf = async () => {
@@ -653,7 +655,11 @@ const NewCityExpantionPdf = ({
             <div style={{ textAlign: "center", padding: "6px" }}>
               External Indicators
             </div>
-            <CityProjectionPopulationGraph data={extIndecator} height={200} />
+            <CityProjectionPopulationGraph
+              data={extIndecator}
+              height={200}
+              fixedWidth={PDF_EXTERNAL_INDICATOR_WIDTH}
+            />
           </div>
           <br />
           <div
@@ -663,7 +669,11 @@ const NewCityExpantionPdf = ({
             <div style={{ textAlign: "center", padding: "6px" }}>
               Customers Vs Revenue Trends For City
             </div>
-            <CustomerRevenueBar monthOver={monthOver} height={190} />
+            <CustomerRevenueBar
+              monthOver={monthOver}
+              height={190}
+              fixedWidth={PDF_CUSTOMER_REVENUE_WIDTH}
+            />
           </div>
           <br />
           <div className='user_input_box'>

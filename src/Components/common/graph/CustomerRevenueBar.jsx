@@ -44,7 +44,7 @@ const SplitBar = ({ x, y, width, height, payload }) => {
   );
 };
 
-const CustomerRevenueBar = ({ monthOver = [], height = 300 }) => {
+const CustomerRevenueBar = ({ monthOver = [], height = 300, fixedWidth }) => {
   const dataList = monthOver.map((item, index) => ({
     customers: item.customers || 0,
     month: item.month,
@@ -52,72 +52,147 @@ const CustomerRevenueBar = ({ monthOver = [], height = 300 }) => {
     color: colorPairs[index % colorPairs.length],
   }));
 
+  const chartContent = (
+    <BarChart
+      data={dataList}
+      barCategoryGap='25%'
+      width={fixedWidth}
+      height={height}>
+      <XAxis
+        dataKey='month'
+        tickLine={false}
+        axisLine={false}
+        interval={0}
+        tick={{ dy: 10, fontSize: 12 }}
+      />
+      <YAxis hide domain={[0, "dataMax + 10000"]} />
+      <Bar dataKey='value' shape={<SplitBar />} minPointSize={8}>
+        <LabelList
+          dataKey='value'
+          content={({ x, y, width, height, value }) => {
+            if (!value) return null;
+            const displayValue = `₹${(value / 10000000).toFixed(1)}Cr`;
+            if (height < 50) {
+              return (
+                <text
+                  x={x + width / 2}
+                  y={y - 5}
+                  textAnchor='middle'
+                  fontSize={11}
+                  fontWeight={600}>
+                  {displayValue}
+                </text>
+              );
+            }
+
+            return (
+              <text
+                x={x + width / 2}
+                y={y + 10}
+                transform={`rotate(-90, ${x + width / 2}, ${y + 10})`}
+                textAnchor='end'
+                fontSize={11}
+                fontWeight={600}>
+                {displayValue}
+              </text>
+            );
+          }}
+        />
+
+        <LabelList
+          dataKey='customers'
+          content={({ x, y, width, height, value }) => {
+            if (!value) return null;
+            const posY = height < 30 ? y + height + 14 : y + height - 6;
+            return (
+              <text
+                x={x + width / 2}
+                y={posY}
+                textAnchor='middle'
+                fontSize={12}
+                fontWeight={600}
+                fill='#000'>
+                {value.toLocaleString()}
+              </text>
+            );
+          }}
+        />
+      </Bar>
+    </BarChart>
+  );
+
   return (
-    <div style={{ width: "100%", height }}>
-      <ResponsiveContainer>
-        <BarChart data={dataList} barCategoryGap='25%'>
-          <XAxis
-            dataKey='month'
-            tickLine={false}
-            axisLine={false}
-            interval={0}
-            tick={{ dy: 10, fontSize: 12 }}
-          />
-          <YAxis hide domain={[0, "dataMax + 10000"]} />
-          <Bar dataKey='value' shape={<SplitBar />} minPointSize={8}>
-            <LabelList
-              dataKey='value'
-              content={({ x, y, width, height, value }) => {
-                if (!value) return null;
-                const displayValue = `₹${(value / 10000000).toFixed(1)}Cr`;
-                if (height < 50) {
+    <div style={{ width: "100%", height, overflow: "hidden" }}>
+      {fixedWidth ? (
+        <div style={{ width: `${fixedWidth}px`, margin: "0 auto" }}>
+          {chartContent}
+        </div>
+      ) : (
+        <ResponsiveContainer>
+          <BarChart data={dataList} barCategoryGap='25%'>
+            <XAxis
+              dataKey='month'
+              tickLine={false}
+              axisLine={false}
+              interval={0}
+              tick={{ dy: 10, fontSize: 12 }}
+            />
+            <YAxis hide domain={[0, "dataMax + 10000"]} />
+            <Bar dataKey='value' shape={<SplitBar />} minPointSize={8}>
+              <LabelList
+                dataKey='value'
+                content={({ x, y, width, height, value }) => {
+                  if (!value) return null;
+                  const displayValue = `₹${(value / 10000000).toFixed(1)}Cr`;
+                  if (height < 50) {
+                    return (
+                      <text
+                        x={x + width / 2}
+                        y={y - 5}
+                        textAnchor='middle'
+                        fontSize={11}
+                        fontWeight={600}>
+                        {displayValue}
+                      </text>
+                    );
+                  }
+
                   return (
                     <text
                       x={x + width / 2}
-                      y={y - 5}
-                      textAnchor='middle'
+                      y={y + 10}
+                      transform={`rotate(-90, ${x + width / 2}, ${y + 10})`}
+                      textAnchor='end'
                       fontSize={11}
                       fontWeight={600}>
                       {displayValue}
                     </text>
                   );
-                }
+                }}
+              />
 
-                return (
-                  <text
-                    x={x + width / 2}
-                    y={y + 10}
-                    transform={`rotate(-90, ${x + width / 2}, ${y + 10})`}
-                    textAnchor='end'
-                    fontSize={11}
-                    fontWeight={600}>
-                    {displayValue}
-                  </text>
-                );
-              }}
-            />
-
-            <LabelList
-              dataKey='customers'
-              content={({ x, y, width, height, value }) => {
-                if (!value) return null;
-                const posY = height < 30 ? y + height + 14 : y + height - 6;
-                return (
-                  <text
-                    x={x + width / 2}
-                    y={posY}
-                    textAnchor='middle'
-                    fontSize={12}
-                    fontWeight={600}
-                    fill='#000'>
-                    {value.toLocaleString()}
-                  </text>
-                );
-              }}
-            />
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+              <LabelList
+                dataKey='customers'
+                content={({ x, y, width, height, value }) => {
+                  if (!value) return null;
+                  const posY = height < 30 ? y + height + 14 : y + height - 6;
+                  return (
+                    <text
+                      x={x + width / 2}
+                      y={posY}
+                      textAnchor='middle'
+                      fontSize={12}
+                      fontWeight={600}
+                      fill='#000'>
+                      {value.toLocaleString()}
+                    </text>
+                  );
+                }}
+              />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
 };
