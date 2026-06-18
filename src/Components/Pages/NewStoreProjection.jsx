@@ -67,6 +67,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   const [estimateRevenue, setEstimateRevenue] = useState(0);
   // REF DEFINE
   const screenshotRef = useRef();
+  const lastPdfDecisionPinRef = useRef("");
   const {
     channel,
     targetPinCode,
@@ -424,31 +425,46 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   }, [channel, primarySec?.secondary]);
 
   const GetPdfDecision = async (t_pin) => {
+    const pin = t_pin?.toString() || "";
+    if (!pin) return;
+
     startLoading();
     try {
-      const payload = {
-        pincode: t_pin?.toString() || "",
-      };
-      const response = await axiosInstance.post(
-        "/api/openai/decision_reasoner/v2",
-        payload,
-      );
+      let response;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          response = await axiosInstance.post(
+            "/api/openai/decision_reasoner/v2",
+            { pincode: pin },
+          );
+          break;
+        } catch (error) {
+          if (attempt === 1) {
+            return;
+          }
+        }
+      }
 
       if (response?.status === 200) {
         const formattedData = formatAssessmentData(response?.data?.assessment);
         setPdfDecesion(formattedData);
       }
+    } finally {
       stopLoading();
-    } catch (error) {
-      stopLoading();
-      return [];
     }
   };
 
   useEffect(() => {
-    if (inputsPayload?.targetPinCode) {
-      GetPdfDecision(inputsPayload?.targetPinCode);
-    }
+    const pin = inputsPayload?.targetPinCode?.toString() || "";
+    if (!pin) return;
+    if (lastPdfDecisionPinRef.current === pin) return;
+
+    const timer = setTimeout(() => {
+      lastPdfDecisionPinRef.current = pin;
+      GetPdfDecision(pin);
+    }, 0);
+
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputsPayload?.targetPinCode]);
 
