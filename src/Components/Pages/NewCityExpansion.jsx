@@ -101,7 +101,7 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
   const polygonRefs = useRef([]);
   const selectedDriveTimesRef = useRef(driveTime);
   const map_img = useRef(null);
-  const radius = DRIVE_TIME_RADIUS_MAP[Math.max(...driveTime)] || 15000;
+  const radius = DRIVE_TIME_RADIUS_MAP[Math.max(...driveTime)] || 8000;
   console.log("pdfMarkers==>", pdfMarkers);
   const inputsPayload = {
     targetPinCode: channelval,

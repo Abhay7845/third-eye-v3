@@ -873,6 +873,7 @@ const DashboardPdf = ({
               ))}
             </Tbody>
           </Table>
+          <br />
           <div className='user_input_box' style={{ padding: "5px" }}>
             <h5 className='user_input_title'>
               Cannibalization Effect Over Period of 3 Years
