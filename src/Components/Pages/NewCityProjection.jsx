@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Sidebar from "../custom/Sidebar";
 import { Modal } from "@mui/material";
 import { RiArrowLeftSLine } from "react-icons/ri";
@@ -17,6 +17,7 @@ import RandmizeNumber from "../accordion/RandmizeNumber";
 import { useSelector } from "react-redux";
 import NewCityExpantionPdf from "../pdf/NewCityExpantionPdf";
 import { FilePopStyle } from "./NewStoreProjection";
+import { formatAssessmentData, pdf_data } from "../Data/Data";
 
 const NewCityProjection = ({ toggle_open, toggle }) => {
   const userLog = useSelector((state) => state?.user?.user);
@@ -42,6 +43,9 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   const [cannibilization, setCannibilization] = useState(0);
   const [custExitStore, setCustExitStore] = useState(0);
   const [pdfFileName, setPdfFileName] = useState("");
+  const dataPdf = formatAssessmentData(pdf_data?.assessment);
+  const [pdfDecesion, setPdfDecesion] = useState(dataPdf);
+  const pdfDecisionRef = useRef({ lastPin: "", inFlight: false });
 
   const { targetCity, targetPinCode, similerStoreVal, arpcVal } = inputsPayload;
   const { t_catch, s_catch, m_trends } = catchmentData;
@@ -71,6 +75,8 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
       }, 700);
     }
   };
+
+  console.log("inputsPayload==>", inputsPayload);
 
   useEffect(() => {
     // Add one dummy entry so popstate fires immediately
@@ -222,6 +228,53 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
       .catch((err) => setCustExitStore(0));
   };
 
+  const GetPdfDecision = async (t_pin) => {
+    const pin = t_pin?.toString() || "";
+    if (!pin) return null;
+    // Prevent duplicate calls for same pin due to multiple effect triggers.
+    if (
+      pdfDecisionRef.current.inFlight &&
+      pdfDecisionRef.current.lastPin === pin
+    ) {
+      return null;
+    }
+    if (
+      !pdfDecisionRef.current.inFlight &&
+      pdfDecisionRef.current.lastPin === pin
+    ) {
+      return null;
+    }
+
+    pdfDecisionRef.current = { lastPin: pin, inFlight: true };
+
+    try {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await axiosInstance.post(
+            "/api/openai/decision_reasoner/v2",
+            {
+              pincode: pin,
+            },
+          );
+          if (response?.status === 200) {
+            const formattedData = formatAssessmentData(
+              response?.data?.assessment,
+            );
+            setPdfDecesion(formattedData);
+          }
+          return response;
+        } catch (error) {
+          if (attempt === 1) {
+            return null;
+          }
+        }
+      }
+      return null;
+    } finally {
+      pdfDecisionRef.current.inFlight = false;
+    }
+  };
+
   useEffect(() => {
     if (!(targetPinCode && similerStoreVal && targetCity)) return;
 
@@ -237,6 +290,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
         GetEnrollTargetYear(similerStoreVal, targetPinCode),
         GetCannibilization(similerStoreVal, targetCity, targetPinCode),
         GetNewCrossChannel(targetPinCode, similerStoreVal),
+        GetPdfDecision(targetPinCode),
       ]);
       if (!isCancelled) {
         setLoading(false);
@@ -251,6 +305,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   }, [targetPinCode, similerStoreVal, targetCity]);
 
   const GetInsertUserInfo = () => {
+    setModalOpen(true);
     const newCityPylaod = {
       userName: userLog?.name,
       channel: targetPinCode,
@@ -317,7 +372,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
     };
     setLoading(true);
     axiosInstance
-      .post(`/api/data/insert/new/city`, newCityPylaod)
+      .post(`/api/data/insert/new/city/abhay`, newCityPylaod)
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
@@ -472,6 +527,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
               monthOver={monthOver}
               userLog={userLog}
               pdfFileName={pdfFileName}
+              pdfDecesion={pdfDecesion}
             />
           </div>
         </Modal>

@@ -26,6 +26,7 @@ const NewCityExpantionPdf = ({
   monthOver,
   userLog,
   pdfFileName,
+  pdfDecesion,
 }) => {
   const [loading, setLoading] = useState(false);
   const [skeletonLoad, setSkeletonLoad] = useState(false);
