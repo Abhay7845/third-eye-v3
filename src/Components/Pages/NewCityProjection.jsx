@@ -248,9 +248,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
         try {
           const response = await axiosInstance.post(
             "/api/openai/decision_reasoner/v2",
-            {
-              pincode: pin,
-            },
+            { pincode: "560100" },
           );
           if (response?.status === 200) {
             const formattedData = formatAssessmentData(
