@@ -547,7 +547,7 @@ const NewCityExpantionPdf = ({
                     padding: "4px 6px",
                     textAlign: "center",
                   }}>
-                  New Store Projection Details
+                  New City Projection Details
                 </Th>
               </Tr>
             </Thead>
@@ -568,9 +568,26 @@ const NewCityExpantionPdf = ({
                       textAlign: "center",
                       fontSize: "10px",
                     }}>
-                    {i >= projectionData.length - 2
-                      ? `₹${Number(item.value).toFixed(2)}`
-                      : item.value}
+                    {(() => {
+                      const rawValue = Number(item.value);
+                      const isNumeric = Number.isFinite(rawValue);
+                      const isArpcRow = `${item.heading || ""}`
+                        .toLowerCase()
+                        .includes("arpc");
+
+                      if (!isNumeric) return item.value;
+                      if (isArpcRow) {
+                        return Math.round(rawValue).toLocaleString("en-IN");
+                      }
+                      if (i >= projectionData.length - 2) {
+                        const inCrore = rawValue / 10000000;
+                        return `₹${inCrore.toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })} Cr`;
+                      }
+                      return rawValue.toLocaleString("en-IN");
+                    })()}
                   </Td>
                 </Tr>
               ))}
@@ -629,14 +646,20 @@ const NewCityExpantionPdf = ({
             <CityStoresBar data={CityStoreScore} />
           </div>
           <br />
-          <div style={{ border: "1px solid #233044" }}>
+          <div
+            style={{
+              border: "1px solid #233044",
+            }}>
             <div style={{ textAlign: "center", padding: "6px" }}>
               External Indicators
             </div>
             <CityProjectionPopulationGraph data={extIndecator} height={200} />
           </div>
           <br />
-          <div style={{ border: "1px solid #233044", marginTop: "5px" }}>
+          <div
+            style={{
+              border: "1px solid #233044",
+            }}>
             <div style={{ textAlign: "center", padding: "6px" }}>
               Customers Vs Revenue Trends For City
             </div>
@@ -744,7 +767,7 @@ const NewCityExpantionPdf = ({
             </div>
           </div>
           <br />
-          <div className='retail_section' style={{ lineHeight: "1.5" }}>
+          <div className='retail_section' style={{ lineHeight: "1.4" }}>
             {pdfDecesion?.map((section, index) => (
               <div key={index}>
                 <h6 style={{ marginBottom: "5px", marginTop: "5px" }}>
