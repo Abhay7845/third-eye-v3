@@ -853,9 +853,17 @@ const DashboardPdf = ({
                       textAlign: "center",
                       fontSize: "13px",
                     }}>
-                    {i >= projectionData.length - 2
-                      ? `₹${Number(item.value).toFixed(2)}`
-                      : item.value}
+                    {(() => {
+                      const rawValue = Number(item.value);
+                      if (!Number.isFinite(rawValue)) return item.value;
+
+                      if (i >= projectionData.length - 2) {
+                        const inCrore = Math.round(rawValue / 10000000);
+                        return `₹${inCrore.toLocaleString("en-IN")} Cr`;
+                      }
+
+                      return item.value;
+                    })()}
                   </Td>
                 </Tr>
               ))}
@@ -877,7 +885,7 @@ const DashboardPdf = ({
                   <Th
                     style={{
                       background: "#ccc",
-                      fontSize: "15px",
+                      fontSize: "12px",
                       padding: "4px 6px",
                       textAlign: "center",
                     }}>
@@ -886,7 +894,7 @@ const DashboardPdf = ({
                   <Th
                     style={{
                       background: "#ccc",
-                      fontSize: "15px",
+                      fontSize: "12px",
                       padding: "4px 6px",
                       textAlign: "center",
                     }}>
@@ -895,7 +903,7 @@ const DashboardPdf = ({
                   <Th
                     style={{
                       background: "#ccc",
-                      fontSize: "15px",
+                      fontSize: "12px",
                       padding: "4px 6px",
                       textAlign: "center",
                     }}>

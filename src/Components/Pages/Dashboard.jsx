@@ -1244,7 +1244,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             </button>
           </div>
 
-          <div style={{ marginTop: "17px" }}>
+          <div style={{ marginTop: "19px" }}>
             <Tippy content='Reset'>
               <button
                 type='submit'

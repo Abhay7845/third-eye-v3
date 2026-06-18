@@ -369,7 +369,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
     };
     setLoading(true);
     axiosInstance
-      .post(`/api/data/insert/new/city/abhay`, newCityPylaod)
+      .post(`/api/data/insert/new/city`, newCityPylaod)
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
