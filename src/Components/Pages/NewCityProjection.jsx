@@ -13,11 +13,10 @@ import Loader from "../custom/Loader";
 import { axiosInstance } from "../../HostManger/API/Authorization";
 import ThirdEyeHeader from "../custom/ThirdEyeHeader";
 import AnimatedNumber from "../accordion/AnimatedNumber";
-import RandmizeNumber from "../accordion/RandmizeNumber";
 import { useSelector } from "react-redux";
 import NewCityExpantionPdf from "../pdf/NewCityExpantionPdf";
 import { FilePopStyle } from "./NewStoreProjection";
-import { formatAssessmentData, pdf_data } from "../Data/Data";
+import { formatAssessmentData, formatStoreValue, pdf_data } from "../Data/Data";
 
 const NewCityProjection = ({ toggle_open, toggle }) => {
   const userLog = useSelector((state) => state?.user?.user);
@@ -463,12 +462,8 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
                         return (
                           <Tr key={i}>
                             <Td>{item.fieldName} </Td>
-                            <Td>
-                              <RandmizeNumber value={item.topStore} />
-                            </Td>
-                            <Td>
-                              <RandmizeNumber value={item.similarStore} />
-                            </Td>
+                            <Td>₹{formatStoreValue(item.topStore)}</Td>
+                            <Td>₹{formatStoreValue(item.similarStore)}</Td>
                           </Tr>
                         );
                       })}

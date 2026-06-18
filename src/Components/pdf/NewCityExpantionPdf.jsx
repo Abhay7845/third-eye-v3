@@ -14,7 +14,7 @@ import { useSelector } from "react-redux";
 import { GetChannelLogo } from "../Data/ChannelLogo";
 import { axiosInstance } from "../../HostManger/API/Authorization";
 import Loader from "../custom/Loader";
-import { getKeyAndValue } from "../Data/Data";
+import { formatStoreValue, getKeyAndValue } from "../Data/Data";
 
 const NewCityExpantionPdf = ({
   inputsPayload,
@@ -631,8 +631,8 @@ const NewCityExpantionPdf = ({
                       return (
                         <Tr key={i}>
                           <Td>{item?.fieldName} </Td>
-                          <Td>₹{item?.topStore} </Td>
-                          <Td>₹{item?.similarStore} </Td>
+                          <Td>₹{formatStoreValue(item?.topStore)} </Td>
+                          <Td>₹{formatStoreValue(item?.similarStore)} </Td>
                         </Tr>
                       );
                     })}

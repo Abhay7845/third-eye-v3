@@ -242,3 +242,12 @@ export function getKeyAndValue(value) {
       }
     : null;
 }
+
+export const formatStoreValue = (value) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return value;
+  return numericValue.toLocaleString("en-IN", {
+    minimumFractionDigits: Number.isInteger(numericValue) ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+};
