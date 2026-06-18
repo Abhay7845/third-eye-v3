@@ -70,7 +70,6 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
     competitor: ciyInputs?.pdfMarkers?.competitor || [],
     ourBrand: ciyInputs?.pdfMarkers?.ourBrand || [],
   });
-  console.log("pdfMarkers==>", pdfMarkers);
   const [categoryMarkers, setCategoryMarkers] = useState({
     jewellery: [],
     retail: [],
@@ -103,7 +102,6 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
   const selectedDriveTimesRef = useRef(driveTime);
   const map_img = useRef(null);
   const radius = DRIVE_TIME_RADIUS_MAP[Math.max(...driveTime)] || 8000;
-  console.log("pdfMarkers==>", pdfMarkers);
   const inputsPayload = {
     targetPinCode: channelval,
     similerStoreVal: targetCity,

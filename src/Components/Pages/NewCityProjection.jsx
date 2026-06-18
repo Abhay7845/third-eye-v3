@@ -74,8 +74,6 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
     }
   };
 
-  console.log("inputsPayload==>", inputsPayload);
-
   useEffect(() => {
     // Add one dummy entry so popstate fires immediately
     window.history.pushState({ dummy: true }, "");
