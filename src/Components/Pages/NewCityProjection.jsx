@@ -88,7 +88,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   }, [isSave]);
 
   const GetMonthOverTrend = (chl, t_city) => {
-    axiosInstance
+    return axiosInstance
       .get(`/api/new/city/exp/mom/trends/data?channel=${chl}&city=${t_city}`)
       .then((res) => res)
       .then((response) => {
@@ -105,17 +105,11 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setMonthOver([]);
         }
       })
-      .catch((err) => setLoading(false));
+      .catch((err) => setMonthOver([]));
   };
 
-  useEffect(() => {
-    if (targetPinCode && similerStoreVal) {
-      GetMonthOverTrend(targetPinCode, similerStoreVal);
-    }
-  }, [targetPinCode, similerStoreVal]);
-
   const GetCityStoreScore = (t_city, s_city) => {
-    axiosInstance
+    return axiosInstance
       .get(`/api/new/city/fetch/score?inp1=${t_city}&inp2=${s_city}`)
       .then((res) => res)
       .then((response) => {
@@ -125,17 +119,11 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setCityStoreScore([]);
         }
       })
-      .catch((err) => setLoading(false));
+      .catch((err) => setCityStoreScore([]));
   };
 
-  useEffect(() => {
-    if (targetCity && similerStoreVal) {
-      GetCityStoreScore(similerStoreVal, targetCity);
-    }
-  }, [targetCity, similerStoreVal]);
-
   const GetExteranalIndicatore = (t_city, s_city) => {
-    axiosInstance
+    return axiosInstance
       .get(`/api/fetch/external/indicator?inp1=${t_city}&inp2=${s_city}`)
       .then((res) => res)
       .then((response) => {
@@ -170,18 +158,11 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setExtIndecator([]);
         }
       })
-      .catch((err) => setLoading(false));
+      .catch((err) => setExtIndecator([]));
   };
 
-  useEffect(() => {
-    if (targetCity && similerStoreVal) {
-      GetExteranalIndicatore(similerStoreVal, targetCity);
-    }
-  }, [targetCity, similerStoreVal]);
-
   const GetNearByStoreShare = (t_city, s_city, chl) => {
-    setLoading(true);
-    axiosInstance(
+    return axiosInstance(
       `/api/near/by/city/store/share?targetCity=${t_city}&similarCity=${s_city}&channel=${chl}`,
     )
       .then((res) => res)
@@ -198,19 +179,12 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
         } else {
           setStoreShare([]);
         }
-        setLoading(false);
       })
-      .catch((err) => setLoading(false));
+      .catch((err) => setStoreShare([]));
   };
 
-  useEffect(() => {
-    if (similerStoreVal && targetCity && targetPinCode) {
-      GetNearByStoreShare(similerStoreVal, targetCity, targetPinCode);
-    }
-  }, [similerStoreVal, targetCity, targetPinCode]);
-
   const GetEnrollTargetYear = (t_city, chl) => {
-    axiosInstance
+    return axiosInstance
       .get(
         `/api/new/city/first/year/enrolls?similarCity=${t_city}&channel=${chl}`,
       )
@@ -220,17 +194,11 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setEnrollTarget(response.data.value[0] || 0);
         }
       })
-      .catch((err) => setLoading(false));
+      .catch((err) => setEnrollTarget(0));
   };
 
-  useEffect(() => {
-    if (similerStoreVal && targetPinCode) {
-      GetEnrollTargetYear(similerStoreVal, targetPinCode);
-    }
-  }, [similerStoreVal, targetPinCode]);
-
   const GetCannibilization = (t_city, s_city, chl) => {
-    axiosInstance(
+    return axiosInstance(
       `api/new/expension/city/canib?targetCity=${t_city}&similarCity=${s_city}&channel=${chl}`,
     )
       .then((res) => res)
@@ -239,17 +207,11 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setCannibilization(response.data.value[0] || 0);
         }
       })
-      .catch((err) => setLoading(false));
+      .catch((err) => setCannibilization(0));
   };
 
-  useEffect(() => {
-    if (similerStoreVal && targetCity && targetPinCode) {
-      GetCannibilization(similerStoreVal, targetCity, targetPinCode);
-    }
-  }, [similerStoreVal, targetCity, targetPinCode]);
-
   const GetNewCrossChannel = (chl, t_city) => {
-    axiosInstance
+    return axiosInstance
       .get(`/api/new/city/cross/cust/movement/?city=${t_city}&channel=${chl}`)
       .then((res) => res)
       .then((response) => {
@@ -257,14 +219,36 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           setCustExitStore(response.data.value[0] || 0);
         }
       })
-      .catch((err) => setLoading(false));
+      .catch((err) => setCustExitStore(0));
   };
 
   useEffect(() => {
-    if (targetPinCode && similerStoreVal) {
-      GetNewCrossChannel(targetPinCode, similerStoreVal);
-    }
-  }, [targetPinCode, similerStoreVal]);
+    if (!(targetPinCode && similerStoreVal && targetCity)) return;
+
+    let isCancelled = false;
+
+    const loadAllProjectionApis = async () => {
+      setLoading(true);
+      await Promise.allSettled([
+        GetMonthOverTrend(targetPinCode, similerStoreVal),
+        GetCityStoreScore(similerStoreVal, targetCity),
+        GetExteranalIndicatore(similerStoreVal, targetCity),
+        GetNearByStoreShare(similerStoreVal, targetCity, targetPinCode),
+        GetEnrollTargetYear(similerStoreVal, targetPinCode),
+        GetCannibilization(similerStoreVal, targetCity, targetPinCode),
+        GetNewCrossChannel(targetPinCode, similerStoreVal),
+      ]);
+      if (!isCancelled) {
+        setLoading(false);
+      }
+    };
+
+    loadAllProjectionApis();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [targetPinCode, similerStoreVal, targetCity]);
 
   const GetInsertUserInfo = () => {
     const newCityPylaod = {

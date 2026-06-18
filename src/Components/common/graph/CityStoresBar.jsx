@@ -14,22 +14,28 @@ const CityScoreBar = ({ label, value, max, color }) => {
       style={{
         display: "flex",
         alignItems: "center",
+        flexWrap: "nowrap",
         marginBottom: "12px",
         gap: "8px",
+        minWidth: 0,
       }}>
       {/* Label */}
       <div
         style={{
-          width: "80px",
+          width: "150px",
+          flexShrink: 0,
           fontSize: "13px",
           fontWeight: 500,
-          textAlign: "justify",
+          textAlign: "left",
+          whiteSpace: "nowrap",
         }}>
         {label}
       </div>
       {/* Values Bar */}
       <div
         style={{
+          flexShrink: 0,
+          whiteSpace: "nowrap",
           textAlign: "center",
           border: "1px solid #000",
           padding: "2px",
@@ -42,6 +48,8 @@ const CityScoreBar = ({ label, value, max, color }) => {
       <div
         style={{
           flexGrow: 1,
+          flexShrink: 1,
+          minWidth: 0,
           height: "12px",
           backgroundColor: "#e0e0e0",
           borderRadius: "7px",

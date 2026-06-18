@@ -70,6 +70,7 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
     competitor: ciyInputs?.pdfMarkers?.competitor || [],
     ourBrand: ciyInputs?.pdfMarkers?.ourBrand || [],
   });
+  console.log("pdfMarkers==>", pdfMarkers);
   const [categoryMarkers, setCategoryMarkers] = useState({
     jewellery: [],
     retail: [],
