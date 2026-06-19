@@ -42,6 +42,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   const [cannibilization, setCannibilization] = useState(0);
   const [custExitStore, setCustExitStore] = useState(0);
   const [pdfFileName, setPdfFileName] = useState("");
+
   const [pdfDecesion, setPdfDecesion] = useState([]);
   const pdfDecisionRef = useRef({ lastPin: "", inFlight: false });
 
@@ -299,6 +300,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   }, [targetPinCode, similerStoreVal, targetCity]);
 
   const GetInsertUserInfo = () => {
+    setModalOpen(true);
     const newCityPylaod = {
       userName: userLog?.name,
       channel: targetPinCode,
