@@ -68,6 +68,19 @@ export const colorPairs = [
   ["#b8d6f4", "#375f8f"],
 ];
 
+export const retailTypes = [
+  "shopping_mall",
+  "department_store",
+  "supermarket",
+  "clothing_store",
+  "electronics_store",
+  "furniture_store",
+  "home_goods_store",
+  "jewelry_store",
+  "shoe_store",
+  "pet_store",
+];
+
 export const comList = [
   "Kalyan Jewellers",
   "Malabar Jewellers",
@@ -251,3 +264,178 @@ export const formatStoreValue = (value) => {
     maximumFractionDigits: 2,
   });
 };
+
+export function categorizeRetails(data) {
+  const categories = {
+    Footwear: [],
+    Clothing: [],
+    "ShoppingMall & Supermarkets": [],
+    Restaurant: [],
+    Automotive: [],
+    "Entertainment & Culture": [],
+    "Others Retail": [],
+  };
+
+  const unique = new Set();
+
+  const footwearBrands = [
+    "nike",
+    "adidas",
+    "reebok",
+    "bata",
+    "puma",
+    "shoe",
+    "footwear",
+  ];
+
+  const clothingBrands = [
+    "zara",
+    "zudio",
+    "raymond",
+    "zodiac",
+    "peter england",
+  ];
+
+  const shoppingKeywords = [
+    "department",
+    "shopping mall",
+    "supermarket",
+    "hypermarket",
+    "dmart",
+    "mega mart",
+  ];
+
+  const restaurantKeywords = [
+    "restaurant",
+    "cafe",
+    "bakery",
+    "coffee",
+    "pizza",
+    "juice",
+  ];
+
+  const automotiveKeywords = [
+    "car dealer",
+    "car rental",
+    "garage",
+    "parking",
+    "gas station",
+  ];
+
+  const entertainmentKeywords = [
+    "park",
+    "museum",
+    "movie theater",
+    "aquarium",
+    "art gallery",
+    "casino",
+    "zoo",
+  ];
+
+  const otherRetailKeywords = [
+    "pet",
+    "pet store",
+    "electronics",
+    "electronic",
+    "furniture",
+    "grocery",
+    "home goods",
+    "wholesaler",
+  ];
+
+  data.forEach((item) => {
+    const title = item.title?.trim();
+
+    if (!title) return;
+
+    const type = item.type?.toLowerCase() || "";
+    const key = title.toLowerCase();
+
+    const uniqueKey = `${key}-${type}`;
+
+    if (unique.has(uniqueKey)) return;
+
+    unique.add(uniqueKey);
+
+    // TYPE FIRST
+
+    if (["shoe_store", "footwear"].includes(type)) {
+      categories.Footwear.push({ title });
+      return;
+    }
+
+    if (["clothing_store"].includes(type)) {
+      categories.Clothing.push({ title });
+      return;
+    }
+
+    if (["shopping_mall", "department_store", "supermarket"].includes(type)) {
+      categories["ShoppingMall & Supermarkets"].push({
+        title,
+      });
+      return;
+    }
+
+    if (["restaurant", "cafe", "bakery"].includes(type)) {
+      categories.Restaurant.push({ title });
+      return;
+    }
+
+    if (["car_dealer", "car_rental", "parking"].includes(type)) {
+      categories.Automotive.push({
+        title,
+      });
+      return;
+    }
+
+    if (["park", "museum", "movie_theater"].includes(type)) {
+      categories["Entertainment & Culture"].push({
+        title,
+      });
+      return;
+    }
+
+    // TITLE FALLBACK
+
+    if (otherRetailKeywords.some((x) => key.includes(x))) {
+      categories["Others Retail"].push({
+        title,
+      });
+    } else if (footwearBrands.some((x) => key.includes(x))) {
+      categories.Footwear.push({
+        title,
+      });
+    } else if (clothingBrands.some((x) => key.includes(x))) {
+      categories.Clothing.push({
+        title,
+      });
+    } else if (shoppingKeywords.some((x) => key.includes(x))) {
+      categories["ShoppingMall & Supermarkets"].push({
+        title,
+      });
+    } else if (restaurantKeywords.some((x) => key.includes(x))) {
+      categories.Restaurant.push({
+        title,
+      });
+    } else if (automotiveKeywords.some((x) => key.includes(x))) {
+      categories.Automotive.push({
+        title,
+      });
+    } else if (entertainmentKeywords.some((x) => key.includes(x))) {
+      categories["Entertainment & Culture"].push({
+        title,
+      });
+    } else {
+      categories["Others Retail"].push({
+        title,
+      });
+    }
+  });
+
+  return Object.entries(categories)
+    .filter(([, items]) => items.length)
+    .map(([label, items]) => ({
+      label,
+      data: items.slice(0, 3),
+    }));
+}

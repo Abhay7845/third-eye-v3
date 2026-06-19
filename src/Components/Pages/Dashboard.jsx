@@ -20,6 +20,8 @@ import {
   ourBrandMatchList,
   comMatchList,
   DRIVE_TIME_RADIUS_MAP,
+  retailTypes,
+  categorizeRetails,
 } from "../Data/Data";
 import { useNavigate } from "react-router-dom";
 import { routes } from "../../routes";
@@ -109,25 +111,13 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
     ourBrand: newStore?.pdfMarkers?.ourBrand || [],
   });
 
-  // const [categoryMarkers, setCategoryMarkers] = useState({
-  //   jewellery: newStore?.categoryMarkers?.jewellery || [],
-  //   retail: newStore?.categoryMarkers?.retail || [],
-  //   competitor: newStore?.categoryMarkers?.competitor || [],
-  //   ourBrand: newStore?.categoryMarkers?.ourBrand || [],
-  // });
+  console.log("pdfMarkers==>", pdfMarkers);
   const [categoryMarkers, setCategoryMarkers] = useState({
     jewellery: [],
     retail: [],
     competitor: [],
     ourBrand: [],
   });
-
-  // const [selectedCategories, setSelectedCategories] = useState({
-  //   jewellery: newStore?.selectedCategories?.jewellery || false,
-  //   retail: newStore?.selectedCategories?.retail || false,
-  //   competitor: newStore?.selectedCategories?.competitor || false,
-  //   ourBrand: newStore?.selectedCategories?.ourBrand || false,
-  // });
 
   const [selectedCategories, setSelectedCategories] = useState({
     jewellery: false,
@@ -160,6 +150,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
     dormancyTarget: dormancyTarget,
     dormancySimilar: dormancySimilar,
   };
+
   const HandelResetFiled = () => {
     clearPolygons();
     setDefaultLoad(false);
@@ -231,6 +222,9 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
       setProjBtnDesabled(true);
     }
   }, [dicisionData?.bottom_line]);
+
+  const retails_category = categorizeRetails(pdfMarkers?.retail);
+  console.log("retails_category==>", retails_category);
 
   // const HandelTargetPin = (value) => {
   //   if (!value || value.length === 0) {
@@ -638,7 +632,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
     );
     const keywordByCategory = {
       jewellery: ["jewellery", "jewellers", "jewel"],
-      retail: ["retail", "retailmass"],
+      retail: retailTypes,
       competitor: comList,
       ourBrand: ourBrandList,
     };

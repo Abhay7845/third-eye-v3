@@ -15,7 +15,11 @@ import AnimatedNumber from "../accordion/AnimatedNumber";
 import NormalRandmaize from "../accordion/NormalRandmaize";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
-import { formatAssessmentData } from "../Data/Data";
+import {
+  categorizeRetails,
+  formatAssessmentData,
+  pdf_data,
+} from "../Data/Data";
 
 export const FilePopStyle = {
   position: "absolute",
@@ -63,7 +67,8 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   // -----------------POPULATION CALUCATION SATES
   const [priPincodePopulation, setPriPincodePopulation] = useState([]);
   const [secPincodePopulation, setSecPincodePopulation] = useState([]);
-  const [pdfDecesion, setPdfDecesion] = useState([]);
+  const pdlList = formatAssessmentData(pdf_data?.assessment);
+  const [pdfDecesion, setPdfDecesion] = useState(pdlList);
   const [estimateRevenue, setEstimateRevenue] = useState(0);
   // REF DEFINE
   const screenshotRef = useRef();
@@ -77,6 +82,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     storeSize,
     category,
     primarySec,
+    pdfMarkers,
   } = inputsPayload;
   const estiCustBase =
     Number(revenueData?.firstYearEnrolls || 0) +
@@ -84,6 +90,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     Number(revenueData?.crossCust || 0);
 
   const cityName = revenueData?.city;
+  const retails_category = categorizeRetails(pdfMarkers?.retail);
 
   useEffect(() => {
     if (arpcVal) {
@@ -209,6 +216,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   }, [channel, cityName, setOfPin]);
 
   const GetInsertUserInfo = () => {
+    setModalOpen(true);
     const newStrPylaod = {
       userName: userLog?.name || "geust",
       channel: channel,
@@ -583,6 +591,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
               pdfFileName={pdfFileName}
               cityTier={revenueData?.cityTier}
               pdfDecesion={pdfDecesion}
+              retails_category={retails_category}
             />
           </div>
         </Modal>

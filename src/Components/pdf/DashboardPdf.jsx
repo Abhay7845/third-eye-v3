@@ -27,6 +27,7 @@ const DashboardPdf = ({
   pdfFileName,
   cityTier,
   pdfDecesion,
+  retails_category,
 }) => {
   const newStoreRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -59,7 +60,7 @@ const DashboardPdf = ({
   const brandList = pdfMarkers?.ourBrand || [];
   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR COMPETITOR JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
   const competitorsList = pdfMarkers?.competitor || [];
-
+  console.log("pdfMarkers==>", pdfMarkers?.retail);
   function CategoryFormat(str) {
     return str
       .split("_")
@@ -772,22 +773,23 @@ const DashboardPdf = ({
             <div style={{ margin: "6px" }}>
               <div className='retail_subheading'>Retail Maturity Summary:</div>
               <div className='retail_section'>
-                <h6 style={{ marginBottom: "0px", marginTop: "5px" }}>
+                <h6
+                  style={{
+                    marginBottom: "0px",
+                    marginTop: "5px",
+                    fontSize: "14px",
+                  }}>
                   Major Retail Brands Present
                 </h6>
                 <ul>
-                  <li>
-                    <strong>Fashion & Lifestyle:</strong> H&M, Zara, Uniqlo,
-                    Lifestyle, Pantaloons.
-                  </li>
-                  <li>
-                    <strong>Tech & Electronics:</strong> Croma, Reliance
-                    Digital, Apple Store.
-                  </li>
-                  <li>
-                    <strong>Luxury & Premium:</strong> Marks & Spencer, Sephora,
-                    MAC, Coach.
-                  </li>
+                  {retails_category
+                    ?.filter((category) => category.data?.length)
+                    ?.map((category) => (
+                      <li key={category.label}>
+                        <strong>{category.label}:</strong>{" "}
+                        {category.data.map((item) => item.title).join(", ")}
+                      </li>
+                    ))}
                 </ul>
               </div>
             </div>
