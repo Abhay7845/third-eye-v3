@@ -751,7 +751,7 @@ const NewCityExpantionPdf = ({
                 {pdfMarkers?.jewellery?.length}{" "}
               </strong>{" "}
               Within Drive Time:
-              <strong style={{ margin: "0 5px" }}> {drive_time?.key}Min</strong>
+              <strong style={{ margin: "0 5px" }}> {drive_time?.key}min</strong>
             </div>
             <div style={{ margin: "6px" }}>
               <div className='retail_subheading'>Retail Maturity Summary:</div>
@@ -777,7 +777,7 @@ const NewCityExpantionPdf = ({
             </div>
           </div>
           <br />
-          <div className='retail_section' style={{ lineHeight: "1.4" }}>
+          <div className='retail_section' style={{ lineHeight: "1.6" }}>
             {pdfDecesion?.map((section, index) => (
               <div key={index}>
                 <h6 style={{ marginBottom: "5px", marginTop: "5px" }}>

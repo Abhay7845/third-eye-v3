@@ -21,6 +21,7 @@ import {
   ourBrandMatchList,
   comMatchList,
   DRIVE_TIME_RADIUS_MAP,
+  categorizeRetails,
 } from "../Data/Data";
 import { routes } from "../../routes";
 import { useNavigate } from "react-router-dom";
@@ -153,11 +154,6 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
     });
   };
 
-  // const check_validstion = {
-  //   radius: radius,
-  //   lat: anchorLocation?.lat,
-  // };
-
   useEffect(() => {
     if (!ciyInputs?.targetCity)
       navigator.geolocation.getCurrentPosition(
@@ -197,6 +193,9 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
       setProjBtnDesabled(false);
     }
   }, [decisionObj?.bottom_line]);
+
+  const retails_category = categorizeRetails(pdfMarkers?.retail);
+  console.log("retails_category==>", retails_category);
 
   const handleScreenshot = (map_img) => {
     return new Promise((resolve) => {

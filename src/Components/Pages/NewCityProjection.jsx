@@ -16,7 +16,7 @@ import AnimatedNumber from "../accordion/AnimatedNumber";
 import { useSelector } from "react-redux";
 import NewCityExpantionPdf from "../pdf/NewCityExpantionPdf";
 import { FilePopStyle } from "./NewStoreProjection";
-import { formatAssessmentData, formatStoreValue } from "../Data/Data";
+import { formatAssessmentData, formatStoreValue, pdf_data } from "../Data/Data";
 
 const NewCityProjection = ({ toggle_open, toggle }) => {
   const userLog = useSelector((state) => state?.user?.user);
@@ -42,8 +42,8 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   const [cannibilization, setCannibilization] = useState(0);
   const [custExitStore, setCustExitStore] = useState(0);
   const [pdfFileName, setPdfFileName] = useState("");
-
-  const [pdfDecesion, setPdfDecesion] = useState([]);
+  const pdlList = formatAssessmentData(pdf_data?.assessment);
+  const [pdfDecesion, setPdfDecesion] = useState(pdlList);
   const pdfDecisionRef = useRef({ lastPin: "", inFlight: false });
 
   const { targetCity, targetPinCode, similerStoreVal, arpcVal } = inputsPayload;
