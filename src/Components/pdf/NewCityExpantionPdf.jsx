@@ -388,12 +388,7 @@ const NewCityExpantionPdf = ({
               alignItems: "center",
               marginBottom: "5px",
             }}>
-            <img
-              src={third_eye}
-              height={30}
-              alt='third_eye'
-              style={{ marginTop: "-1%" }}
-            />
+            <img src={third_eye} height={30} alt='third_eye' />
           </div>
           <div className='pdf_top_header'>
             <img src={logo} height={30} alt='logo' />
