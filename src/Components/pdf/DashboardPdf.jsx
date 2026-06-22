@@ -767,10 +767,7 @@ const DashboardPdf = ({
                 {pdfMarkers?.jewellery?.length}{" "}
               </strong>{" "}
               Within Drive Time:
-              <strong style={{ margin: "0 5px" }}>
-                {" "}
-                {drive_time?.key} min
-              </strong>
+              <strong style={{ margin: "0 5px" }}> {drive_time?.key}min</strong>
             </div>
             <div style={{ margin: "6px" }}>
               <div className='retail_subheading'>Retail Maturity Summary:</div>
