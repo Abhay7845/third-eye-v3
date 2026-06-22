@@ -278,15 +278,7 @@ export function categorizeRetails(data) {
 
   const unique = new Set();
 
-  const footwearBrands = [
-    "nike",
-    "adidas",
-    "reebok",
-    "bata",
-    "puma",
-    "shoe",
-    "footwear",
-  ];
+  const footwearBrands = ["nike", "adidas", "reebok", "bata", "puma"];
 
   const clothingBrands = [
     "zara",
@@ -333,7 +325,6 @@ export function categorizeRetails(data) {
   ];
 
   const otherRetailKeywords = [
-    "pet",
     "pet store",
     "electronics",
     "electronic",
@@ -345,58 +336,12 @@ export function categorizeRetails(data) {
 
   data.forEach((item) => {
     const title = item.title?.trim();
-
     if (!title) return;
-
     const type = item.type?.toLowerCase() || "";
     const key = title.toLowerCase();
-
     const uniqueKey = `${key}-${type}`;
-
     if (unique.has(uniqueKey)) return;
-
     unique.add(uniqueKey);
-
-    // TYPE FIRST
-
-    if (["shoe_store", "footwear"].includes(type)) {
-      categories.Footwear.push({ title });
-      return;
-    }
-
-    if (["clothing_store"].includes(type)) {
-      categories.Clothing.push({ title });
-      return;
-    }
-
-    if (["shopping_mall", "department_store", "supermarket"].includes(type)) {
-      categories["ShoppingMall & Supermarkets"].push({
-        title,
-      });
-      return;
-    }
-
-    if (["restaurant", "cafe", "bakery"].includes(type)) {
-      categories.Restaurant.push({ title });
-      return;
-    }
-
-    if (["car_dealer", "car_rental", "parking"].includes(type)) {
-      categories.Automotive.push({
-        title,
-      });
-      return;
-    }
-
-    if (["park", "museum", "movie_theater"].includes(type)) {
-      categories["Entertainment & Culture"].push({
-        title,
-      });
-      return;
-    }
-
-    // TITLE FALLBACK
-
     if (otherRetailKeywords.some((x) => key.includes(x))) {
       categories["Others Retail"].push({
         title,
