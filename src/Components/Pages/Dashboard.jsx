@@ -129,6 +129,8 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
 
   // FETCH SIMOLER STIRE API-----------------------------
 
+  console.log("pdfMarkers==>", pdfMarkers);
+
   const inputsPayload = {
     targetPinCode: targetPinCode,
     similarPinCode: simChachmentPin,
@@ -650,6 +652,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
         const fetchPage = (req) => {
           service.nearbySearch(req, (results, status, nextPage) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+              console.log("results==>", results);
               results.forEach((place) => {
                 const location = place.geometry.location;
                 const distance =
