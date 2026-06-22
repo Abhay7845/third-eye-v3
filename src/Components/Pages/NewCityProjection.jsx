@@ -308,7 +308,6 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   }, [targetPinCode, similerStoreVal, targetCity]);
 
   const GetInsertUserInfo = () => {
-    setModalOpen(true);
     const newCityPylaod = {
       userName: userLog?.name,
       channel: targetPinCode,
