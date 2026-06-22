@@ -60,7 +60,6 @@ const DashboardPdf = ({
   const brandList = pdfMarkers?.ourBrand || [];
   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR COMPETITOR JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
   const competitorsList = pdfMarkers?.competitor || [];
-  console.log("pdfMarkers==>", pdfMarkers?.retail);
   function CategoryFormat(str) {
     return str
       .split("_")

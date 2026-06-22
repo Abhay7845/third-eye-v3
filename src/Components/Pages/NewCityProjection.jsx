@@ -16,7 +16,12 @@ import AnimatedNumber from "../accordion/AnimatedNumber";
 import { useSelector } from "react-redux";
 import NewCityExpantionPdf from "../pdf/NewCityExpantionPdf";
 import { FilePopStyle } from "./NewStoreProjection";
-import { formatAssessmentData, formatStoreValue, pdf_data } from "../Data/Data";
+import {
+  categorizeRetails,
+  formatAssessmentData,
+  formatStoreValue,
+  pdf_data,
+} from "../Data/Data";
 
 const NewCityProjection = ({ toggle_open, toggle }) => {
   const userLog = useSelector((state) => state?.user?.user);
@@ -46,7 +51,8 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   const [pdfDecesion, setPdfDecesion] = useState(pdlList);
   const pdfDecisionRef = useRef({ lastPin: "", inFlight: false });
 
-  const { targetCity, targetPinCode, similerStoreVal, arpcVal } = inputsPayload;
+  const { targetCity, targetPinCode, similerStoreVal, arpcVal, pdfMarkers } =
+    inputsPayload;
   const { t_catch, s_catch, m_trends } = catchmentData;
   const proRev1yr = (enrollTarget + custExitStore) * arpcVal;
   const projectionData = [
@@ -59,6 +65,8 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
     },
     { heading: "Cannibilization In 1 Year", value: cannibilization },
   ];
+
+  const retails_category = categorizeRetails(pdfMarkers?.retail);
 
   // your function remains same
   const myFunction = (isSave) => {
@@ -519,6 +527,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
               userLog={userLog}
               pdfFileName={pdfFileName}
               pdfDecesion={pdfDecesion}
+              retails_category={retails_category}
             />
           </div>
         </Modal>

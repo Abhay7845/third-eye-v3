@@ -21,7 +21,7 @@ import {
   comMatchList,
   DRIVE_TIME_RADIUS_MAP,
   retailTypes,
-  categorizeRetails,
+  // categorizeRetails,
 } from "../Data/Data";
 import { useNavigate } from "react-router-dom";
 import { routes } from "../../routes";
@@ -111,7 +111,6 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
     ourBrand: newStore?.pdfMarkers?.ourBrand || [],
   });
 
-  console.log("pdfMarkers==>", pdfMarkers);
   const [categoryMarkers, setCategoryMarkers] = useState({
     jewellery: [],
     retail: [],
@@ -223,8 +222,8 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
     }
   }, [dicisionData?.bottom_line]);
 
-  const retails_category = categorizeRetails(pdfMarkers?.retail);
-  console.log("retails_category==>", retails_category);
+  // const retails_category = categorizeRetails(pdfMarkers?.retail);
+  // console.log("retails_category==>", retails_category);
 
   // const HandelTargetPin = (value) => {
   //   if (!value || value.length === 0) {

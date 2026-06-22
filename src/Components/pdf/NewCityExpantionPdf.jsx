@@ -28,6 +28,7 @@ const NewCityExpantionPdf = ({
   userLog,
   pdfFileName,
   pdfDecesion,
+  retails_category,
 }) => {
   const [loading, setLoading] = useState(false);
   const [skeletonLoad, setSkeletonLoad] = useState(false);
@@ -760,18 +761,14 @@ const NewCityExpantionPdf = ({
                   Major Retail Brands Present
                 </h6>
                 <ul>
-                  <li>
-                    <strong>Fashion & Lifestyle:</strong> H&M, Zara, Uniqlo,
-                    Lifestyle, Pantaloons.
-                  </li>
-                  <li>
-                    <strong>Tech & Electronics:</strong> Croma, Reliance
-                    Digital, Apple Store.
-                  </li>
-                  <li>
-                    <strong>Luxury & Premium:</strong> Marks & Spencer, Sephora,
-                    MAC, Coach.
-                  </li>
+                  {retails_category
+                    ?.filter((category) => category.data?.length)
+                    ?.map((category) => (
+                      <li key={category.label}>
+                        <strong>{category.label}:</strong>{" "}
+                        {category.data.map((item) => item.title).join(", ")}
+                      </li>
+                    ))}
                 </ul>
               </div>
             </div>
