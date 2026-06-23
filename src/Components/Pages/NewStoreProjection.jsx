@@ -216,6 +216,8 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   }, [channel, cityName, setOfPin]);
 
   const GetInsertUserInfo = () => {
+    setModalOpen(true);
+
     const newStrPylaod = {
       userName: userLog?.name || "geust",
       channel: channel,

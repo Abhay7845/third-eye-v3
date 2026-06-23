@@ -97,6 +97,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
   const polygonRefs = useRef([]);
   const selectedDriveTimesRef = useRef(driveTime);
   const map_img = useRef(null);
+  const hasFetchedNearBy = useRef(false);
 
   // <<<<<<<<<<<<<<<<<<<<<<<<<<MAP RELATED STATES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
   const [polygonLabels, setPolygonLabels] = useState([]);
@@ -627,7 +628,6 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
     if (!googleMapInstance || !window.google?.maps) {
       return;
     }
-    setLoading(true);
     const service = new window.google.maps.places.PlacesService(
       googleMapInstance,
     );
@@ -753,19 +753,26 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
       ...prev,
       [category]: filteredMarkers,
     }));
-    setLoading(false);
     setDefaultLoad(true);
   };
 
+  // Reset the gate when radius or anchorLocation changes so nearby places re-fetch
   useEffect(() => {
-    if (defaultLoad) {
-      DefaultAreaNearBy("jewellery", anchorLocation, radius);
-      DefaultAreaNearBy("retail", anchorLocation, radius);
-      DefaultAreaNearBy("competitor", anchorLocation, radius);
-      DefaultAreaNearBy("ourBrand", anchorLocation, radius);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    hasFetchedNearBy.current = false;
   }, [radius, anchorLocation]);
+
+  useEffect(() => {
+    if (!defaultLoad || hasFetchedNearBy.current) return;
+    hasFetchedNearBy.current = true;
+    setLoading(true);
+    Promise.all([
+      DefaultAreaNearBy("jewellery", anchorLocation, radius),
+      DefaultAreaNearBy("retail", anchorLocation, radius),
+      DefaultAreaNearBy("competitor", anchorLocation, radius),
+      DefaultAreaNearBy("ourBrand", anchorLocation, radius),
+    ]).finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultLoad, radius, anchorLocation]);
 
   // --------------------------------FILLTER COMPETITORS LIST --------------------------
   const competitorsList = pdfMarkers?.competitor || [];
@@ -969,12 +976,8 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
     }
 
     if (!newStore?.category) {
-      const activeAnchor = t_location || anchorLocation;
+      hasFetchedNearBy.current = false;
       setDefaultLoad(true);
-      DefaultAreaNearBy("jewellery", activeAnchor, radius);
-      DefaultAreaNearBy("retail", activeAnchor, radius);
-      DefaultAreaNearBy("competitor", activeAnchor, radius);
-      DefaultAreaNearBy("ourBrand", activeAnchor, radius);
     }
 
     try {
@@ -1129,6 +1132,10 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
       setLoading(false);
     } finally {
       setMapLoader(false);
+      // When DefaultAreaNearBy won't be triggered (history reload), turn off loading here
+      if (newStore?.category) {
+        setLoading(false);
+      }
     }
   };
 
@@ -1330,7 +1337,8 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
                 setLoading(false);
               }, 700);
             }}
-            disabled={projBtnDesabled}>
+            // disabled={projBtnDesabled}
+          >
             PROJECTION
           </button>
         </div>

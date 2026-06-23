@@ -690,7 +690,6 @@ const DashboardPdf = ({
               <h6>Data Not Available</h6>
             )}
           </div>
-          <br />
           <div className='user_input_box'>
             <h5 className='user_input_title'>Secondary Catchment Details</h5>
             {secPincodePopulation?.length > 0 ? (
@@ -699,7 +698,6 @@ const DashboardPdf = ({
               <h6>Stores Not Available</h6>
             )}
           </div>
-          <br />
           <div className='user_input_box'>
             <h5 className='user_input_title'>
               Nearest Our Brand Store Details
@@ -726,7 +724,12 @@ const DashboardPdf = ({
               )}
             </div>
           </div>
-          <br />
+        </div>
+        <br />
+        {/* ------------------------2ND PAGE SAPARATION -------------------- */}
+        <div
+          className='second_page_separation'
+          style={{ padding: "10px", border: "1px solid #000" }}>
           <div className='user_input_box'>
             <h5 className='user_input_title'>
               Nearest Competitor Store Details
@@ -753,12 +756,6 @@ const DashboardPdf = ({
               )}
             </div>
           </div>
-        </div>
-        <br />
-        {/* ------------------------2ND PAGE SAPARATION -------------------- */}
-        <div
-          className='second_page_separation'
-          style={{ padding: "10px", border: "1px solid #000" }}>
           <div className='retail_box'>
             <div className='retail_heading'>
               Jewellery Market Store Count:
@@ -794,7 +791,7 @@ const DashboardPdf = ({
             </div>
           </div>
           <br />
-          <div className='retail_section' style={{ lineHeight: "1.6" }}>
+          <div className='retail_section' style={{ lineHeight: "1.5" }}>
             {pdfDecesion?.map((section, index) => (
               <div key={index}>
                 <h6 style={{ marginBottom: "5px", marginTop: "5px" }}>
