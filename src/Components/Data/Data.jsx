@@ -76,9 +76,7 @@ export const retailTypes = [
   "electronics_store",
   "furniture_store",
   "home_goods_store",
-  "jewelry_store",
   "shoe_store",
-  "pet_store",
 ];
 
 export const comList = [

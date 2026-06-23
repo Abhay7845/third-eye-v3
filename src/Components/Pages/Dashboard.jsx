@@ -655,6 +655,8 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
               console.log("results==>", results);
               results.forEach((place) => {
                 const location = place.geometry.location;
+                const user_rating = place?.user_ratings_total;
+                const rating = place?.rating;
                 const distance =
                   window.google.maps.geometry.spherical.computeDistanceBetween(
                     anchorLocation,
@@ -665,6 +667,8 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
                   const marker = new window.google.maps.Marker({
                     position: location,
                     title: place.name,
+                    user_rating: user_rating,
+                    rating: rating,
                     icon: { url: "22" },
                   });
                   marker.setMap(null);
@@ -682,7 +686,6 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             }
           });
         };
-
         fetchPage(request);
       });
 
@@ -739,9 +742,16 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
         })
       : deduped;
 
+    // Filter markers based on user_rating >= 100 and rating >= 3
+    const filteredMarkers = uniqueMarkers.filter((marker) => {
+      const userRating = marker.user_rating || 0;
+      const rating = marker.rating || 0;
+      return userRating >= 100 && rating >= 3;
+    });
+
     setPdfMarkers((prev) => ({
       ...prev,
-      [category]: uniqueMarkers,
+      [category]: filteredMarkers,
     }));
     setLoading(false);
     setDefaultLoad(true);
