@@ -21,6 +21,7 @@ import {
   ourBrandMatchList,
   comMatchList,
   DRIVE_TIME_RADIUS_MAP,
+  retailTypes,
   // categorizeRetails,
 } from "../Data/Data";
 import { routes } from "../../routes";
@@ -51,6 +52,7 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
   const [slideOut, setSlideOut] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [projBtnDesabled, setProjBtnDesabled] = useState(true);
+  const [generateLoading, setGenerateLoading] = useState(false);
   const [channelList, setChannelList] = useState(null);
   const [channelval, setChannelval] = useState(userLog?.channel);
   const [targetCityList, setTargetCityList] = useState([]);
@@ -102,6 +104,8 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
   const polygonRefs = useRef([]);
   const selectedDriveTimesRef = useRef(driveTime);
   const map_img = useRef(null);
+  const hasFetchedNearBy = useRef(false);
+  const generateTriggeredRef = useRef(false);
   const radius = DRIVE_TIME_RADIUS_MAP[Math.max(...driveTime)] || 8000;
   const inputsPayload = {
     targetPinCode: channelval,
@@ -121,9 +125,18 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
     anchorLocation: anchorLocation,
   };
 
+  const hideGenerateLoaderSmooth = () => {
+    setTimeout(() => {
+      setGenerateLoading(false);
+      generateTriggeredRef.current = false;
+    }, 250);
+  };
+
   useEffect(() => {
     dispatch(clearNewStoreInputs());
   });
+
+  console.log("pdfMarkers==>", pdfMarkers);
 
   const HandelResetFiled = () => {
     clearPolygons();
@@ -200,7 +213,13 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
   const handleScreenshot = (map_img) => {
     return new Promise((resolve) => {
       if (map_img.current) {
-        html2canvas(map_img.current, { useCORS: true }).then((canvas) => {
+        html2canvas(map_img.current, {
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: null,
+          scale: Math.max(2, window.devicePixelRatio || 1),
+        }).then((canvas) => {
           const imgData = canvas.toDataURL("image/png");
           dispatch(setNewStoreMapImg(imgData));
           resolve(imgData);
@@ -209,6 +228,19 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
         resolve(null);
       }
     });
+  };
+
+  const captureMapScreenshotWithRetry = async (attempts = 3) => {
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 450));
+      }
+      const imgData = await handleScreenshot(map_img);
+      if (imgData && imgData.length > 15000) {
+        return imgData;
+      }
+    }
+    return null;
   };
 
   const GetChannelList = () => {
@@ -467,14 +499,13 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
     if (!googleMapInstance || !window.google?.maps) {
       return;
     }
-    setLoading(true);
     const service = new window.google.maps.places.PlacesService(
       googleMapInstance,
     );
 
     const keywordByCategory = {
       jewellery: ["jewellery", "jewellers", "jewel"],
-      retail: ["retail", "retailmass"],
+      retail: retailTypes,
       competitor: comList,
       ourBrand: ourBrandList,
     };
@@ -495,6 +526,8 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK) {
               results.forEach((place) => {
                 const location = place.geometry.location;
+                const user_rating = place?.user_ratings_total;
+                const rating = place?.rating;
                 const distance =
                   window.google.maps.geometry.spherical.computeDistanceBetween(
                     anchorLocation,
@@ -504,6 +537,8 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
                   const marker = new window.google.maps.Marker({
                     position: location,
                     title: place.name,
+                    user_rating: user_rating,
+                    rating: rating,
                     icon: { url: "22" },
                   });
                   marker.setMap(null);
@@ -571,23 +606,45 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
         })
       : deduped;
 
+    // Apply rating threshold only for retail markers.
+    const filteredMarkers =
+      category === "retail"
+        ? uniqueMarkers.filter((marker) => {
+            const userRating = marker.user_rating || 0;
+            const rating = marker.rating || 0;
+            return userRating >= 100 && rating >= 3;
+          })
+        : uniqueMarkers;
+
     setPdfMarkers((prev) => ({
       ...prev,
-      [category]: uniqueMarkers,
+      [category]: filteredMarkers,
     }));
-    setLoading(false);
     setDefaultLoad(true);
   };
 
+  // Reset the gate when radius or anchorLocation changes so nearby places re-fetch
   useEffect(() => {
-    if (defaultLoad) {
-      DefaultAreaNearBy("jewellery", anchorLocation, radius);
-      DefaultAreaNearBy("retail", anchorLocation, radius);
-      DefaultAreaNearBy("competitor", anchorLocation, radius);
-      DefaultAreaNearBy("ourBrand", anchorLocation, radius);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    hasFetchedNearBy.current = false;
   }, [radius, anchorLocation]);
+
+  useEffect(() => {
+    if (!defaultLoad || hasFetchedNearBy.current) return;
+    hasFetchedNearBy.current = true;
+    setLoading(true);
+    Promise.all([
+      DefaultAreaNearBy("jewellery", anchorLocation, radius),
+      DefaultAreaNearBy("retail", anchorLocation, radius),
+      DefaultAreaNearBy("competitor", anchorLocation, radius),
+      DefaultAreaNearBy("ourBrand", anchorLocation, radius),
+    ]).finally(() => {
+      setLoading(false);
+      if (generateTriggeredRef.current) {
+        hideGenerateLoaderSmooth();
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultLoad, radius, anchorLocation]);
 
   // competitor and ourBrand are stored directly in pdfMarkers by DefaultAreaNearBy
   const competitorsList = pdfMarkers?.competitor || [];
@@ -731,6 +788,8 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
       });
       return;
     }
+    generateTriggeredRef.current = true;
+    setGenerateLoading(true);
     setLoading(true);
     if (!ciyInputs?.targetMatrix) {
       const target_matrix = await GetTargetMatrix(channelval, targetCity);
@@ -781,12 +840,8 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
           setAnchorLocation(t_location);
         }
         if (!ciyInputs?.targetCity) {
-          const activeAnchor = t_location || anchorLocation;
+          hasFetchedNearBy.current = false;
           setDefaultLoad(true);
-          DefaultAreaNearBy("jewellery", activeAnchor, radius);
-          DefaultAreaNearBy("retail", activeAnchor, radius);
-          DefaultAreaNearBy("competitor", activeAnchor, radius);
-          DefaultAreaNearBy("ourBrand", activeAnchor, radius);
         }
         setLockBtn(true);
         const data = response.data.value;
@@ -889,16 +944,16 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
                 data.length > 100 ? currentZoom + 1 : currentZoom + 0.7,
               );
             }
-            // tilesloaded ensures map is fully drawn
+            // Wait for map tiles + a small render settle window before screenshot.
             window.google.maps.event.addListenerOnce(
               googleMapInstance,
-              "idle",
+              "tilesloaded",
               async () => {
                 setTimeout(async () => {
                   if (!ciyInputs?.radius) {
-                    await handleScreenshot(map_img);
+                    await captureMapScreenshotWithRetry(3);
                   }
-                }, 500);
+                }, 900);
               },
             );
           },
@@ -911,9 +966,18 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
       }
     } catch (err) {
       setLoading(false);
+      if (generateTriggeredRef.current) {
+        hideGenerateLoaderSmooth();
+      }
     } finally {
-      setLoading(false);
       setMapLoader(false);
+      // When DefaultAreaNearBy won't be triggered (history reload), turn off loading here
+      if (ciyInputs?.targetCity) {
+        setLoading(false);
+        if (generateTriggeredRef.current) {
+          hideGenerateLoaderSmooth();
+        }
+      }
     }
   };
 
@@ -970,7 +1034,7 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
 
   return (
     <React.Fragment>
-      {loading && <Loader />}
+      {(loading || generateLoading) && <Loader />}
       <Sidebar
         toggle_open={toggle_open}
         toggle={toggle}

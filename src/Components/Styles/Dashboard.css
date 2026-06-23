@@ -104,7 +104,7 @@ box-shadow:  3.0px 5.9px 5.9px hsl(0deg 0% 0% / 0.41);
   }
   
   .scrollable_container {
-  width: 50vw;
+  width: 65vw;
   height: 95vh;
   overflow: auto;
   border: 1px solid #ccc;

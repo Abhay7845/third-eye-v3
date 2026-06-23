@@ -308,6 +308,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   }, [targetPinCode, similerStoreVal, targetCity]);
 
   const GetInsertUserInfo = () => {
+    setModalOpen(true);
     const newCityPylaod = {
       userName: userLog?.name,
       channel: targetPinCode,
@@ -374,7 +375,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
     };
     setLoading(true);
     axiosInstance
-      .post(`/api/data/insert/new/city`, newCityPylaod)
+      .post(`/api/data/insert/new/city/abhay`, newCityPylaod)
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {

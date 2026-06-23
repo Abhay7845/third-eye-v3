@@ -33,6 +33,7 @@ const NewCityExpantionPdf = ({
   const [loading, setLoading] = useState(false);
   const [skeletonLoad, setSkeletonLoad] = useState(false);
   const newCityRef = useRef(null);
+  const lastSavedPdfRef = useRef(null);
   const currentDate = moment(new Date()).format("DD-MM-YYYY");
   const s_city = catchmentData?.s_catch;
   const t_city = catchmentData?.t_catch;
@@ -231,18 +232,30 @@ const NewCityExpantionPdf = ({
   };
 
   useEffect(() => {
-    if (pdfFileName) {
+    if (!pdfFileName) return;
+    if (lastSavedPdfRef.current === pdfFileName) return;
+
+    lastSavedPdfRef.current = pdfFileName;
+
+    const runHistorySave = async () => {
       setSkeletonLoad(true);
-      setTimeout(() => {
-        handleSavePdfHistory(pdfFileName);
-      }, 1500);
-    }
+      // Ensure loader paint before heavy PDF generation starts.
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await handleSavePdfHistory(pdfFileName);
+    };
+
+    runHistorySave();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pdfFileName]);
 
   const handleDownloadPdf = async () => {
     setLoading(true);
     try {
+      // Let React commit loader UI before starting heavy PDF work.
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
       const pdf = await renderSectionsToPdf();
       const pdfBlob = pdf.output("blob");
 
@@ -349,9 +362,12 @@ const NewCityExpantionPdf = ({
   const our_brand_list = getFirstSixData(nearestOurBrands);
   const competitors_list = getFirstSixData(nearestCompetitors);
 
+  const showHistoryLoader = skeletonLoad && !loading;
+  const showDownloadLoader = loading && !skeletonLoad;
+
   return (
     <React.Fragment>
-      {skeletonLoad && <Loader />}
+      {showHistoryLoader && <Loader />}
       <div
         style={{
           display: "flex",
@@ -372,7 +388,7 @@ const NewCityExpantionPdf = ({
           </button>
         </div>
       </div>
-      {loading && <PdfLoader />}
+      {showDownloadLoader && <PdfLoader />}
       <div style={{ marginTop: "2%" }} ref={newCityRef}>
         {/* ---------------------------------PDF RIRST PAGE SEPRATION ------------------------------ */}
         <div
@@ -738,7 +754,6 @@ const NewCityExpantionPdf = ({
               )}
             </div>
           </div>
-          <br />
           <div className='retail_box'>
             <div className='retail_heading'>
               Jewellery Market Store Count:

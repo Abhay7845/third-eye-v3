@@ -183,12 +183,27 @@ const NewStoreDecision = ({
     }
   };
 
-  const max_stores = Math.max(
-    jewellers_stores?.length,
-    inputsPayload?.anchorLocation?.lat,
-  );
+  const hasFetched = React.useRef(false);
+
+  // Reset gate when radius/anchor changes so decision re-runs for new map context.
+  useEffect(() => {
+    hasFetched.current = false;
+  }, [inputsPayload?.radius, inputsPayload?.anchorLocation]);
 
   useEffect(() => {
+    const anchor = inputsPayload?.anchorLocation;
+    const allDataReady =
+      defaultLoad &&
+      jewellers_stores?.length > 0 &&
+      retails_list?.length > 0 &&
+      Array.isArray(competitors) &&
+      Number.isFinite(anchor?.lat) &&
+      Number.isFinite(anchor?.lng);
+
+    if (!allDataReady || hasFetched.current) return;
+
+    hasFetched.current = true;
+
     const fetchData = async () => {
       const GIS_Data = await Get_GIS_Data(
         jewellers_stores,
@@ -197,11 +212,17 @@ const NewStoreDecision = ({
       );
       GetDecisionList(GIS_Data);
     };
-    if (defaultLoad) {
-      fetchData();
-    }
+
+    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [max_stores, inputsPayload?.radius]);
+  }, [
+    jewellers_stores,
+    retails_list,
+    competitors,
+    defaultLoad,
+    inputsPayload?.radius,
+    inputsPayload?.anchorLocation,
+  ]);
 
   return (
     <React.Fragment>
