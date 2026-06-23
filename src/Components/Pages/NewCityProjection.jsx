@@ -20,7 +20,6 @@ import {
   categorizeRetails,
   formatAssessmentData,
   formatStoreValue,
-  pdf_data,
 } from "../Data/Data";
 
 const NewCityProjection = ({ toggle_open, toggle }) => {
@@ -47,8 +46,8 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   const [cannibilization, setCannibilization] = useState(0);
   const [custExitStore, setCustExitStore] = useState(0);
   const [pdfFileName, setPdfFileName] = useState("");
-  const pdlList = formatAssessmentData(pdf_data?.assessment);
-  const [pdfDecesion, setPdfDecesion] = useState(pdlList);
+  // const pdlList = formatAssessmentData(pdf_data?.assessment);
+  const [pdfDecesion, setPdfDecesion] = useState([]);
   const pdfDecisionRef = useRef({ lastPin: "", inFlight: false });
 
   const { targetCity, targetPinCode, similerStoreVal, arpcVal, pdfMarkers } =
@@ -257,7 +256,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
         try {
           const response = await axiosInstance.post(
             "/api/openai/decision_reasoner/v2",
-            { pincode: "560100" },
+            { city: similerStoreVal },
           );
           if (response?.status === 200) {
             const formattedData = formatAssessmentData(
@@ -305,10 +304,10 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
     return () => {
       isCancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetPinCode, similerStoreVal, targetCity]);
 
   const GetInsertUserInfo = () => {
-    setModalOpen(true);
     const newCityPylaod = {
       userName: userLog?.name,
       channel: targetPinCode,
@@ -375,7 +374,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
     };
     setLoading(true);
     axiosInstance
-      .post(`/api/data/insert/new/city/abhay`, newCityPylaod)
+      .post(`/api/data/insert/new/city`, newCityPylaod)
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {

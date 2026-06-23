@@ -15,11 +15,7 @@ import AnimatedNumber from "../accordion/AnimatedNumber";
 import NormalRandmaize from "../accordion/NormalRandmaize";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
-import {
-  categorizeRetails,
-  formatAssessmentData,
-  pdf_data,
-} from "../Data/Data";
+import { categorizeRetails, formatAssessmentData } from "../Data/Data";
 
 export const FilePopStyle = {
   position: "absolute",
@@ -67,8 +63,8 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   // -----------------POPULATION CALUCATION SATES
   const [priPincodePopulation, setPriPincodePopulation] = useState([]);
   const [secPincodePopulation, setSecPincodePopulation] = useState([]);
-  const pdlList = formatAssessmentData(pdf_data?.assessment);
-  const [pdfDecesion, setPdfDecesion] = useState(pdlList);
+  // const pdlList = formatAssessmentData(pdf_data?.assessment);
+  const [pdfDecesion, setPdfDecesion] = useState([]);
   const [estimateRevenue, setEstimateRevenue] = useState(0);
   // REF DEFINE
   const screenshotRef = useRef();
@@ -216,8 +212,6 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   }, [channel, cityName, setOfPin]);
 
   const GetInsertUserInfo = () => {
-    setModalOpen(true);
-
     const newStrPylaod = {
       userName: userLog?.name || "geust",
       channel: channel,

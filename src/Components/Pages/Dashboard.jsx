@@ -21,6 +21,7 @@ import {
   comMatchList,
   DRIVE_TIME_RADIUS_MAP,
   retailTypes,
+  channel_list,
   // categorizeRetails,
 } from "../Data/Data";
 import { useNavigate } from "react-router-dom";
@@ -129,8 +130,6 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
   const radius = DRIVE_TIME_RADIUS_MAP[Math.max(...driveTime)] || 8000;
 
   // FETCH SIMOLER STIRE API-----------------------------
-
-  console.log("pdfMarkers==>", pdfMarkers);
 
   const inputsPayload = {
     targetPinCode: targetPinCode,
@@ -329,14 +328,14 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
-          // const filteredBrands = response?.data?.value
-          //   ?.map((b) => b.trim())
-          //   .filter((brand) =>
-          //     channel_list.some(
-          //       (ch) => ch.toUpperCase() === brand.toUpperCase(),
-          //     ),
-          //   );
-          const channelList = ["TANISHQ"].map((item) => {
+          const filteredBrands = response?.data?.value
+            ?.map((b) => b.trim())
+            .filter((brand) =>
+              channel_list.some(
+                (ch) => ch.toUpperCase() === brand.toUpperCase(),
+              ),
+            );
+          const channelList = filteredBrands?.map((item) => {
             return {
               value: item?.toUpperCase(),
               label: item?.toUpperCase(),
@@ -652,7 +651,6 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
         const fetchPage = (req) => {
           service.nearbySearch(req, (results, status, nextPage) => {
             if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-              console.log("results==>", results);
               results.forEach((place) => {
                 const location = place.geometry.location;
                 const user_rating = place?.user_ratings_total;
@@ -1337,8 +1335,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
                 setLoading(false);
               }, 700);
             }}
-            // disabled={projBtnDesabled}
-          >
+            disabled={projBtnDesabled}>
             PROJECTION
           </button>
         </div>

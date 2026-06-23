@@ -14,6 +14,7 @@ import GraphAccordion from "../accordion/GraphAccordion";
 import { PolygonCentroid, StoreColorSet } from "../Data/PolygonCentroid";
 import StoreAnlTabel from "../../Mainpages/StoreAnlTabel";
 import StoreTypeDetails from "../custom/StoreTypeDetails";
+import { channel_list } from "../Data/Data";
 // import { channel_list } from "../Data/Data";
 
 const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
@@ -87,14 +88,14 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
-          // const filteredBrands = response?.data?.value
-          //   ?.map((b) => b.trim())
-          //   .filter((brand) =>
-          //     channel_list.some(
-          //       (ch) => ch.toUpperCase() === brand.toUpperCase(),
-          //     ),
-          //   );
-          const channelList = ["TANISHQ"].map((item) => {
+          const filteredBrands = response?.data?.value
+            ?.map((b) => b.trim())
+            .filter((brand) =>
+              channel_list.some(
+                (ch) => ch.toUpperCase() === brand.toUpperCase(),
+              ),
+            );
+          const channelList = filteredBrands?.map((item) => {
             return {
               value: item?.toUpperCase(),
               label: item?.toUpperCase(),

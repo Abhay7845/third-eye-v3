@@ -10,6 +10,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { clearNewStoreInputs } from "../../redux/reducer/NewStore";
 import { clearNewCityInputs } from "../../redux/reducer/NewCity";
 import { colorSet } from "../Data/PolygonCentroid";
+import { channel_list } from "../Data/Data";
 // import { channel_list } from "../Data/Data";
 
 const DarkCatchmentAnl = ({ toggle_open, toggle }) => {
@@ -59,14 +60,14 @@ const DarkCatchmentAnl = ({ toggle_open, toggle }) => {
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
-          // const filteredBrands = response?.data?.value
-          //   ?.map((b) => b.trim())
-          //   .filter((brand) =>
-          //     channel_list.some(
-          //       (ch) => ch.toUpperCase() === brand.toUpperCase(),
-          //     ),
-          //   );
-          const channelList = ["TANISHQ"].map((item) => {
+          const filteredBrands = response?.data?.value
+            ?.map((b) => b.trim())
+            .filter((brand) =>
+              channel_list.some(
+                (ch) => ch.toUpperCase() === brand.toUpperCase(),
+              ),
+            );
+          const channelList = filteredBrands?.map((item) => {
             return {
               value: item?.toUpperCase(),
               label: item?.toUpperCase(),

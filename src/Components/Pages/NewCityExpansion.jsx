@@ -22,6 +22,7 @@ import {
   comMatchList,
   DRIVE_TIME_RADIUS_MAP,
   retailTypes,
+  channel_list,
   // categorizeRetails,
 } from "../Data/Data";
 import { routes } from "../../routes";
@@ -136,8 +137,6 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
     dispatch(clearNewStoreInputs());
   });
 
-  console.log("pdfMarkers==>", pdfMarkers);
-
   const HandelResetFiled = () => {
     clearPolygons();
     setLockBtn(false);
@@ -249,14 +248,14 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
-          // const filteredBrands = response?.data?.value
-          //   ?.map((b) => b.trim())
-          //   .filter((brand) =>
-          //     channel_list.some(
-          //       (ch) => ch.toUpperCase() === brand.toUpperCase(),
-          //     ),
-          //   );
-          const channelList = ["TANISHQ"].map((item) => {
+          const filteredBrands = response?.data?.value
+            ?.map((b) => b.trim())
+            .filter((brand) =>
+              channel_list.some(
+                (ch) => ch.toUpperCase() === brand.toUpperCase(),
+              ),
+            );
+          const channelList = filteredBrands?.map((item) => {
             return {
               value: item?.toUpperCase(),
               label: item?.toUpperCase(),
