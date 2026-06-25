@@ -26,6 +26,7 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [movementCount, setMovementCount] = useState(0);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const auth_token = localStorage.getItem("3rd_eye_auth_token") === "true";
 
@@ -55,8 +56,11 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
     };
   }, [toggle, toggle_open]);
 
-  const LogOutUser = async () => {
-    await invalidateServerSession();
+  const LogOutUser = () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    // Fire server invalidation without awaiting — best-effort, non-blocking.
+    invalidateServerSession().catch(() => {});
     clearClientSession();
     dispatch(logoutUser());
     dispatch(clearNewStoreInputs());
@@ -65,7 +69,7 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
     dispatch(setNewCityDecisiontext());
     setSlideOut(true);
     setTimeout(() => {
-      navigate(routes.LOGIN);
+      navigate(routes.LOGIN, { replace: true });
     }, 700);
   };
 
@@ -80,6 +84,17 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
         navigate(routes.LOGIN);
       }
     }, 700);
+  };
+
+  const logoutSpinner = {
+    display: "inline-block",
+    width: "14px",
+    height: "14px",
+    border: "2px solid rgba(255,255,255,0.3)",
+    borderTop: "2px solid currentColor",
+    borderRadius: "50%",
+    animation: "spin 0.7s linear infinite",
+    flexShrink: 0,
   };
 
   return (
@@ -148,7 +163,10 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
         </div>
         <div>
           {toggle ? (
-            <button className='log_out_btn' onClick={LogOutUser}>
+            <button
+              className='log_out_btn'
+              onClick={LogOutUser}
+              disabled={loggingOut}>
               <div
                 style={{
                   display: "flex",
@@ -156,14 +174,32 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
                   alignItems: "center",
                   gap: "8px",
                 }}>
-                <span>LOG OUT</span>
-                <HiOutlineLogout size={17} />
+                {loggingOut ? (
+                  <React.Fragment>
+                    <span>Logging out...</span>
+                    <span style={logoutSpinner} />
+                  </React.Fragment>
+                ) : (
+                  <React.Fragment>
+                    <span>LOG OUT</span>
+                    <HiOutlineLogout size={17} />
+                  </React.Fragment>
+                )}
               </div>
             </button>
           ) : (
-            <Tippy content={<span>LOG OUT</span>} placement='right'>
-              <button className='log_out_btn' onClick={LogOutUser}>
-                <HiOutlineLogout size={22} />
+            <Tippy
+              content={<span>{loggingOut ? "Logging out..." : "LOG OUT"}</span>}
+              placement='right'>
+              <button
+                className='log_out_btn'
+                onClick={LogOutUser}
+                disabled={loggingOut}>
+                {loggingOut ? (
+                  <span style={logoutSpinner} />
+                ) : (
+                  <HiOutlineLogout size={22} />
+                )}
               </button>
             </Tippy>
           )}

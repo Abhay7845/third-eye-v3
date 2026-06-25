@@ -140,7 +140,6 @@ html, body, #root { height: 100%; margin: 0; }
 .google_btn img {
   width: 20px;
   height: 20px;
-  filter: brightness(0);  /* dark icon to match #233044 text */
 }
 
 /* Spinner */

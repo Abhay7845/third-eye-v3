@@ -28,6 +28,14 @@ export default function Login() {
   const navigate = useNavigate();
   const isDevMode = window.location.hostname === "localhost";
 
+  // Redirect away immediately if already authenticated — prevents browser
+  // back/forward navigating back to the login page.
+  useEffect(() => {
+    if (localStorage.getItem("3rd_eye_auth_token") === "true") {
+      navigate(routes.NEW_STORE, { replace: true });
+    }
+  }, [navigate]);
+
   const ClearUserDetails = () => {
     dispatch(logoutUser());
     dispatch(clearNewStoreInputs());
@@ -49,7 +57,7 @@ export default function Login() {
             dispatch(setUser(logCred));
             setSlideOut(true);
             setTimeout(() => {
-              navigate(routes.NEW_STORE);
+              navigate(routes.NEW_STORE, { replace: true });
             }, 700);
           } else {
             toast.error("User Not Active", {
