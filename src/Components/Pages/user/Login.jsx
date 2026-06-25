@@ -176,7 +176,9 @@ export default function Login() {
       <section className={`auth-card ${slideOut ? "slide_animation" : ""}`}>
         <div className='form_side'>
           <h2>THIRD EYE...</h2>
-          <WorkTypingSound sentence={sentence} speed={60} />
+          <div className='typing-wrapper'>
+            <WorkTypingSound sentence={sentence} speed={60} />
+          </div>
           <div className='divider'>
             <span>Login with</span>
           </div>
