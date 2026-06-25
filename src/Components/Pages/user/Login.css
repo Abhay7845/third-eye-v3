@@ -162,7 +162,7 @@
   .google_btn {
     padding: .95rem;
     border: 1px solid var(--gray-300);
-    border-radius: var(--radius);
+    border-radius: "2px";
     display: flex;
     justify-content: center;
     align-items: center;

@@ -1,9 +1,11 @@
 import { axiosInstance } from "./Authorization";
 import { HOST_URL } from "./HostUrl";
+import { clearAllCookies } from "../../utils/cookieUtils";
 
 export const clearClientSession = () => {
   localStorage.clear();
   sessionStorage.clear();
+  clearAllCookies();
 };
 
 export const invalidateServerSession = async () => {

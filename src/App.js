@@ -11,6 +11,7 @@ import NewStoreProjection from "./Components/Pages/NewStoreProjection";
 import HistoryPreview from "./Components/Pages/HistoryPreview";
 import StoreCatchmentAnalysis from "./Components/Pages/StoreCatchmentAnalysis";
 import InternetStatus from "./Components/trackOnline/InternetStatus";
+import CookieBanner from "./Components/custom/CookieBanner";
 import {
   clearClientSession,
   invalidateServerSessionOnUnload,
@@ -45,6 +46,7 @@ const App = () => {
   return (
     <React.Fragment>
       <InternetStatus />
+      <CookieBanner />
       <Routes>
         <Route
           path={routes.LOGIN}
