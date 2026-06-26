@@ -107,7 +107,7 @@ const DashboardPdf = ({
             anchorLocation.lng,
             lat,
             lng,
-          ).toFixed(1),
+          ).toFixed(2),
         ),
       };
     });

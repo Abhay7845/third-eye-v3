@@ -275,7 +275,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       reason: decisionObj?.reason?.toString(),
       recommendation: decisionObj?.recomendation,
     };
-    setLoading(true);
+    startLoading();
     axiosInstance
       .post(`/api/data/insert/new/store`, newStrPylaod)
       .then((res) => res)
@@ -292,9 +292,9 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
             autoClose: 1000,
           });
         }
-        setLoading(false);
+        stopLoading();
       })
-      .catch((err) => setLoading(false));
+      .catch((err) => stopLoading());
   };
 
   // PINCODE LEVEL GET POPULATION
@@ -310,7 +310,6 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
         return [];
       }
     } catch (err) {
-      setLoading(false);
       return [];
     }
   };
@@ -433,25 +432,38 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
 
     startLoading();
     try {
-      let response;
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          response = await axiosInstance.post(
+          const response = await axiosInstance.post(
             "/api/openai/decision_reasoner/v2",
             { pincode: pin },
           );
-          break;
-        } catch (error) {
+
+          if (response?.status === 200) {
+            const formattedData =
+              formatAssessmentData(response?.data?.assessment) || [];
+
+            // Accept only non-empty payload. Empty response gets one retry.
+            if (formattedData.length > 0) {
+              setPdfDecesion(formattedData);
+              return response;
+            }
+          }
+
+          // Non-200 or empty payload: retry once, then stop.
           if (attempt === 1) {
-            return;
+            setPdfDecesion([]);
+            return null;
+          }
+        } catch (error) {
+          // Failed request: retry once, then stop.
+          if (attempt === 1) {
+            setPdfDecesion([]);
+            return null;
           }
         }
       }
-
-      if (response?.status === 200) {
-        const formattedData = formatAssessmentData(response?.data?.assessment);
-        setPdfDecesion(formattedData);
-      }
+      return null;
     } finally {
       stopLoading();
     }
