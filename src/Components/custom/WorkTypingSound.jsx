@@ -28,7 +28,7 @@ export default function WorkTypingSound({ sentence, speed }) {
 
   const containerStyle = {
     fontFamily: "Arial, sans-serif",
-    fontSize: "16px",
+    fontSize: "14px",
     whiteSpace: "pre-wrap",
   };
 

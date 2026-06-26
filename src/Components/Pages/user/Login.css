@@ -65,7 +65,7 @@ html, body, #root { height: 100%; margin: 0; }
 
 /* Heading */
 .form_side h2 {
-  font-size: clamp(1.6rem, 2.5vw, 2rem);
+  font-size: clamp(1.6rem, 2.5vw, 1rem);
   font-weight: 800;
   color: var(--brand);
   letter-spacing: 0.06em;
