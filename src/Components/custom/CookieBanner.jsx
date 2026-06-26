@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "../Styles/CookieBanner.css";
 import {
   hasConsent,
@@ -8,10 +8,6 @@ import {
 } from "../../utils/cookieUtils";
 import { axiosInstance } from "../../HostManger/API/Authorization";
 
-/**
- * Attaches the anonymous analytics ID to every outgoing axios request
- * so the server can correlate activity without exposing user identity.
- */
 const attachAnalyticsHeader = () => {
   const analyticsId = getCookie(COOKIE_NAMES.ANALYTICS);
   if (!analyticsId) return;
@@ -23,6 +19,8 @@ const attachAnalyticsHeader = () => {
 
 const CookieBanner = () => {
   const [visible, setVisible] = useState(false);
+  const [showHoverHint, setShowHoverHint] = useState(false);
+  const hintTimerRef = useRef(null);
 
   useEffect(() => {
     if (hasConsent()) {
@@ -31,6 +29,14 @@ const CookieBanner = () => {
     } else {
       setVisible(true);
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (hintTimerRef.current) {
+        clearTimeout(hintTimerRef.current);
+      }
+    };
   }, []);
 
   const handleAccept = () => {
@@ -50,12 +56,27 @@ const CookieBanner = () => {
     setVisible(false);
   };
 
+  const handleOverlayMouseMove = () => {
+    setShowHoverHint(true);
+
+    if (hintTimerRef.current) {
+      clearTimeout(hintTimerRef.current);
+    }
+
+    hintTimerRef.current = setTimeout(() => {
+      setShowHoverHint(false);
+    }, 900);
+  };
+
   if (!visible) return null;
 
   return (
     <React.Fragment>
       {/* Blocks all interaction behind the banner until cookies are accepted */}
-      <div className='cookie-overlay' />
+      <div className='cookie-overlay' onMouseMove={handleOverlayMouseMove} />
+      {showHoverHint && (
+        <div className='cookie-hover-hint'>Please accept cookies</div>
+      )}
       <div className='cookie-banner'>
         <div className='cookie-banner__content'>
           <span className='cookie-banner__text'>
