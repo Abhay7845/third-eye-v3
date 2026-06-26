@@ -259,14 +259,24 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
             { city: similerStoreVal },
           );
           if (response?.status === 200) {
-            const formattedData = formatAssessmentData(
-              response?.data?.assessment,
-            );
-            setPdfDecesion(formattedData);
+            const formattedData =
+              formatAssessmentData(response?.data?.assessment) || [];
+
+            // Accept only non-empty data; empty payload gets one retry.
+            if (formattedData.length > 0) {
+              setPdfDecesion(formattedData);
+              return response;
+            }
           }
-          return response;
+
+          // Non-200 or empty formatted data: retry once, then stop.
+          if (attempt === 1) {
+            setPdfDecesion([]);
+            return null;
+          }
         } catch (error) {
           if (attempt === 1) {
+            setPdfDecesion([]);
             return null;
           }
         }
