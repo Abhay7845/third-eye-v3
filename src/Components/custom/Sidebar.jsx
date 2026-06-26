@@ -59,7 +59,6 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
   const LogOutUser = () => {
     if (loggingOut) return;
     setLoggingOut(true);
-    // Fire server invalidation without awaiting — best-effort, non-blocking.
     invalidateServerSession().catch(() => {});
     clearClientSession();
     dispatch(logoutUser());
@@ -68,8 +67,11 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
     dispatch(setNewStoreDecisiontext());
     dispatch(setNewCityDecisiontext());
     setSlideOut(true);
+    localStorage.clear();
+    sessionStorage.clear();
     setTimeout(() => {
       navigate(routes.LOGIN, { replace: true });
+      window?.location?.reload();
     }, 700);
   };
 

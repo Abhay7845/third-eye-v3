@@ -151,22 +151,32 @@ const DashboardPdf = ({
 
   // -------------------------------UPLOAD PDF FUNCTIONALITY ---------------------------
 
-  const UploadPdf = async (file) => {
+  const UploadPdf = async (file, retryLeft = 1) => {
+    const formData = new FormData();
+    if (!(file instanceof Blob)) {
+      throw new Error("Invalid file type passed to UploadPdf");
+    }
+
+    formData.append("files", file);
+    formData.append("folderName", "ThirdEye");
+
     try {
-      const formData = new FormData();
-      if (!(file instanceof Blob)) {
-        throw new Error("Invalid file type passed to UploadPdf");
-      }
-      formData.append("files", file);
-      formData.append("folderName", "ThirdEye");
       const res = await axiosInstance.post(`/s3/upload`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
+
+      if (!(res?.status >= 200 && res?.status < 300)) {
+        throw new Error("Upload failed with non-success status");
+      }
+
       return res;
     } catch (err) {
-      return;
+      if (retryLeft > 0) {
+        return UploadPdf(file, retryLeft - 1);
+      }
+      throw err;
     }
   };
 
@@ -357,17 +367,19 @@ const DashboardPdf = ({
   const handleSavePdfHistory = async (pdfFileName) => {
     try {
       const pdf = new jsPDF("p", "mm", "a4");
+      // Upload must happen only after all sections are fully rendered.
       await renderSectionsToPdf(pdf);
 
-      //  Create Blob instead of direct save
+      // Create Blob only after render is complete.
       const pdfBlob = pdf.output("blob");
       const pdfFile = new File([pdfBlob], `${pdfFileName}.pdf`, {
         type: "application/pdf",
       });
-      // Upload to server
-      await UploadPdf(pdfFile);
+
+      // Upload to server and fail if upload does not succeed.
+      await UploadPdf(pdfFile, 1);
     } catch (error) {
-      return error;
+      return null;
     } finally {
       setSkeletonLoad(false);
     }
@@ -376,9 +388,11 @@ const DashboardPdf = ({
   useEffect(() => {
     if (pdfFileName) {
       setSkeletonLoad(true);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         handleSavePdfHistory(pdfFileName);
       }, 1500);
+
+      return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pdfFileName]);
