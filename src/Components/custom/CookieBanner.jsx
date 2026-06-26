@@ -85,7 +85,7 @@ const CookieBanner = () => {
             portal.
           </span>
           <button className='cookie-banner__btn' onClick={handleAccept}>
-            Accept All Cookies
+            Accept Cookies
           </button>
         </div>
       </div>
