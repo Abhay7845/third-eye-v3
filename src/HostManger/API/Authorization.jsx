@@ -29,7 +29,7 @@ const showSessionExpiredPopup = (onConfirm) => {
   overlay.id = "session-expired-overlay";
   overlay.style.position = "fixed";
   overlay.style.inset = "0";
-  overlay.style.background = "rgba(10, 15, 25, 0.65)";
+  overlay.style.background = "#0a0f19a6";
   overlay.style.zIndex = "999999";
   overlay.style.display = "flex";
   overlay.style.alignItems = "center";
@@ -40,7 +40,7 @@ const showSessionExpiredPopup = (onConfirm) => {
   modal.style.width = "min(560px, 95vw)";
   modal.style.background = "#ffffff";
   modal.style.borderRadius = "2px";
-  modal.style.boxShadow = "0 24px 50px rgba(0, 0, 0, 0.35)";
+  modal.style.boxShadow = "0 24px 50px #00000059";
   modal.style.padding = "28px 24px";
   modal.style.fontFamily = "Segoe UI, Arial, sans-serif";
   modal.style.textAlign = "center";
@@ -62,10 +62,10 @@ const showSessionExpiredPopup = (onConfirm) => {
   const okBtn = document.createElement("button");
   okBtn.type = "button";
   okBtn.textContent = "OK";
-  okBtn.style.background = "#1a2236";
+  okBtn.style.background = "#df1608";
   okBtn.style.color = "#ffffff";
   okBtn.style.border = "none";
-  okBtn.style.borderRadius = "6px";
+  okBtn.style.borderRadius = "2px";
   okBtn.style.padding = "10px 26px";
   okBtn.style.cursor = "pointer";
   okBtn.style.fontSize = "15px";
