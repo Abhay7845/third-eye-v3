@@ -12,7 +12,7 @@ let hasHandledSessionExpiry = false;
 
 const isLoginRoute = () => {
   const path = window?.location?.pathname || "";
-  return path === routes.LOGIN || `${routes.LOGIN}/`;
+  return path === routes.LOGIN || path === `${routes.LOGIN}/`;
 };
 
 const clearClientAuthState = () => {
@@ -39,8 +39,7 @@ const showSessionExpiredPopup = (onConfirm) => {
   const modal = document.createElement("div");
   modal.style.width = "min(560px, 95vw)";
   modal.style.background = "#ffffff";
-  modal.style.border = "2px solid #d4af37";
-  modal.style.borderRadius = "10px";
+  modal.style.borderRadius = "2px";
   modal.style.boxShadow = "0 24px 50px rgba(0, 0, 0, 0.35)";
   modal.style.padding = "28px 24px";
   modal.style.fontFamily = "Segoe UI, Arial, sans-serif";
@@ -94,7 +93,8 @@ axiosInstance.interceptors.response.use(
         hasHandledSessionExpiry = true;
         showSessionExpiredPopup(() => {
           clearClientAuthState();
-          window.location.replace(routes.LOGIN);
+          window.location.href = routes.LOGIN;
+          window.location.reload(true);
         });
       }
     }
