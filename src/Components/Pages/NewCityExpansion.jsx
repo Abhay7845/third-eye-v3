@@ -611,7 +611,7 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
         ? uniqueMarkers.filter((marker) => {
             const userRating = marker.user_rating || 0;
             const rating = marker.rating || 0;
-            return userRating >= 100 && rating >= 3;
+            return userRating >= 30 && rating >= 2.5;
           })
         : uniqueMarkers;
 
