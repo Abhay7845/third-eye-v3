@@ -77,62 +77,6 @@ export default function Login() {
   };
 
   const url = isDevMode ? "/api/dummy/userinfo" : "/api/userinfo";
-  // const LoginByAzzure = () => {
-  //   setLoading(true);
-  //   ClearUserDetails();
-  //   axiosInstance
-  //     .get(url)
-  //     .then((res) => res)
-  //     .then((response) => {
-  //       if (response?.data?.username) {
-  //         localStorage.setItem("3rd_eye_auth_token", true);
-  //         GetUserLogin(response.data);
-  //       }
-  //     })
-  //     .catch((err) => {
-  //       if (err?.response?.status === 401) {
-  //         setSlideOut(true);
-  //         setTimeout(() => {
-  //           sessionStorage.setItem("sso_redirect_in_progress", "true");
-  //           window.location.href = `${HOST_URL}/oauth2/authorization/azure`;
-  //         }, 700);
-  //       }
-  //       setLoading(false);
-  //     });
-  // };
-
-  // const LoginByAzzure = async () => {
-  //   try {
-  //     setLoading(true);
-  //     ClearUserDetails();
-  //     const response = await axiosInstance.get(url, {
-  //       withCredentials: true,
-  //       headers: {
-  //         Accept: "application/json",
-  //       },
-  //     });
-  //     if (response?.data?.username) {
-  //       localStorage.setItem("3rd_eye_auth_token", "true");
-  //       sessionStorage.removeItem("sso_redirect_in_progress");
-  //       GetUserLogin(response.data);
-  //     }
-  //   } catch (err) {
-  //     if (err?.response?.status === 401) {
-  //       const redirectInProgress = sessionStorage.getItem(
-  //         "sso_redirect_in_progress",
-  //       );
-  //       if (!redirectInProgress) {
-  //         sessionStorage.setItem("sso_redirect_in_progress", "true");
-  //         setSlideOut(true);
-  //         setTimeout(() => {
-  //           window.location.href = `${HOST_URL}/oauth2/authorization/azure`;
-  //         }, 700);
-  //       }
-  //     }
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   const LoginByAzzure = async (retry = true) => {
     try {
@@ -150,13 +94,13 @@ export default function Login() {
         GetUserLogin(response.data);
       }
     } catch (err) {
-      // RETRY SAME API ONE MORE TIME
-      if (err?.response?.status === 401 && retry) {
+      const status = err?.response?.status;
+      if (status === 401 && retry) {
         await new Promise((resolve) => setTimeout(resolve, 1200));
         return LoginByAzzure(false);
       }
       // FINAL REDIRECT TO AZURE LOGIN
-      if (err?.response?.status === 401) {
+      if (status === 401) {
         const redirectInProgress = sessionStorage.getItem(
           "sso_redirect_in_progress",
         );
@@ -167,7 +111,13 @@ export default function Login() {
             window.location.replace(`${HOST_URL}/oauth2/authorization/azure`);
           }, 700);
         }
+        return;
       }
+      // SHOW ALERT FOR ALL OTHER ERRORS
+      toast.error("Something went wrong", {
+        theme: "colored",
+        autoClose: 2000,
+      });
     } finally {
       setLoading(false);
     }

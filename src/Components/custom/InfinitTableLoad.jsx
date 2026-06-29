@@ -7,7 +7,7 @@ import Tippy from "@tippyjs/react";
 
 const InfinitTableLoad = ({ data, header }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 9;
+  const pageSize = 10;
   const startIndex = (currentPage - 1) * pageSize;
   const currentData = data.slice(startIndex, startIndex + pageSize);
 
