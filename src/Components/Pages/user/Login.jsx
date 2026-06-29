@@ -20,6 +20,8 @@ import {
   setNewCityDecisiontext,
 } from "../../../redux/reducer/NewCity";
 import WorkTypingSound from "../../custom/WorkTypingSound";
+import packageJson from "../../../../package.json";
+const VERSION = packageJson.version;
 
 export default function Login() {
   const dispatch = useDispatch();
@@ -156,6 +158,10 @@ export default function Login() {
             loading='lazy'
             className='third_eye_image'
           />
+          <p className='footer-text'>
+            &copy; {new Date().getFullYear()} Third Eye Portal, Version:{" "}
+            {VERSION}
+          </p>
         </div>
       </section>
     </main>
