@@ -197,7 +197,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
-          setArpcVal(Number(response.data.value[0]) || 0);
+          setArpcVal(parseInt(response.data.value[0]) || 0);
         }
         stopLoading();
       })
