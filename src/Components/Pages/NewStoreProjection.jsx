@@ -182,7 +182,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   };
 
   useEffect(() => {
-    if (setOfPin) {
+    if (channel && setOfPin && similarPinCode) {
       GetRevenueData(channel, setOfPin, similarPinCode);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

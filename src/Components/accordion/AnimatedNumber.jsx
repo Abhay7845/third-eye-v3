@@ -4,7 +4,7 @@ const AnimatedNumber = ({ index, value, data }) => {
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
-    let target = parseInt(value, 10);
+    const target = Number(String(value).replace(/,/g, "")) || 0;
     let current = 0;
     const step = Math.max(1, Math.ceil(target / 40));
 
@@ -21,13 +21,13 @@ const AnimatedNumber = ({ index, value, data }) => {
   }, [value]);
 
   const formatted = `${new Intl.NumberFormat("en-IN", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
   }).format(display / 10000000)} Cr`;
 
   return (
     <div>
-      {index >= data.length - 2 ? formatted : display?.toLocaleString("en-IN")}
+      {index >= data.length - 1 ? formatted : display?.toLocaleString("en-IN")}
     </div>
   );
 };

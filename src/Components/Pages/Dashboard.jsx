@@ -412,7 +412,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
-          const pins = response.data.value.filter(
+          const pins = response?.data?.value.filter(
             (v) => v && v !== 0 && v !== "0",
           );
           setSimChachmentPin(pins.toString());
