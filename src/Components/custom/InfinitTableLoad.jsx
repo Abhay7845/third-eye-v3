@@ -43,9 +43,9 @@ const InfinitTableLoad = ({ data, header }) => {
           {currentData.map((item, i) => {
             const pdfFileName = item?.historyId?.trim().replace(/\s+/g, "_");
             // UAT PDF URL
-            // const pdf_url = `https://d6oojw29okpcs.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
+            const pdf_url = `https://d6oojw29okpcs.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
             // PROD PDF URL
-            const pdf_url = `https://d1i4tarane3v3g.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
+            // const pdf_url = `https://d1i4tarane3v3g.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
             return (
               <Tr key={i}>
                 <Td style={{ width: "6%" }}>{i + 1}</Td>
