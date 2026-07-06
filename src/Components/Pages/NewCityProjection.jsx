@@ -53,16 +53,22 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   const { targetCity, targetPinCode, similerStoreVal, arpcVal, pdfMarkers } =
     inputsPayload;
   const { t_catch, s_catch, m_trends } = catchmentData;
-  const proRev1yr = (enrollTarget + custExitStore) * arpcVal;
+  const proRev1yr = (enrollTarget + custExitStore) * parseFloat(arpcVal);
+
+  const cann_val = `${new Intl.NumberFormat("en-IN", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(cannibilization / 10000000)} Cr`;
+
   const projectionData = [
     { heading: "First Year Enrollments For Tartget City", value: enrollTarget },
     { heading: "Cross Channel Movement", value: custExitStore },
-    { heading: "ARPC", value: arpcVal },
+    { heading: "ARPC", value: parseFloat(arpcVal) },
     {
       heading: "Projected Revenue In Year 1",
-      value: proRev1yr,
+      value: parseInt(proRev1yr),
     },
-    { heading: "Cannibilization In 1 Year", value: cannibilization },
+    { heading: "Cannibilization In 1 Year", value: cann_val },
   ];
 
   const retails_category = categorizeRetails(pdfMarkers?.retail);
@@ -201,7 +207,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
-          setEnrollTarget(response.data.value[0] || 0);
+          setEnrollTarget(parseInt(response.data.value[0] || 0));
         }
       })
       .catch((err) => setEnrollTarget(0));
@@ -226,7 +232,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
       .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
-          setCustExitStore(response.data.value[0] || 0);
+          setCustExitStore(parseInt(response.data.value[0] || 0));
         }
       })
       .catch((err) => setCustExitStore(0));
@@ -359,8 +365,8 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
       custCount12m: m_trends[11]?.customers,
       firstYearEnrolls: enrollTarget,
       crossChnlMovement: custExitStore,
-      arpc: arpcVal,
-      estRev1Year: proRev1yr,
+      arpc: parseFloat(arpcVal) || 0,
+      estRev1Year: parseInt(proRev1yr) || 0,
       canibalizationFor1yr: cannibilization,
       similarCityScore: CityStoreScore[0]?.score || 0,
       targetCityScore: CityStoreScore[1]?.score || 0,
