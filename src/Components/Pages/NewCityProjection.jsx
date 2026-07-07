@@ -12,7 +12,6 @@ import CustomerRevenueBar from "../common/graph/CustomerRevenueBar";
 import Loader from "../custom/Loader";
 import { axiosInstance } from "../../HostManger/API/Authorization";
 import ThirdEyeHeader from "../custom/ThirdEyeHeader";
-import AnimatedNumber from "../accordion/AnimatedNumber";
 import { useSelector } from "react-redux";
 import NewCityExpantionPdf from "../pdf/NewCityExpantionPdf";
 import { FilePopStyle } from "./NewStoreProjection";
@@ -53,17 +52,20 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   const { targetCity, targetPinCode, similerStoreVal, arpcVal, pdfMarkers } =
     inputsPayload;
   const { t_catch, s_catch, m_trends } = catchmentData;
-  const proRev1yr = (enrollTarget + custExitStore) * parseFloat(arpcVal);
+  const proRev1yr = (enrollTarget + custExitStore) * parseInt(arpcVal);
 
   const cann_val = `${new Intl.NumberFormat("en-IN", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(cannibilization / 10000000)} Cr`;
 
   const projectionData = [
-    { heading: "First Year Enrollments For Tartget City", value: enrollTarget },
-    { heading: "Cross Channel Movement", value: custExitStore },
-    { heading: "ARPC", value: parseFloat(arpcVal) },
+    {
+      heading: "First Year Enrollments For Tartget City",
+      value: parseInt(enrollTarget),
+    },
+    { heading: "Cross Channel Movement", value: parseInt(custExitStore) },
+    { heading: "ARPC", value: parseInt(arpcVal) },
     {
       heading: "Projected Revenue In Year 1",
       value: parseInt(proRev1yr),
@@ -444,11 +446,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
                 return (
                   <div key={i} className='box_text'>
                     {heading}
-                    <AnimatedNumber
-                      index={i}
-                      value={value}
-                      data={projectionData}
-                    />
+                    <div>{value}</div>
                   </div>
                 );
               })}

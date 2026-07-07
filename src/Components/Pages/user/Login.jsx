@@ -21,6 +21,10 @@ import {
 } from "../../../redux/reducer/NewCity";
 import WorkTypingSound from "../../custom/WorkTypingSound";
 import packageJson from "../../../../package.json";
+import {
+  isAuthSessionValid,
+  startAuthSession,
+} from "../../../utils/authSession";
 const VERSION = packageJson.version;
 
 export default function Login() {
@@ -33,7 +37,7 @@ export default function Login() {
   // Redirect away immediately if already authenticated — prevents browser
   // back/forward navigating back to the login page.
   useEffect(() => {
-    if (localStorage.getItem("3rd_eye_auth_token") === "true") {
+    if (isAuthSessionValid()) {
       navigate(routes.NEW_STORE, { replace: true });
     }
   }, [navigate]);
@@ -91,7 +95,7 @@ export default function Login() {
         },
       });
       if (response?.data?.username) {
-        localStorage.setItem("3rd_eye_auth_token", "true");
+        startAuthSession();
         sessionStorage.removeItem("sso_redirect_in_progress");
         GetUserLogin(response.data);
       }

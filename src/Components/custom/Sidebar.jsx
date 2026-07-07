@@ -19,6 +19,7 @@ import {
   clearClientSession,
   invalidateServerSession,
 } from "../../HostManger/API/sessionLogout";
+import { isAuthSessionValid } from "../../utils/authSession";
 
 const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
   const sidebarRef = useRef(null);
@@ -28,7 +29,7 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
   const [movementCount, setMovementCount] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const auth_token = localStorage.getItem("3rd_eye_auth_token") === "true";
+  const auth_token = isAuthSessionValid();
 
   useEffect(() => {
     const handleMouseMove = () => {

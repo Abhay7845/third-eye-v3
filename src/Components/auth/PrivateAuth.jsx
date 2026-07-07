@@ -1,8 +1,9 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { routes } from "../../routes";
+import { isAuthSessionValid } from "../../utils/authSession";
 
 const PrivateAuth = () => {
-  const isToken = localStorage.getItem("3rd_eye_auth_token") === "true";
+  const isToken = isAuthSessionValid();
   return (
     <div>{isToken ? <Outlet /> : <Navigate to={routes.LOGIN} replace />}</div>
   );

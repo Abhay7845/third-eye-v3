@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import { routes } from "./routes";
 import DashboardMain from "./Mainpages/DashboardMain";
@@ -12,36 +12,10 @@ import HistoryPreview from "./Components/Pages/HistoryPreview";
 import StoreCatchmentAnalysis from "./Components/Pages/StoreCatchmentAnalysis";
 import InternetStatus from "./Components/trackOnline/InternetStatus";
 import CookieBanner from "./Components/custom/CookieBanner";
-import {
-  clearClientSession,
-  invalidateServerSessionOnUnload,
-} from "./HostManger/API/sessionLogout";
 
 const App = () => {
   const [toggle, setToggle] = useState(false);
   const toggle_open = () => setToggle(!toggle);
-
-  useEffect(() => {
-    const handleSessionClearOnUnload = () => {
-      const isSsoRedirectInProgress =
-        sessionStorage.getItem("sso_redirect_in_progress") === "true";
-
-      if (isSsoRedirectInProgress) {
-        return;
-      }
-
-      clearClientSession();
-      invalidateServerSessionOnUnload();
-    };
-
-    window.addEventListener("beforeunload", handleSessionClearOnUnload);
-    window.addEventListener("pagehide", handleSessionClearOnUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleSessionClearOnUnload);
-      window.removeEventListener("pagehide", handleSessionClearOnUnload);
-    };
-  }, []);
 
   return (
     <React.Fragment>
