@@ -49,8 +49,12 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   const [pdfDecesion, setPdfDecesion] = useState([]);
   const pdfDecisionRef = useRef({ lastPin: "", inFlight: false });
 
-  const { targetCity, targetPinCode, similerStoreVal, arpcVal, pdfMarkers } =
-    inputsPayload;
+  const targetCity = inputsPayload?.targetCity;
+  const targetPinCode = inputsPayload?.targetPinCode;
+  const similerStoreVal = inputsPayload?.similerStoreVal;
+  const arpcVal = inputsPayload?.arpcVal;
+  const pdfMarkers = inputsPayload?.pdfMarkers;
+
   const { t_catch, s_catch, m_trends } = catchmentData;
   const proRev1yr = (enrollTarget + custExitStore) * parseInt(arpcVal);
 

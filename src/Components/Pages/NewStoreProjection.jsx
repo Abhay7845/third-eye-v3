@@ -69,17 +69,17 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   // REF DEFINE
   const screenshotRef = useRef();
   const lastPdfDecisionPinRef = useRef("");
-  const {
-    channel,
-    targetPinCode,
-    similarPinCode,
-    similerStoreVal,
-    setOfPin,
-    storeSize,
-    category,
-    primarySec,
-    pdfMarkers,
-  } = inputsPayload;
+
+  const channel = inputsPayload?.channel;
+  const targetPinCode = inputsPayload?.targetPinCode;
+  const similarPinCode = inputsPayload?.similarPinCode;
+  const similerStoreVal = inputsPayload?.similerStoreVal;
+  const setOfPin = inputsPayload?.setOfPin;
+  const storeSize = inputsPayload?.storeSize;
+  const category = inputsPayload?.category;
+  const primarySec = inputsPayload?.primarySec;
+  const pdfMarkers = inputsPayload?.pdfMarkers;
+
   const estiCustBase =
     Number(revenueData?.firstYearEnrolls || 0) +
     Number(revenueData?.canniCust || 0) +

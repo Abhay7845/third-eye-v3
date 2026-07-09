@@ -2,6 +2,7 @@ import axios from "axios";
 import { HOST_URL } from "./HostUrl";
 import { routes } from "../../routes";
 import { clearAllCookies } from "../../utils/cookieUtils";
+import { loginRequest, msalInstance } from "../../Components/auth/AuthConfig";
 
 export const axiosInstance = axios.create({
   baseURL: HOST_URL,
@@ -83,10 +84,76 @@ const showSessionExpiredPopup = (onConfirm) => {
   document.body.appendChild(overlay);
 };
 
+const shouldSkipAuthHeader = (url) => {
+  const requestUrl = String(url || "");
+  return requestUrl.includes("/api/dummy/userinfo");
+};
+
+const getAccessTokenSilently = async (options = {}) => {
+  const active = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
+  if (!active) {
+    return null;
+  }
+
+  msalInstance.setActiveAccount(active);
+  const response = await msalInstance.acquireTokenSilent({
+    ...loginRequest,
+    account: active,
+    forceRefresh: !!options.forceRefresh,
+  });
+  return response?.accessToken || null;
+};
+
+axiosInstance.interceptors.request.use(
+  async (config) => {
+    if (shouldSkipAuthHeader(config?.url)) {
+      return config;
+    }
+
+    try {
+      const token = await getAccessTokenSilently();
+      if (token) {
+        config.headers = {
+          ...(config.headers || {}),
+          Authorization: `Bearer ${token}`,
+        };
+      }
+    } catch (error) {
+      // Let request proceed without token; backend 401 is handled centrally.
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error?.response?.status;
+    const originalRequest = error?.config || {};
+
+    const canRetryWithFreshToken =
+      status === 401 &&
+      !isLoginRoute() &&
+      !shouldSkipAuthHeader(originalRequest?.url) &&
+      !originalRequest.__retriedWithFreshToken;
+
+    if (canRetryWithFreshToken) {
+      try {
+        const freshToken = await getAccessTokenSilently({ forceRefresh: true });
+        if (freshToken) {
+          originalRequest.__retriedWithFreshToken = true;
+          originalRequest.headers = {
+            ...(originalRequest.headers || {}),
+            Authorization: `Bearer ${freshToken}`,
+          };
+          return axiosInstance(originalRequest);
+        }
+      } catch (refreshError) {
+        // If refresh fails, continue with existing session-expiry handling.
+      }
+    }
 
     if (status === 401 && !isLoginRoute()) {
       if (!hasHandledSessionExpiry) {

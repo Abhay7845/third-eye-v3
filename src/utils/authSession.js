@@ -1,9 +1,14 @@
 const AUTH_TOKEN_KEY = "3rd_eye_auth_token";
 const AUTH_EXPIRY_KEY = "3rd_eye_auth_token_expiry";
-const ONE_HOUR_IN_MS = 60 * 60 * 1000;
+
+const getEndOfDayTimestamp = () => {
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  return endOfDay.getTime();
+};
 
 export const startAuthSession = () => {
-  const expiresAt = Date.now() + ONE_HOUR_IN_MS;
+  const expiresAt = getEndOfDayTimestamp();
   localStorage.setItem(AUTH_TOKEN_KEY, "true");
   localStorage.setItem(AUTH_EXPIRY_KEY, String(expiresAt));
 };

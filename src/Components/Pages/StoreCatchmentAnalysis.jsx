@@ -367,6 +367,14 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
       const res = await axiosInstance.get(
         `/ThirdEye/get/adjacent/pincodes/db?pincode=${data?.pincode}`,
       );
+      if (res?.data?.code !== "1000") {
+        toast.info("Data not fond.", {
+          theme: "colored",
+          autoClose: 2000,
+          position: "bottom-right",
+        });
+        return;
+      }
       const { pincode, primaryPincode, secondaryPincode } = res?.data?.value;
       const AdjacentPins = [pincode, ...primaryPincode, ...secondaryPincode];
       // Step 1: Get city & dormancy data
@@ -660,6 +668,12 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
         setUserLocation({
           lat: res?.data?.value?.lat,
           lng: res?.data?.value?.longi,
+        });
+      } else {
+        toast.info("Data not found for seleted Channel & Store.", {
+          theme: "colored",
+          autoClose: 2000,
+          position: "bottom-right",
         });
       }
     } catch (err) {

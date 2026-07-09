@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { routes } from "./routes";
 import DashboardMain from "./Mainpages/DashboardMain";
 import DarkCatchmentAnl from "./Components/Pages/DarkCatchmentAnl";
@@ -22,6 +22,7 @@ const App = () => {
       <InternetStatus />
       <CookieBanner />
       <Routes>
+        <Route path='/' element={<Navigate to={routes.LOGIN} replace />} />
         <Route
           path={routes.LOGIN}
           index
@@ -74,6 +75,7 @@ const App = () => {
             }
           />
         </Route>
+        <Route path='*' element={<Navigate to={routes.LOGIN} replace />} />
       </Routes>
     </React.Fragment>
   );

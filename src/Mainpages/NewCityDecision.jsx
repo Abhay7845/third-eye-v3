@@ -127,6 +127,15 @@ const NewStoreDecision = ({
       inputsPayload?.setOfPin,
       inputsPayload?.similarPinCode,
     );
+
+    const fallbackRespData = (reason = []) => ({
+      bottom_line:
+        "Unable to find a decision based on the selected details. Please wait some time and try again.",
+      decision: "",
+      recomendation: "Somthing went wrong!",
+      reason,
+    });
+
     const DecesionPayload = {
       Channel: userLog?.channel,
       "Target Catchment": {
@@ -155,24 +164,43 @@ const NewStoreDecision = ({
         "/api/openai/decision_reasoner",
         DecesionPayload,
       );
+
       if (response.data.code === "1000") {
-        const respData = {
-          bottom_line: response?.data?.bottom_line,
-          decision: decision_data?.decision,
-          recomendation: decision_data?.recomendation,
-          reason: response?.data?.reason,
-        };
-        if (
-          decision_data?.decision?.toUpperCase() === "NEW" ||
-          decision_data?.decision?.toUpperCase() === "MAYBE"
-        ) {
-          btnDesabeld(false);
-        } else {
+        const apiDecision = response?.data?.value?.decision?.trim() || "";
+        const apiBottomLine = response?.data?.value?.bottom_line?.trim() || "";
+        const apiRecommendation =
+          response?.data?.value?.recomendation?.trim() || "";
+        const hasValidDecisionData =
+          Boolean(apiBottomLine) ||
+          Boolean(apiDecision) ||
+          Boolean(apiRecommendation);
+
+        if (!hasValidDecisionData) {
           btnDesabeld(true);
+          const respData = fallbackRespData(response?.data?.reason || []);
+          dispatch(setNewCityDecisiontext(respData));
+        } else {
+          const respData = {
+            bottom_line: apiBottomLine,
+            decision: apiDecision,
+            recomendation: apiRecommendation,
+            reason: response?.data?.reason || [],
+          };
+          if (
+            apiDecision?.toUpperCase() === "NEW" ||
+            apiDecision?.toUpperCase() === "MAYBE"
+          ) {
+            btnDesabeld(false);
+          } else {
+            btnDesabeld(true);
+          }
+          dispatch(setNewCityDecisiontext(respData));
         }
+      } else {
+        btnDesabeld(true);
+        const respData = fallbackRespData(response?.data?.reason || []);
         dispatch(setNewCityDecisiontext(respData));
       }
-      setLoading(false);
     } catch (err) {
       setLoading(false);
       toast.error(
@@ -285,6 +313,8 @@ const NewStoreDecision = ({
                     color: "black",
                     cursor: "pointer",
                     textDecoration: "underline",
+                    background: "#fff",
+                    padding: "2px 5px",
                   }}
                   onClick={() => setSeeMore(!seeMore)}>
                   {seeMore ? "Hide" : "See more"}

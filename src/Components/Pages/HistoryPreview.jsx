@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Sidebar from "../custom/Sidebar";
 import ThirdEyeHeader from "../custom/ThirdEyeHeader";
 import { useDispatch, useSelector } from "react-redux";
@@ -60,6 +60,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
       .then((response) => {
         if (response.data.code === "1000") {
           setHistoryData(response.data.value);
+          setHisUniqueId(null);
         } else {
           toast.error("History Data Not Available For Your ID", {
             theme: "colored",
@@ -79,41 +80,38 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scrType]);
 
-  const uniqueId = historyData.map((item) => {
-    return {
+  const uniqueId = [
+    {
+      value: null,
+      label: "Select",
+    },
+    ...historyData.map((item) => ({
       value: item?.historyId,
       label: item?.historyId,
-    };
-  });
+    })),
+  ];
 
-  const handelFilter = () => {
-    if (!fromDate) {
-      toast.error("Please Select From Date", {
-        theme: "colored",
-        autoClose: 2000,
-        position: "bottom-right",
-      });
-      return;
-    }
-    if (!toDate) {
-      toast.error("Please Select To Date", {
-        theme: "colored",
-        autoClose: 2000,
-        position: "bottom-right",
-      });
-      return;
-    }
-
-    const result = historyData.filter((item) => {
+  const filteredHistoryData = useMemo(() => {
+    return historyData.filter((item) => {
       const itemDate = moment(item.date, "YYYY-MM-DD");
-      return (
-        itemDate.isSame(fromDate, "day") ||
-        itemDate.isSame(toDate, "day") ||
-        (itemDate.isAfter(fromDate, "day") && itemDate.isBefore(toDate, "day"))
-      );
+      const matchesUniqueId = hisUniqueId
+        ? item?.historyId === hisUniqueId
+        : true;
+
+      let matchesDateRange = true;
+      if (fromDate && toDate) {
+        matchesDateRange =
+          itemDate.isSameOrAfter(fromDate, "day") &&
+          itemDate.isSameOrBefore(toDate, "day");
+      } else if (fromDate) {
+        matchesDateRange = itemDate.isSameOrAfter(fromDate, "day");
+      } else if (toDate) {
+        matchesDateRange = itemDate.isSameOrBefore(toDate, "day");
+      }
+
+      return matchesUniqueId && matchesDateRange;
     });
-    setHistoryData(result);
-  };
+  }, [historyData, fromDate, toDate, hisUniqueId]);
 
   // const SendMailConfirmation = (historyId) => {
   //   axiosInstance
@@ -130,10 +128,14 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
   useEffect(() => {
     dispatch(clearNewStoreInputs());
     dispatch(clearNewCityInputs());
-  });
+  }, [dispatch]);
 
   const ResetValues = () => {
     setScrType(null);
+    setFromDate(null);
+    setToDate(null);
+    setHisUniqueId(null);
+    setHeading([]);
     setHistoryData([]);
   };
 
@@ -174,6 +176,9 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
               options={scr_typeList}
               onChange={(value) => {
                 setScrType(value);
+                setFromDate(null);
+                setToDate(null);
+                setHisUniqueId(null);
                 if (value === "new_store") {
                   setHeading(str_heading);
                 } else {
@@ -189,6 +194,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                     border: "1px solid black",
                     borderRadius: "5px",
                   }}
+                  value={fromDate ? moment(fromDate, "YYYY-MM-DD") : null}
                   onChange={(_, dateString) => setFromDate(dateString)}
                   placeholder='From Date'
                   id='from_date'
@@ -199,6 +205,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                     border: "1px solid black",
                     borderRadius: "5px",
                   }}
+                  value={toDate ? moment(toDate, "YYYY-MM-DD") : null}
                   onChange={(_, dateString) => setToDate(dateString)}
                   placeholder='To Date'
                   id='to_id'
@@ -216,9 +223,6 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                   options={uniqueId}
                   onChange={(value) => setHisUniqueId(value)}
                 />
-                <button className='CButton' onClick={handelFilter}>
-                  Next
-                </button>
                 <button style={{ cursor: "pointer" }} onClick={ResetValues}>
                   Reset
                 </button>
@@ -227,7 +231,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
           </div>
         </div>
         {historyData.length > 0 && (
-          <InfinitTableLoad data={historyData} header={heading} />
+          <InfinitTableLoad data={filteredHistoryData} header={heading} />
         )}
       </div>
     </React.Fragment>

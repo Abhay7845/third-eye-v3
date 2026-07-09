@@ -1,6 +1,6 @@
 {
   "name": "third-eye",
-  "version": "1.1.9",
+  "version": "1.1.17",
   "homepage": "https://uat-tanishqdigitalmerch.titan.in/ThirdEye",
   "private": true,
   "dependencies": {
@@ -53,11 +53,11 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "node ./node_modules/react-scripts/bin/react-scripts.js start",
     "prebuild": "npm version patch --no-git-tag-version",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "build": "node ./node_modules/react-scripts/bin/react-scripts.js build",
+    "test": "node ./node_modules/react-scripts/bin/react-scripts.js test",
+    "eject": "node ./node_modules/react-scripts/bin/react-scripts.js eject"
   },
   "eslintConfig": {
     "extends": [

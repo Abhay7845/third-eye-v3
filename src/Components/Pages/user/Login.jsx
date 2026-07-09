@@ -2,15 +2,16 @@ import { useEffect, useState } from "react";
 import "../user/Login.css";
 import Login_Image from "../../../asset/3rdeye.png";
 import Mic_Icon from "../../Images/mic-icon.png";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useMsal } from "@azure/msal-react";
 import { routes } from "../../../routes";
 import { toast } from "react-toastify";
 import { axiosInstance } from "../../../HostManger/API/Authorization";
+import { loginRequest } from "../../auth/AuthConfig";
 
 // ---------------------------->   REDUX ----------------------------------------->
 import { useDispatch } from "react-redux";
 import { logoutUser, setUser } from "../../../redux/reducer/user";
-import { HOST_URL } from "../../../HostManger/API/HostUrl";
 import {
   clearNewStoreInputs,
   setNewStoreDecisiontext,
@@ -29,9 +30,11 @@ const VERSION = packageJson.version;
 
 export default function Login() {
   const dispatch = useDispatch();
+  const { instance } = useMsal();
   const [loading, setLoading] = useState(false);
   const [slideOut, setSlideOut] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const isDevMode = window.location.hostname === "localhost";
 
   // Redirect away immediately if already authenticated — prevents browser
@@ -82,12 +85,64 @@ export default function Login() {
       .catch((err) => setLoading(false));
   };
 
-  const url = isDevMode ? "/api/dummy/userinfo" : "/api/userinfo";
+  // const url = isDevMode ? "/api/dummy/userinfo" : "/api/userinfo";
+  const url = "/api/userinfo";
+
+  const clearApplicationCache = async () => {
+    localStorage.clear();
+    sessionStorage.clear();
+
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+
+    if ("caches" in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((cache) => caches.delete(cache)));
+    }
+  };
+
+  const signInAndSeedAccount = async () => {
+    const loginResponse = await instance.loginPopup({
+      ...loginRequest,
+      prompt: "select_account",
+    });
+
+    if (loginResponse?.account) {
+      instance.setActiveAccount(loginResponse.account);
+      return true;
+    }
+
+    const account = instance.getActiveAccount() || instance.getAllAccounts()[0];
+    if (account) {
+      instance.setActiveAccount(account);
+      return true;
+    }
+
+    return false;
+  };
 
   const LoginByAzzure = async (retry = true) => {
     try {
       setLoading(true);
       ClearUserDetails();
+
+      await clearApplicationCache();
+      const hasAccount =
+        !!instance.getActiveAccount() || instance.getAllAccounts().length > 0;
+      if (!hasAccount) {
+        const didSignIn = await signInAndSeedAccount();
+        if (!didSignIn) {
+          toast.error("Microsoft sign-in failed", {
+            theme: "colored",
+            autoClose: 2000,
+          });
+          return;
+        }
+      }
+
       const response = await axiosInstance.get(url, {
         withCredentials: true,
         headers: {
@@ -101,24 +156,17 @@ export default function Login() {
       }
     } catch (err) {
       const status = err?.response?.status;
+      if (status === 401 && retry && !isDevMode) {
+        const didSignIn = await signInAndSeedAccount();
+        if (didSignIn) {
+          return LoginByAzzure(false);
+        }
+      }
       if (status === 401 && retry) {
         await new Promise((resolve) => setTimeout(resolve, 1200));
         return LoginByAzzure(false);
       }
-      // FINAL REDIRECT TO AZURE LOGIN
-      if (status === 401) {
-        const redirectInProgress = sessionStorage.getItem(
-          "sso_redirect_in_progress",
-        );
-        if (!redirectInProgress) {
-          sessionStorage.setItem("sso_redirect_in_progress", "true");
-          setSlideOut(true);
-          setTimeout(() => {
-            window.location.replace(`${HOST_URL}/oauth2/authorization/azure`);
-          }, 700);
-        }
-        return;
-      }
+      if (status === 401) return;
       // SHOW ALERT FOR ALL OTHER ERRORS
       toast.error("Something went wrong", {
         theme: "colored",
@@ -130,8 +178,12 @@ export default function Login() {
   };
 
   useEffect(() => {
-    sessionStorage.removeItem("sso_redirect_in_progress");
-  }, []);
+    const hasAccount =
+      !!instance.getActiveAccount() || instance.getAllAccounts().length > 0;
+    if (hasAccount && !isAuthSessionValid()) {
+      LoginByAzzure(false);
+    }
+  }, [instance, location.pathname]);
 
   const sentence =
     "  Powerful retail analytics suite designed to help you make smarter, data-driven decisions.";
