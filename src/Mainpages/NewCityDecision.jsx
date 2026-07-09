@@ -166,10 +166,9 @@ const NewStoreDecision = ({
       );
 
       if (response.data.code === "1000") {
-        const apiDecision = response?.data?.value?.decision?.trim() || "";
-        const apiBottomLine = response?.data?.value?.bottom_line?.trim() || "";
-        const apiRecommendation =
-          response?.data?.value?.recomendation?.trim() || "";
+        const apiDecision = decision_data?.decision?.trim() || "";
+        const apiBottomLine = response?.data?.bottom_line?.trim() || "";
+        const apiRecommendation = decision_data?.recomendation?.trim() || "";
         const hasValidDecisionData =
           Boolean(apiBottomLine) ||
           Boolean(apiDecision) ||
