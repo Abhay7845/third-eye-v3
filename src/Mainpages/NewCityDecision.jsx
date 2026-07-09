@@ -104,7 +104,6 @@ const NewStoreDecision = ({
   };
 
   const GetPosibilityDecision = async (chl, t_pin, s_pin) => {
-    setLoading(true);
     try {
       const response = await axiosInstance.get(
         `/api/get/decision/details?channel=${chl}&targCatchment=${t_pin}&similarCatchment=${s_pin}`,
@@ -121,6 +120,7 @@ const NewStoreDecision = ({
   };
 
   const GetDecisionList = async (GIS_Data) => {
+    setLoading(true);
     btnDesabeld(true);
     const decision_data = await GetPosibilityDecision(
       inputsPayload?.targetPinCode,
@@ -201,12 +201,13 @@ const NewStoreDecision = ({
         dispatch(setNewCityDecisiontext(respData));
       }
     } catch (err) {
-      setLoading(false);
       toast.error(
         "Something Went wrong while pulling the Decision Data . Pls try after sometime",
         { theme: "colored", autoClose: 3000 },
       );
       dispatch(setNewCityDecisiontext());
+    } finally {
+      setLoading(false);
     }
   };
 
