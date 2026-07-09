@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../custom/Sidebar";
 import ThirdEyeHeader from "../custom/ThirdEyeHeader";
 import { useDispatch, useSelector } from "react-redux";
@@ -34,6 +34,12 @@ const city_heading = [
   "Preview",
 ];
 
+const normalizeHistoryId = (value) =>
+  String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+
 const HistoryPreview = ({ toggle_open, toggle }) => {
   const dispatch = useDispatch();
   const userLog = useSelector((state) => state?.user?.user);
@@ -43,6 +49,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
   const [historyData, setHistoryData] = useState([]);
+  const [allHistoryData, setAllHistoryData] = useState([]);
   const [hisUniqueId, setHisUniqueId] = useState(null);
   const [heading, setHeading] = useState([]);
 
@@ -60,13 +67,17 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
       .then((response) => {
         if (response.data.code === "1000") {
           setHistoryData(response.data.value);
+          setAllHistoryData(response.data.value);
           setHisUniqueId(null);
+          setFromDate(null);
+          setToDate(null);
         } else {
           toast.error("History Data Not Available For Your ID", {
             theme: "colored",
             autoClose: 1000,
           });
           setHistoryData([]);
+          setAllHistoryData([]);
         }
         setLoading(false);
       })
@@ -80,38 +91,47 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scrType]);
 
-  const uniqueId = [
-    {
-      value: null,
-      label: "Select",
-    },
-    ...historyData.map((item) => ({
-      value: item?.historyId,
-      label: item?.historyId,
-    })),
-  ];
+  const uniqueId = Array.from(
+    new Set(allHistoryData.map((item) => normalizeHistoryId(item?.historyId))),
+  )
+    .filter(Boolean)
+    .map((id) => ({
+      value: id,
+      label: id,
+    }));
 
-  const filteredHistoryData = useMemo(() => {
-    return historyData.filter((item) => {
+  const handelFilter = () => {
+    if (!fromDate) {
+      toast.error("Please Select From Date", {
+        theme: "colored",
+        autoClose: 2000,
+        position: "bottom-right",
+      });
+      return;
+    }
+    if (!toDate) {
+      toast.error("Please Select To Date", {
+        theme: "colored",
+        autoClose: 2000,
+        position: "bottom-right",
+      });
+      return;
+    }
+
+    const selectedId = normalizeHistoryId(hisUniqueId);
+    const result = allHistoryData.filter((item) => {
       const itemDate = moment(item.date, "YYYY-MM-DD");
-      const matchesUniqueId = hisUniqueId
-        ? item?.historyId === hisUniqueId
+      const matchesDate =
+        itemDate.isSame(fromDate, "day") ||
+        itemDate.isSame(toDate, "day") ||
+        (itemDate.isAfter(fromDate, "day") && itemDate.isBefore(toDate, "day"));
+      const matchesId = selectedId
+        ? normalizeHistoryId(item?.historyId) === selectedId
         : true;
-
-      let matchesDateRange = true;
-      if (fromDate && toDate) {
-        matchesDateRange =
-          itemDate.isSameOrAfter(fromDate, "day") &&
-          itemDate.isSameOrBefore(toDate, "day");
-      } else if (fromDate) {
-        matchesDateRange = itemDate.isSameOrAfter(fromDate, "day");
-      } else if (toDate) {
-        matchesDateRange = itemDate.isSameOrBefore(toDate, "day");
-      }
-
-      return matchesUniqueId && matchesDateRange;
+      return matchesDate && matchesId;
     });
-  }, [historyData, fromDate, toDate, hisUniqueId]);
+    setHistoryData(result);
+  };
 
   // const SendMailConfirmation = (historyId) => {
   //   axiosInstance
@@ -128,7 +148,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
   useEffect(() => {
     dispatch(clearNewStoreInputs());
     dispatch(clearNewCityInputs());
-  }, [dispatch]);
+  });
 
   const ResetValues = () => {
     setScrType(null);
@@ -137,6 +157,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
     setHisUniqueId(null);
     setHeading([]);
     setHistoryData([]);
+    setAllHistoryData([]);
   };
 
   return (
@@ -194,7 +215,6 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                     border: "1px solid black",
                     borderRadius: "5px",
                   }}
-                  value={fromDate ? moment(fromDate, "YYYY-MM-DD") : null}
                   onChange={(_, dateString) => setFromDate(dateString)}
                   placeholder='From Date'
                   id='from_date'
@@ -205,13 +225,13 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                     border: "1px solid black",
                     borderRadius: "5px",
                   }}
-                  value={toDate ? moment(toDate, "YYYY-MM-DD") : null}
                   onChange={(_, dateString) => setToDate(dateString)}
                   placeholder='To Date'
                   id='to_id'
                 />
                 <Select
                   showSearch
+                  allowClear
                   style={{
                     width: "100%",
                     border: "1px solid black",
@@ -219,10 +239,25 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                   }}
                   placeholder='Search By Unique Id'
                   id='search_unique_id'
-                  value={hisUniqueId}
+                  value={hisUniqueId ?? undefined}
                   options={uniqueId}
-                  onChange={(value) => setHisUniqueId(value)}
+                  onChange={(value) => {
+                    setHisUniqueId(value || null);
+                    if (!value) {
+                      setHistoryData(allHistoryData);
+                      return;
+                    }
+                    const selectedId = normalizeHistoryId(value);
+                    const filteredById = allHistoryData.filter(
+                      (item) =>
+                        normalizeHistoryId(item?.historyId) === selectedId,
+                    );
+                    setHistoryData(filteredById);
+                  }}
                 />
+                <button className='CButton' onClick={handelFilter}>
+                  Next
+                </button>
                 <button style={{ cursor: "pointer" }} onClick={ResetValues}>
                   Reset
                 </button>
@@ -231,7 +266,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
           </div>
         </div>
         {historyData.length > 0 && (
-          <InfinitTableLoad data={filteredHistoryData} header={heading} />
+          <InfinitTableLoad data={historyData} header={heading} />
         )}
       </div>
     </React.Fragment>

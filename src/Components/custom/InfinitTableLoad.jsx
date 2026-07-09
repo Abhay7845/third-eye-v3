@@ -40,39 +40,54 @@ const InfinitTableLoad = ({ data, header }) => {
           </Tr>
         </Thead>
         <Tbody>
-          {currentData.map((item, i) => {
-            const pdfFileName = item?.historyId?.trim().replace(/\s+/g, "_");
-            // UAT PDF URL
-            const pdf_url = `https://d6oojw29okpcs.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
-            // PROD PDF URL
-            // const pdf_url = `https://d1i4tarane3v3g.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
-            return (
-              <Tr key={i}>
-                <Td style={{ width: "6%" }}>{i + 1}</Td>
-                <Td>{pdfFileName}</Td>
-                <Td>{moment(item?.date).format("DD-MM-YYYY")}</Td>
-                <Td>{item?.targetValue}</Td>
-                <Td>{item?.similarValue}</Td>
-                <Td
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    gap: "15px",
-                  }}>
-                  <Tippy content={<span>Preview PDF</span>}>
-                    <span
-                      onClick={() =>
-                        window.open(pdf_url, "_blank", "noopener,noreferrer")
-                      }
-                      style={{ cursor: "pointer" }}>
-                      <FaFilePdf size={15} color='#e63838ff' />
-                    </span>
-                  </Tippy>
-                </Td>
-              </Tr>
-            );
-          })}
+          {currentData.length === 0 ? (
+            <Tr>
+              <Td
+                colSpan={header.length}
+                style={{
+                  textAlign: "center",
+                  padding: "14px",
+                  fontWeight: "600",
+                  color: "#2e4861",
+                }}>
+                No record find
+              </Td>
+            </Tr>
+          ) : (
+            currentData.map((item, i) => {
+              const pdfFileName = item?.historyId?.trim().replace(/\s+/g, "_");
+              // UAT PDF URL
+              const pdf_url = `https://d6oojw29okpcs.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
+              // PROD PDF URL
+              // const pdf_url = `https://d1i4tarane3v3g.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
+              return (
+                <Tr key={i}>
+                  <Td style={{ width: "6%" }}>{i + 1}</Td>
+                  <Td>{pdfFileName}</Td>
+                  <Td>{moment(item?.date).format("DD-MM-YYYY")}</Td>
+                  <Td>{item?.targetValue}</Td>
+                  <Td>{item?.similarValue}</Td>
+                  <Td
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: "15px",
+                    }}>
+                    <Tippy content={<span>Preview PDF</span>}>
+                      <span
+                        onClick={() =>
+                          window.open(pdf_url, "_blank", "noopener,noreferrer")
+                        }
+                        style={{ cursor: "pointer" }}>
+                        <FaFilePdf size={15} color='#e63838ff' />
+                      </span>
+                    </Tippy>
+                  </Td>
+                </Tr>
+              );
+            })
+          )}
         </Tbody>
       </Table>
       <div
@@ -81,19 +96,20 @@ const InfinitTableLoad = ({ data, header }) => {
           bottom: 0,
           zIndex: 1,
           padding: "3px",
-          border: "1px solid #2e4861",
           background: "#fff",
           textAlign: "center",
           display: "flex",
           justifyContent: "end",
         }}>
-        <Pagination
-          current={currentPage}
-          total={data.length}
-          pageSize={pageSize}
-          onChange={(page) => setCurrentPage(page)}
-          showSizeChanger={false}
-        />
+        {data.length > 0 && (
+          <Pagination
+            current={currentPage}
+            total={data.length}
+            pageSize={pageSize}
+            onChange={(page) => setCurrentPage(page)}
+            showSizeChanger={false}
+          />
+        )}
       </div>
     </div>
   );
