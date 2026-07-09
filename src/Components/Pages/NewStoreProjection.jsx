@@ -16,6 +16,7 @@ import NormalRandmaize from "../accordion/NormalRandmaize";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { categorizeRetails, formatAssessmentData } from "../Data/Data";
+import { DummyTopStrLayout } from "../custom/DummyTopStrLayout";
 
 export const FilePopStyle = {
   position: "absolute",
@@ -532,7 +533,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
                   <Table className='custom_table'>
                     <Thead>
                       <Tr>
-                        <Th />
+                        <Th>Store</Th>
                         <Th>Store to Pincode Customer(%) Top 3 Stores</Th>
                         <Th>Store to Pincode Revenue(%) Top 3 Stores</Th>
                       </Tr>
@@ -556,9 +557,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
                     </Tbody>
                   </Table>
                 ) : (
-                  <div style={{ color: "red", textAlign: "center" }}>
-                    Data not available
-                  </div>
+                  <DummyTopStrLayout />
                 )}
                 <div style={{ border: "1px solid #233044", marginTop: "2%" }}>
                   {topStrCanData?.length > 0 ? (
