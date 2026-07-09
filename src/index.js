@@ -11,26 +11,35 @@ import "react-super-responsive-table/dist/SuperResponsiveTableStyle.css";
 import { LoadScript } from "@react-google-maps/api";
 import { GOOGLE_MAP_LIBRARIES } from "./Components/Data/Data";
 import { MsalProvider } from "@azure/msal-react";
-import { msalInstance } from "./Components/auth/AuthConfig";
+import { initializeMsal, msalInstance } from "./Components/auth/AuthConfig";
 import { store } from "../src/redux/store/store";
 import { BrowserRouter } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 const GoogleKey = process.env.REACT_APP_GOOGLE_KEY;
-root.render(
-  <React.StrictMode>
-    <LoadScript googleMapsApiKey={GoogleKey} libraries={GOOGLE_MAP_LIBRARIES}>
-      <MsalProvider instance={msalInstance}>
-        <Provider store={store}>
-          <BrowserRouter>
-            <ToastContainer />
-            <App />
-          </BrowserRouter>
-        </Provider>
-      </MsalProvider>
-    </LoadScript>
-  </React.StrictMode>,
-);
+
+const renderApp = () => {
+  root.render(
+    <React.StrictMode>
+      <LoadScript googleMapsApiKey={GoogleKey} libraries={GOOGLE_MAP_LIBRARIES}>
+        <MsalProvider instance={msalInstance}>
+          <Provider store={store}>
+            <BrowserRouter>
+              <ToastContainer />
+              <App />
+            </BrowserRouter>
+          </Provider>
+        </MsalProvider>
+      </LoadScript>
+    </React.StrictMode>,
+  );
+};
+
+initializeMsal()
+  .then(renderApp)
+  .catch(() => {
+    renderApp();
+  });
 
 reportWebVitals();

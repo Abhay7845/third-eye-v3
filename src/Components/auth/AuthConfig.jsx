@@ -12,9 +12,34 @@ export const msalConfig = {
     authority: `https://login.microsoftonline.com/${tenantId}`,
     redirectUri: routes.NEW_STORE,
   },
+  cache: {
+    cacheLocation: "sessionStorage",
+    storeAuthStateInCookie: true,
+  },
 };
 
 export const msalInstance = new PublicClientApplication(msalConfig);
+
+let msalInitializePromise = null;
+
+export const initializeMsal = async () => {
+  if (!msalInitializePromise) {
+    msalInitializePromise = msalInstance
+      .initialize()
+      .then(() => {
+        const existingAccounts = msalInstance.getAllAccounts();
+        if (!msalInstance.getActiveAccount() && existingAccounts.length > 0) {
+          msalInstance.setActiveAccount(existingAccounts[0]);
+        }
+      })
+      .catch((error) => {
+        msalInitializePromise = null;
+        throw error;
+      });
+  }
+
+  return msalInitializePromise;
+};
 
 export const loginRequest = {
   scopes: ["openid", "profile", "email", `api://${clientId}/access_as_user`],

@@ -2,12 +2,20 @@ import axios from "axios";
 import { HOST_URL } from "./HostUrl";
 import { routes } from "../../routes";
 import { clearAllCookies } from "../../utils/cookieUtils";
-import { loginRequest, msalInstance } from "../../Components/auth/AuthConfig";
+import {
+  initializeMsal,
+  loginRequest,
+  msalInstance,
+} from "../../Components/auth/AuthConfig";
+import { isAuthSessionValid } from "../../utils/authSession";
 
 export const axiosInstance = axios.create({
   baseURL: HOST_URL,
   withCredentials: true,
 });
+
+const ACCESS_TOKEN_KEY = "3rd_eye_access_token";
+const ACCESS_TOKEN_EXPIRY_KEY = "3rd_eye_access_token_expiry";
 
 let hasHandledSessionExpiry = false;
 
@@ -20,6 +28,18 @@ const clearClientAuthState = () => {
   localStorage.clear();
   sessionStorage.clear();
   clearAllCookies();
+};
+
+export const handleSessionExpiry = () => {
+  if (hasHandledSessionExpiry || isLoginRoute()) {
+    return;
+  }
+
+  hasHandledSessionExpiry = true;
+  showSessionExpiredPopup(() => {
+    clearClientAuthState();
+    window.location.href = routes.LOGIN;
+  });
 };
 
 const showSessionExpiredPopup = (onConfirm) => {
@@ -89,19 +109,93 @@ const shouldSkipAuthHeader = (url) => {
   return requestUrl.includes("/api/dummy/userinfo");
 };
 
-const getAccessTokenSilently = async (options = {}) => {
-  const active = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
-  if (!active) {
-    return null;
+const shouldIgnoreSessionExpiry = (url, requestConfig = {}) => {
+  const requestUrl = String(url || "");
+  return !!requestConfig?.__skipSessionExpiry || requestUrl.includes("/logout");
+};
+
+const setCachedAccessToken = (token, expiresOn) => {
+  if (!token) {
+    return;
   }
 
-  msalInstance.setActiveAccount(active);
-  const response = await msalInstance.acquireTokenSilent({
-    ...loginRequest,
-    account: active,
-    forceRefresh: !!options.forceRefresh,
-  });
-  return response?.accessToken || null;
+  try {
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+    const expiryMs = expiresOn ? new Date(expiresOn).getTime() : 0;
+    if (Number.isFinite(expiryMs) && expiryMs > 0) {
+      sessionStorage.setItem(ACCESS_TOKEN_EXPIRY_KEY, String(expiryMs));
+    } else {
+      sessionStorage.removeItem(ACCESS_TOKEN_EXPIRY_KEY);
+    }
+  } catch (error) {
+    // Ignore browser storage write failures.
+  }
+};
+
+const getValidCachedAccessToken = () => {
+  try {
+    const token = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    if (!token) {
+      return null;
+    }
+
+    const expiryMs = Number(sessionStorage.getItem(ACCESS_TOKEN_EXPIRY_KEY));
+    if (Number.isFinite(expiryMs) && expiryMs > 0) {
+      // Keep 30s safety buffer before token expiry.
+      if (Date.now() >= expiryMs - 30 * 1000) {
+        sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+        sessionStorage.removeItem(ACCESS_TOKEN_EXPIRY_KEY);
+        return null;
+      }
+    }
+
+    return token;
+  } catch (error) {
+    return null;
+  }
+};
+
+const getAccessTokenSilently = async (options = {}) => {
+  await initializeMsal();
+
+  const active =
+    msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
+  if (!active) {
+    try {
+      const ssoResponse = await msalInstance.ssoSilent({
+        ...loginRequest,
+        forceRefresh: !!options.forceRefresh,
+      });
+      if (ssoResponse?.account) {
+        msalInstance.setActiveAccount(ssoResponse.account);
+      }
+      if (ssoResponse?.accessToken) {
+        setCachedAccessToken(ssoResponse.accessToken, ssoResponse.expiresOn);
+        return ssoResponse.accessToken;
+      }
+    } catch (error) {
+      // Fall through to cached token fallback.
+    }
+
+    return getValidCachedAccessToken();
+  }
+
+  try {
+    msalInstance.setActiveAccount(active);
+    const response = await msalInstance.acquireTokenSilent({
+      ...loginRequest,
+      account: active,
+      forceRefresh: !!options.forceRefresh,
+    });
+    if (response?.accessToken) {
+      setCachedAccessToken(response.accessToken, response.expiresOn);
+      return response.accessToken;
+    }
+  } catch (error) {
+    // Fall through to cached token fallback.
+  }
+
+  return getValidCachedAccessToken();
 };
 
 axiosInstance.interceptors.request.use(
@@ -137,6 +231,7 @@ axiosInstance.interceptors.response.use(
       status === 401 &&
       !isLoginRoute() &&
       !shouldSkipAuthHeader(originalRequest?.url) &&
+      !shouldIgnoreSessionExpiry(originalRequest?.url, originalRequest) &&
       !originalRequest.__retriedWithFreshToken;
 
     if (canRetryWithFreshToken) {
@@ -155,14 +250,14 @@ axiosInstance.interceptors.response.use(
       }
     }
 
-    if (status === 401 && !isLoginRoute()) {
-      if (!hasHandledSessionExpiry) {
-        hasHandledSessionExpiry = true;
-        showSessionExpiredPopup(() => {
-          clearClientAuthState();
-          window.location.href = routes.LOGIN;
-          window.location.reload(true);
-        });
+    if (
+      status === 401 &&
+      !isLoginRoute() &&
+      !shouldIgnoreSessionExpiry(originalRequest?.url, originalRequest)
+    ) {
+      const hasValidSession = isAuthSessionValid();
+      if (!hasValidSession) {
+        handleSessionExpiry();
       }
     }
 

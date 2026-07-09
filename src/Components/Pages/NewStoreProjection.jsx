@@ -573,6 +573,9 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
                   </div>
                 ) : (
                   <div style={{ border: "1px solid #233044", marginTop: "1%" }}>
+                    <div style={{ textAlign: "center", padding: "6px" }}>
+                      Cannibalization Effect
+                    </div>
                     <DummyCanLayout />
                   </div>
                 )}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "../user/Login.css";
 import Login_Image from "../../../asset/3rdeye.png";
 import Mic_Icon from "../../Images/mic-icon.png";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 import { routes } from "../../../routes";
 import { toast } from "react-toastify";
@@ -34,7 +34,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [slideOut, setSlideOut] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
   const isDevMode = window.location.hostname === "localhost";
 
   // Redirect away immediately if already authenticated — prevents browser
@@ -91,12 +90,6 @@ export default function Login() {
   const clearApplicationCache = async () => {
     localStorage.clear();
     sessionStorage.clear();
-
-    document.cookie.split(";").forEach((c) => {
-      document.cookie = c
-        .replace(/^ +/, "")
-        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-    });
 
     if ("caches" in window) {
       const cacheNames = await caches.keys();
@@ -176,15 +169,6 @@ export default function Login() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const hasAccount =
-      !!instance.getActiveAccount() || instance.getAllAccounts().length > 0;
-    if (hasAccount && !isAuthSessionValid()) {
-      LoginByAzzure(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instance, location.pathname]);
 
   const sentence =
     "  Powerful retail analytics suite designed to help you make smarter, data-driven decisions.";

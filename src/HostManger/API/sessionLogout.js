@@ -10,7 +10,7 @@ export const clearClientSession = () => {
 
 export const invalidateServerSession = async () => {
   try {
-    await axiosInstance.post("/logout", {});
+    await axiosInstance.post("/logout", {}, { __skipSessionExpiry: true });
   } catch (error) {
     // Best effort only. Client-side logout should continue even if server logout fails.
   }

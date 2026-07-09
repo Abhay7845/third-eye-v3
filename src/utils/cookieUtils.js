@@ -81,10 +81,14 @@ export const acceptAllCookies = (sessionPrefs = {}) => {
 };
 
 /**
- * Clear all portal cookies (called on logout).
+ * Clear portal cookies.
+ * By default, preserve consent so the banner does not reappear after
+ * auth/session resets or page reloads.
  */
-export const clearAllCookies = () => {
-  Object.values(COOKIE_NAMES).forEach(deleteCookie);
+export const clearAllCookies = ({ preserveConsent = true } = {}) => {
+  Object.values(COOKIE_NAMES)
+    .filter((name) => !(preserveConsent && name === COOKIE_NAMES.CONSENT))
+    .forEach(deleteCookie);
 };
 
 /**
