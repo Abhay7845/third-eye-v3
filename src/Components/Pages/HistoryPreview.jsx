@@ -53,6 +53,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
   const [hisUniqueId, setHisUniqueId] = useState(null);
   const [heading, setHeading] = useState([]);
 
+  console.log("historyData==>", historyData);
   const GetUserHistory = (scrType) => {
     const hisPayload = {
       userName: userLog?.name,
@@ -187,7 +188,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
             }}>
             <Select
               style={{
-                width: historyData.length > 0 ? "40%" : "100%",
+                width: allHistoryData.length > 0 ? "40%" : "100%",
                 border: "1px solid black",
                 borderRadius: "5px",
               }}
@@ -207,7 +208,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                 }
               }}
             />
-            {historyData.length > 0 && (
+            {allHistoryData.length > 0 && (
               <div style={{ display: "flex", gap: "5px", width: "100%" }}>
                 <DatePicker
                   style={{
@@ -265,7 +266,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
             )}
           </div>
         </div>
-        {historyData.length > 0 && (
+        {allHistoryData.length > 0 && (
           <InfinitTableLoad data={historyData} header={heading} />
         )}
       </div>
