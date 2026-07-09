@@ -17,6 +17,7 @@ import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { categorizeRetails, formatAssessmentData } from "../Data/Data";
 import { DummyTopStrLayout } from "../custom/DummyTopStrLayout";
+import { DummyCanLayout } from "../custom/DummyCanLayout";
 
 export const FilePopStyle = {
   position: "absolute",
@@ -559,23 +560,22 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
                 ) : (
                   <DummyTopStrLayout />
                 )}
-                <div style={{ border: "1px solid #233044", marginTop: "2%" }}>
-                  {topStrCanData?.length > 0 ? (
-                    <React.Fragment>
-                      <div style={{ textAlign: "center", padding: "6px" }}>
-                        Cannibalization Effect
-                      </div>
-                      <NewStoreProBarGraph
-                        cannibalizationPeriod={topStrCanData}
-                        height={220}
-                      />
-                    </React.Fragment>
-                  ) : (
-                    <div style={{ color: "red", textAlign: "center" }}>
-                      Cannibalization Effect Not Found
+                {topStrCanData?.length > 0 ? (
+                  <div
+                    style={{ border: "1px solid #233044", marginTop: "4.5%" }}>
+                    <div style={{ textAlign: "center", padding: "6px" }}>
+                      Cannibalization Effect
                     </div>
-                  )}
-                </div>
+                    <NewStoreProBarGraph
+                      cannibalizationPeriod={topStrCanData}
+                      height={220}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ border: "1px solid #233044", marginTop: "1%" }}>
+                    <DummyCanLayout />
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -1,14 +1,9 @@
 import React from "react";
 
-export const DummyTopStrLayout = () => {
+export const DummyCanLayout = () => {
   return (
     <table style={styles.table}>
-      <thead>
-        <tr>
-          <th style={styles.th}>Store to Pincode Customer(%) Top 3 Stores</th>
-          <th style={styles.th}>Store to Pincode Revenue(%) Top 3 Stores</th>
-        </tr>
-      </thead>
+      <thead></thead>
       <tbody>
         <tr>
           <td colSpan={4} style={styles.noData}>
@@ -24,19 +19,14 @@ const styles = {
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    background: "#fff",
-    border: "1px solid #000",
   },
   th: {
     padding: "12px",
-    border: "1px solid #000",
-    backgroundColor: "#f5f5f5",
     textAlign: "left",
     fontSize: "12px",
   },
   noData: {
-    padding: "44px",
-    border: "1px solid #000",
+    padding: "48px",
     textAlign: "center",
     color: "#666",
     fontStyle: "italic",
