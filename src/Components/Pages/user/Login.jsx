@@ -183,6 +183,7 @@ export default function Login() {
     if (hasAccount && !isAuthSessionValid()) {
       LoginByAzzure(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instance, location.pathname]);
 
   const sentence =
