@@ -961,7 +961,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                                   padding: "2px 3px",
                                   fontSize: "12px",
                                 }}>
-                                {item?.customerShare} %
+                                {parseFloat(item?.customerShare).toFixed(2)} %
                               </Td>
                               <Td
                                 style={{

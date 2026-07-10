@@ -47,7 +47,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   const [pdfFileName, setPdfFileName] = useState("");
   // const pdlList = formatAssessmentData(pdf_data?.assessment);
   const [pdfDecesion, setPdfDecesion] = useState([]);
-  const pdfDecisionRef = useRef({ lastPin: "", inFlight: false });
+  const pdfDecisionRef = useRef(null);
 
   const targetCity = inputsPayload?.targetCity;
   const targetPinCode = inputsPayload?.targetPinCode;
@@ -244,59 +244,51 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
       .catch((err) => setCustExitStore(0));
   };
 
-  const GetPdfDecision = async (t_pin) => {
-    const pin = t_pin?.toString() || "";
-    if (!pin) return null;
-    // Prevent duplicate calls for same pin due to multiple effect triggers.
-    if (
-      pdfDecisionRef.current.inFlight &&
-      pdfDecisionRef.current.lastPin === pin
-    ) {
-      return null;
-    }
-    if (
-      !pdfDecisionRef.current.inFlight &&
-      pdfDecisionRef.current.lastPin === pin
-    ) {
-      return null;
+  const GetPdfDecision = async () => {
+    // If a call is already in-flight (e.g. React StrictMode double-invoke),
+    // share the same promise so both callers properly await it.
+    if (pdfDecisionRef.current) {
+      return pdfDecisionRef.current;
     }
 
-    pdfDecisionRef.current = { lastPin: pin, inFlight: true };
+    const promise = (async () => {
+      try {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const response = await axiosInstance.post(
+              "/api/openai/decision_reasoner/v2",
+              { city: similerStoreVal },
+            );
+            if (response?.status === 200) {
+              const formattedData =
+                formatAssessmentData(response?.data?.assessment) || [];
 
-    try {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const response = await axiosInstance.post(
-            "/api/openai/decision_reasoner/v2",
-            { city: similerStoreVal },
-          );
-          if (response?.status === 200) {
-            const formattedData =
-              formatAssessmentData(response?.data?.assessment) || [];
+              if (formattedData.length > 0) {
+                setPdfDecesion(formattedData);
+                return response;
+              }
+            }
 
-            // Accept only non-empty data; empty payload gets one retry.
-            if (formattedData.length > 0) {
-              setPdfDecesion(formattedData);
-              return response;
+            if (attempt === 1) {
+              setPdfDecesion([]);
+              return null;
+            }
+          } catch (error) {
+            if (attempt === 1) {
+              setPdfDecesion([]);
+              return null;
             }
           }
-
-          // Non-200 or empty formatted data: retry once, then stop.
-          if (attempt === 1) {
-            setPdfDecesion([]);
-            return null;
-          }
-        } catch (error) {
-          if (attempt === 1) {
-            setPdfDecesion([]);
-            return null;
-          }
         }
+        setPdfDecesion([]);
+        return null;
+      } finally {
+        pdfDecisionRef.current = null;
       }
-      return null;
-    } finally {
-      pdfDecisionRef.current.inFlight = false;
-    }
+    })();
+
+    pdfDecisionRef.current = promise;
+    return promise;
   };
 
   useEffect(() => {
@@ -314,7 +306,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
         GetEnrollTargetYear(similerStoreVal, targetPinCode),
         GetCannibilization(similerStoreVal, targetCity, targetPinCode),
         GetNewCrossChannel(targetPinCode, similerStoreVal),
-        GetPdfDecision(targetPinCode),
+        GetPdfDecision(),
       ]);
       if (!isCancelled) {
         setLoading(false);
