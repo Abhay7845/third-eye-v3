@@ -126,7 +126,6 @@ const NewStoreDecision = ({
       inputsPayload?.setOfPin,
       inputsPayload?.similarPinCode,
     );
-    console.log("decision_data==>", decision_data);
     const fallbackRespData = (reason = []) => ({
       bottom_line:
         "Unable to find a decision based on the selected details. Please wait some time and try again.",
@@ -163,7 +162,6 @@ const NewStoreDecision = ({
         "/api/openai/decision_reasoner",
         DecesionPayload,
       );
-      console.log("response==>", response.data);
       if (response.data.code === "1000") {
         const apiDecision = decision_data?.decision?.trim() || "";
         const apiBottomLine = response?.data?.bottom_line?.trim() || "";

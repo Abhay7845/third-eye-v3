@@ -54,7 +54,6 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
   const [heading, setHeading] = useState([]);
   const [datePickerKey, setDatePickerKey] = useState(0);
 
-  console.log("historyData==>", historyData);
   const GetUserHistory = (scrType) => {
     const hisPayload = {
       userName: userLog?.name,
