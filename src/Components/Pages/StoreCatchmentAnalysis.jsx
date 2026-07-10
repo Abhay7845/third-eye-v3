@@ -82,8 +82,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
   }, []);
 
   const GetChannelList = () => {
-    setLoading(true);
-    axiosInstance
+    return axiosInstance
       .get(`/api/fetch/channel/list`)
       .then((res) => res)
       .then((response) => {
@@ -103,18 +102,12 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
           });
           setChannelList(channelList);
         }
-        setLoading(false);
       })
-      .catch((err) => setLoading(false));
+      .catch(() => {});
   };
 
-  useEffect(() => {
-    GetChannelList();
-  }, [channelval]);
-
   const GetStoreList = (chl) => {
-    setLoading(true);
-    axiosInstance
+    return axiosInstance
       .get(`/api/fetch/dark/store/codes?channel=${chl}`)
       .then((res) => res)
       .then((response) => {
@@ -151,15 +144,18 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
           });
           setStoreList([]);
         }
-        setLoading(false);
       })
-      .catch((err) => setLoading(false));
+      .catch(() => {});
   };
 
+  // Single effect: show loader until BOTH channel list and store list respond
   useEffect(() => {
-    if (channelval) {
-      GetStoreList(channelval);
-    }
+    if (!channelval) return;
+    setLoading(true);
+    Promise.allSettled([GetChannelList(), GetStoreList(channelval)]).finally(
+      () => setLoading(false),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelval]);
 
   const GetMomTrendData = async (chl, str) => {
