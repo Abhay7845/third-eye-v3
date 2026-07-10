@@ -309,8 +309,16 @@ const NewCityExpantionPdf = ({
 
     // Map markers with distance
     const markersWithDistance = markers.map((m) => {
-      const lat = m?.position?.lat();
-      const lng = m?.position?.lng();
+      // position.lat/lng can be a Google Maps LatLng function (live)
+      // or a plain number (after Redux/localStorage serialization on reload)
+      const lat =
+        typeof m?.position?.lat === "function"
+          ? m.position.lat()
+          : m?.position?.lat;
+      const lng =
+        typeof m?.position?.lng === "function"
+          ? m.position.lng()
+          : m?.position?.lng;
 
       return {
         ...m,
@@ -688,34 +696,30 @@ const NewCityExpantionPdf = ({
             />
           </div>
           <br />
-          <div className='user_input_box'>
-            <h5 className='user_input_title'>
-              Nearest Our Brand Store Details
-            </h5>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                borderTop: "1px solid black",
-                padding: "8px",
-                fontSize: "12px",
-                gap: "5px",
-                textAlign: "left",
-              }}>
-              {our_brand_list?.length > 0 ? (
-                our_brand_list?.map((item, i) => (
+          {our_brand_list?.length > 0 && (
+            <div className='user_input_box'>
+              <h5 className='user_input_title'>
+                Nearest Our Brand Store Details
+              </h5>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                  borderTop: "1px solid black",
+                  padding: "8px",
+                  fontSize: "12px",
+                  gap: "5px",
+                  textAlign: "left",
+                }}>
+                {our_brand_list?.map((item, i) => (
                   <React.Fragment key={i}>
                     <strong>{item?.title}:</strong>
                     <span>{item.distance} KM</span>
                   </React.Fragment>
-                ))
-              ) : (
-                <h6 style={{ textAlign: "center", color: "red" }}>
-                  Stores Not Available
-                </h6>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* ---------------------------------PDF SECOND PAGE SEPRATION ------------------------------ */}
@@ -726,34 +730,30 @@ const NewCityExpantionPdf = ({
             padding: "10px",
             border: "1px solid #000",
           }}>
-          <div className='user_input_box'>
-            <h5 className='user_input_title'>
-              Nearest Competitor Store Details
-            </h5>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                padding: "8px",
-                borderTop: "1px solid black",
-                fontSize: "12px",
-                gap: "5px",
-                textAlign: "left",
-              }}>
-              {competitors_list?.length > 0 ? (
-                competitors_list?.map((item, i) => (
+          {competitors_list?.length > 0 && (
+            <div className='user_input_box'>
+              <h5 className='user_input_title'>
+                Nearest Competitor Store Details
+              </h5>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                  padding: "8px",
+                  borderTop: "1px solid black",
+                  fontSize: "12px",
+                  gap: "5px",
+                  textAlign: "left",
+                }}>
+                {competitors_list?.map((item, i) => (
                   <React.Fragment key={i}>
                     <strong>{item?.title} Jewellers:</strong>
                     <span>{item.distance} KM</span>
                   </React.Fragment>
-                ))
-              ) : (
-                <h6 style={{ textAlign: "center", color: "red" }}>
-                  Stores Not Available
-                </h6>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
           <div className='retail_box'>
             <div className='retail_heading'>
               Jewellery Market Store Count:
