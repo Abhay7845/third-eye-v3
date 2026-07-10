@@ -7,7 +7,6 @@ import {
   loginRequest,
   msalInstance,
 } from "../../Components/auth/AuthConfig";
-import { isAuthSessionValid } from "../../utils/authSession";
 
 export const axiosInstance = axios.create({
   baseURL: HOST_URL,
@@ -255,10 +254,11 @@ axiosInstance.interceptors.response.use(
       !isLoginRoute() &&
       !shouldIgnoreSessionExpiry(originalRequest?.url, originalRequest)
     ) {
-      const hasValidSession = isAuthSessionValid();
-      if (!hasValidSession) {
-        handleSessionExpiry();
-      }
+      // A 401 from the server is authoritative — the session has expired.
+      // The client-side token key stays in sessionStorage until logout, so
+      // checking isAuthSessionValid() here always returns true and
+      // incorrectly suppresses the popup. Call handleSessionExpiry directly.
+      handleSessionExpiry();
     }
 
     return Promise.reject(error);
