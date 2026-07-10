@@ -77,7 +77,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
     { heading: "Cannibilization In 1 Year", value: cann_val },
   ];
 
-  const retails_category = categorizeRetails(pdfMarkers?.retail);
+  const retails_category = categorizeRetails(pdfMarkers?.retail ?? []);
 
   // your function remains same
   const myFunction = (isSave) => {

@@ -42,7 +42,8 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
   useEffect(() => {
     dispatch(clearNewStoreInputs());
     dispatch(clearNewCityInputs());
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const store_summ_heading = [
     "Total Population",

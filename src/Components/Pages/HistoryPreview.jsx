@@ -149,7 +149,8 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
   useEffect(() => {
     dispatch(clearNewStoreInputs());
     dispatch(clearNewCityInputs());
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const ResetValues = () => {
     setScrType(null);

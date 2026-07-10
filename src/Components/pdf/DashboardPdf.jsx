@@ -96,8 +96,16 @@ const DashboardPdf = ({
 
     // Map markers with distance
     const markersWithDistance = markers.map((m) => {
-      const lat = m?.position?.lat();
-      const lng = m?.position?.lng();
+      // position.lat/lng can be a Google Maps LatLng function (live)
+      // or a plain number (after Redux/localStorage serialization on reload)
+      const lat =
+        typeof m?.position?.lat === "function"
+          ? m.position.lat()
+          : m?.position?.lat;
+      const lng =
+        typeof m?.position?.lng === "function"
+          ? m.position.lng()
+          : m?.position?.lng;
 
       return {
         ...m,

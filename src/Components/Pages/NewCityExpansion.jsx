@@ -135,7 +135,8 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
 
   useEffect(() => {
     dispatch(clearNewStoreInputs());
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const HandelResetFiled = () => {
     clearPolygons();

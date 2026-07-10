@@ -88,7 +88,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     Number(revenueData?.crossCust || 0);
 
   const cityName = revenueData?.city;
-  const retails_category = categorizeRetails(pdfMarkers?.retail);
+  const retails_category = categorizeRetails(pdfMarkers?.retail ?? []);
 
   useEffect(() => {
     if (arpcVal) {

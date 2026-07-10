@@ -264,6 +264,7 @@ export const formatStoreValue = (value) => {
 };
 
 export function categorizeRetails(data) {
+  if (!Array.isArray(data)) return {};
   const categories = {
     Footwear: [],
     Clothing: [],
