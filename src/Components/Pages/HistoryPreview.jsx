@@ -52,6 +52,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
   const [allHistoryData, setAllHistoryData] = useState([]);
   const [hisUniqueId, setHisUniqueId] = useState(null);
   const [heading, setHeading] = useState([]);
+  const [datePickerKey, setDatePickerKey] = useState(0);
 
   console.log("historyData==>", historyData);
   const GetUserHistory = (scrType) => {
@@ -153,13 +154,11 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
   }, []);
 
   const ResetValues = () => {
-    setScrType(null);
     setFromDate(null);
     setToDate(null);
     setHisUniqueId(null);
-    setHeading([]);
-    setHistoryData([]);
-    setAllHistoryData([]);
+    setHistoryData(allHistoryData);
+    setDatePickerKey((k) => k + 1);
   };
 
   return (
@@ -212,6 +211,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
             {allHistoryData.length > 0 && (
               <div style={{ display: "flex", gap: "5px", width: "100%" }}>
                 <DatePicker
+                  key={`from-${datePickerKey}`}
                   style={{
                     width: "100%",
                     border: "1px solid black",
@@ -229,6 +229,7 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                   id='from_date'
                 />
                 <DatePicker
+                  key={`to-${datePickerKey}`}
                   style={{
                     width: "100%",
                     border: "1px solid black",
