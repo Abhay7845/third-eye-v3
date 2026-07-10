@@ -27,6 +27,7 @@ import {
   startAuthSession,
 } from "../../../utils/authSession";
 const VERSION = packageJson.version;
+const LOGIN_TIME_KEY = "3rd_eye_login_time";
 
 export default function Login() {
   const dispatch = useDispatch();
@@ -61,7 +62,9 @@ export default function Login() {
         if (response.data.code === "1000") {
           if (response.data.value.accessStatus === "1") {
             const logRes = response.data.value;
-            const logCred = { ...logRes, ...loginData };
+            const loginTime = new Date().toISOString();
+            sessionStorage.setItem(LOGIN_TIME_KEY, loginTime);
+            const logCred = { ...logRes, ...loginData, loginTime };
             dispatch(setUser(logCred));
             setSlideOut(true);
             setTimeout(() => {

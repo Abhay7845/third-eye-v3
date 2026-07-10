@@ -6,11 +6,39 @@ import { IoPersonSharp } from "react-icons/io5";
 import { useSelector } from "react-redux";
 import { GetChannelLogo } from "../Data/ChannelLogo";
 
+const LOGIN_TIME_KEY = "3rd_eye_login_time";
+
 const ThirdEyeHeader = ({ city, chl, cityTier }) => {
   const { pathname } = useLocation();
   const userLog = useSelector((state) => state?.user?.user);
 
   const logo = GetChannelLogo(chl?.toLowerCase());
+
+  const loginTimeText = useMemo(() => {
+    const rawLoginTime =
+      userLog?.loginTime || sessionStorage.getItem(LOGIN_TIME_KEY);
+    if (!rawLoginTime) return "--";
+
+    const parsedDate = new Date(rawLoginTime);
+    if (Number.isNaN(parsedDate.getTime())) return "--";
+
+    const datePart = parsedDate.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+    });
+
+    const timePart = parsedDate.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    const normalizedTimePart = timePart.replace(/\b(am|pm)\b/i, (meridiem) =>
+      meridiem.toUpperCase(),
+    );
+
+    return `${datePart}, ${normalizedTimePart}`;
+  }, [userLog?.loginTime]);
 
   const pageTitle = useMemo(() => {
     switch (pathname) {
@@ -64,6 +92,9 @@ const ThirdEyeHeader = ({ city, chl, cityTier }) => {
           ) : (
             <IoPersonSharp size={20} />
           )}
+          <span style={{ marginLeft: "6px", color: "gray", fontSize: "12px" }}>
+            Login Time: {loginTimeText}
+          </span>
           {pathname === routes.NEW_STR_PROJECTION ||
           pathname === routes.NEW_CITY_PROJECTION ? (
             <div
