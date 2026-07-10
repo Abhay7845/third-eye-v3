@@ -216,7 +216,14 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                     border: "1px solid black",
                     borderRadius: "5px",
                   }}
-                  onChange={(_, dateString) => setFromDate(dateString)}
+                  onChange={(_, dateString) => {
+                    if (!dateString) {
+                      setFromDate(null);
+                      setHistoryData(allHistoryData);
+                    } else {
+                      setFromDate(dateString);
+                    }
+                  }}
                   placeholder='From Date'
                   id='from_date'
                 />
@@ -226,7 +233,14 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                     border: "1px solid black",
                     borderRadius: "5px",
                   }}
-                  onChange={(_, dateString) => setToDate(dateString)}
+                  onChange={(_, dateString) => {
+                    if (!dateString) {
+                      setToDate(null);
+                      setHistoryData(allHistoryData);
+                    } else {
+                      setToDate(dateString);
+                    }
+                  }}
                   placeholder='To Date'
                   id='to_id'
                 />
