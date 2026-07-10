@@ -211,26 +211,30 @@ const NewStoreDecision = ({
     }
   };
 
-  const hasFetched = React.useRef(false);
-
-  // Reset gate when radius/anchor changes so decision re-runs for new map context.
-  useEffect(() => {
-    hasFetched.current = false;
-  }, [inputsPayload?.radius, inputsPayload?.anchorLocation]);
+  const hasFetched = React.useRef("");
 
   useEffect(() => {
     const anchor = inputsPayload?.anchorLocation;
+    const jewellersCount = jewellers_stores?.length || 0;
+    const retailsCount = retails_list?.length || 0;
+    const competitorsCount = Array.isArray(competitors)
+      ? competitors.length
+      : 0;
+    const hasStoreData = jewellersCount > 0 || retailsCount > 0;
     const allDataReady =
       defaultLoad &&
-      jewellers_stores?.length > 0 &&
-      retails_list?.length > 0 &&
+      hasStoreData &&
       Array.isArray(competitors) &&
       Number.isFinite(anchor?.lat) &&
       Number.isFinite(anchor?.lng);
 
-    if (!allDataReady || hasFetched.current) return;
+    const fetchKey = `${inputsPayload?.radius || "na"}:${anchor?.lat || "na"}:${
+      anchor?.lng || "na"
+    }:${jewellersCount}:${retailsCount}:${competitorsCount}`;
 
-    hasFetched.current = true;
+    if (!allDataReady || hasFetched.current === fetchKey) return;
+
+    hasFetched.current = fetchKey;
 
     const fetchData = async () => {
       const GIS_Data = await Get_GIS_Data(
