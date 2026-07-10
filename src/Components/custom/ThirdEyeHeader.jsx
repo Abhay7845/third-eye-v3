@@ -92,16 +92,13 @@ const ThirdEyeHeader = ({ city, chl, cityTier }) => {
           ) : (
             <IoPersonSharp size={20} />
           )}
-          <span style={{ marginLeft: "6px", color: "gray", fontSize: "12px" }}>
-            Login Time: {loginTimeText}
-          </span>
+
           {pathname === routes.NEW_STR_PROJECTION ||
           pathname === routes.NEW_CITY_PROJECTION ? (
             <div
               style={{
                 position: "relative",
                 marginLeft: "1%",
-                marginTop: "1%",
                 color: "grey",
                 fontWeight: "bolder",
                 fontSize: "12px",
@@ -109,6 +106,9 @@ const ThirdEyeHeader = ({ city, chl, cityTier }) => {
               {projection_title}
             </div>
           ) : null}
+          <span style={{ marginLeft: "6px", color: "gray", fontSize: "12px" }}>
+            Login Time: {loginTimeText}
+          </span>
         </div>
         <div
           style={{
