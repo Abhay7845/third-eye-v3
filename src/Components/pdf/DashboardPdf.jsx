@@ -712,64 +712,60 @@ const DashboardPdf = ({
               <h6>Stores Not Available</h6>
             )}
           </div>
-          <div className='user_input_box'>
-            <h5 className='user_input_title'>
-              Nearest Our Brand Store Details
-            </h5>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                borderTop: "1px solid black",
-                padding: "8px",
-                fontSize: "12px",
-                gap: "5px",
-                textAlign: "left",
-              }}>
-              {our_brand_list?.length > 0 ? (
-                our_brand_list?.map((item, i) => (
+          {our_brand_list?.length > 0 && (
+            <div className='user_input_box'>
+              <h5 className='user_input_title'>
+                Nearest Our Brand Store Details
+              </h5>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                  borderTop: "1px solid black",
+                  padding: "8px",
+                  fontSize: "12px",
+                  gap: "5px",
+                  textAlign: "left",
+                }}>
+                {our_brand_list?.map((item, i) => (
                   <React.Fragment key={i}>
                     <strong>{item?.title}:</strong>
                     <span>{item.distance} KM</span>
                   </React.Fragment>
-                ))
-              ) : (
-                <h6 style={{ textAlign: "center" }}>Stores Not Available</h6>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         <br />
         {/* ------------------------2ND PAGE SAPARATION -------------------- */}
         <div
           className='second_page_separation'
           style={{ padding: "10px", border: "1px solid #000" }}>
-          <div className='user_input_box'>
-            <h5 className='user_input_title'>
-              Nearest Competitor Store Details
-            </h5>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                padding: "8px",
-                borderTop: "1px solid black",
-                fontSize: "12px",
-                gap: "5px",
-                textAlign: "left",
-              }}>
-              {competitors_list?.length > 0 ? (
-                competitors_list?.map((item, i) => (
+          {competitors_list?.length > 0 && (
+            <div className='user_input_box'>
+              <h5 className='user_input_title'>
+                Nearest Competitor Store Details
+              </h5>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                  padding: "8px",
+                  borderTop: "1px solid black",
+                  fontSize: "12px",
+                  gap: "5px",
+                  textAlign: "left",
+                }}>
+                {competitors_list?.map((item, i) => (
                   <React.Fragment key={i}>
                     <strong>{item?.title} Jewellers:</strong>
                     <span>{item.distance} KM</span>
                   </React.Fragment>
-                ))
-              ) : (
-                <h6 style={{ textAlign: "center" }}>Stores Not Available</h6>
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
           <div className='retail_box'>
             <div className='retail_heading'>
               Jewellery Market Store Count:
