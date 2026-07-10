@@ -484,22 +484,25 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
                   </Table>
                 )}
               </div>
+              <div
+                style={{
+                  border: "1px solid #233044",
+                  padding: "5px",
+                  marginTop: "10px",
+                }}>
+                <div style={{ textAlign: "center" }}>City Score</div>
+                <CityStoresBar data={CityStoreScore} />
+              </div>
             </div>
             <div style={{ width: "54.5%" }}>
               <div style={{ border: "1px solid #233044" }}>
-                <div style={{ textAlign: "center", marginTop: "10px" }}>
-                  City Score
-                </div>
-                <CityStoresBar data={CityStoreScore} />
-              </div>
-              <div style={{ border: "1px solid #233044", marginTop: "5px" }}>
                 <div style={{ textAlign: "center", padding: "6px" }}>
                   External Indicators
                 </div>
                 {extIndecator.length > 0 ? (
                   <CityProjectionPopulationGraph
                     data={extIndecator}
-                    height={300}
+                    height={290}
                   />
                 ) : (
                   <h5 style={{ textAlign: "center", color: "red" }}>
@@ -512,7 +515,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
                   Customers Vs Revenue Trends For City
                 </div>
                 {monthOver.length > 0 ? (
-                  <CustomerRevenueBar monthOver={monthOver} height={300} />
+                  <CustomerRevenueBar monthOver={monthOver} height={290} />
                 ) : (
                   <h5 style={{ textAlign: "center", color: "red" }}>
                     Data Not Found
