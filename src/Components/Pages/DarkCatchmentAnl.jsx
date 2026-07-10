@@ -54,8 +54,7 @@ const DarkCatchmentAnl = ({ toggle_open, toggle }) => {
   }, []);
 
   const GetChannelList = () => {
-    setLoading(true);
-    axiosInstance
+    return axiosInstance
       .get(`/api/fetch/channel/list`)
       .then((res) => res)
       .then((response) => {
@@ -75,18 +74,12 @@ const DarkCatchmentAnl = ({ toggle_open, toggle }) => {
           });
           setChannelList(channelList);
         }
-        setLoading(false);
       })
-      .catch((err) => setLoading(false));
+      .catch(() => {});
   };
 
-  useEffect(() => {
-    GetChannelList();
-  }, [channelval]);
-
   const GetCityList = () => {
-    setLoading(true);
-    axiosInstance
+    return axiosInstance
       .get("/api/fetch/distinct/city")
       .then((res) => res)
       .then((response) => {
@@ -111,15 +104,18 @@ const DarkCatchmentAnl = ({ toggle_open, toggle }) => {
         } else {
           setCityList([]);
         }
-        setLoading(false);
       })
-      .catch((err) => setLoading(false));
+      .catch(() => {});
   };
 
+  // Single effect: show loader until BOTH channel list and city list respond
   useEffect(() => {
-    if (channelval) {
-      GetCityList();
-    }
+    if (!channelval) return;
+    setLoading(true);
+    Promise.allSettled([GetChannelList(), GetCityList()]).finally(() =>
+      setLoading(false),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelval]);
 
   // -----------------------------AREA HILIGHTING-----------------------------------------------------------
