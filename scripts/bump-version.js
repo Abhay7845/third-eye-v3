@@ -38,5 +38,3 @@ if (minor >= 10) {
 pkg.version = `${major}.${minor}.${patch}`;
 
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
-
-console.log(`Version bumped to: ${pkg.version}`);

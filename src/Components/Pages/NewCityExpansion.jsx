@@ -207,9 +207,6 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
     }
   }, [decisionObj?.bottom_line]);
 
-  // const retails_category = categorizeRetails(pdfMarkers?.retail);
-  // console.log("retails_category==>", retails_category);
-
   const handleScreenshot = (map_img) => {
     return new Promise((resolve) => {
       if (map_img.current) {

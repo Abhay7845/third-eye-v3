@@ -58,21 +58,40 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   const { t_catch, s_catch, m_trends } = catchmentData;
   const proRev1yr = (enrollTarget + custExitStore) * parseInt(arpcVal);
 
-  const cann_val = `${new Intl.NumberFormat("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(cannibilization / 10000000)} Cr`;
+  const formatToCrore = (value) => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return "0.00 Cr";
+    }
+    return `${new Intl.NumberFormat("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(value) / 10000000)} Cr`;
+  };
+  const cann_val = formatToCrore(cannibilization);
+  const preject_revenue = formatToCrore(proRev1yr);
+
+  const formatIndianNumber = (value) => {
+    return new Intl.NumberFormat("en-IN", {
+      maximumFractionDigits: 0,
+    }).format(Math.round(Number(value)));
+  };
 
   const projectionData = [
     {
       heading: "First Year Enrollments For Target City",
-      value: parseInt(enrollTarget),
+      value: formatIndianNumber(enrollTarget),
     },
-    { heading: "Cross Channel Movement", value: parseInt(custExitStore) },
-    { heading: "ARPC", value: parseInt(arpcVal) },
+    {
+      heading: "Cross Channel Movement",
+      value: formatIndianNumber(custExitStore),
+    },
+    {
+      heading: "ARPC",
+      value: formatIndianNumber(arpcVal),
+    },
     {
       heading: "Projected Revenue In Year 1",
-      value: parseInt(proRev1yr),
+      value: preject_revenue,
     },
     { heading: "Cannibilization In 1 Year", value: cann_val },
   ];
@@ -95,7 +114,6 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   };
 
   useEffect(() => {
-    // Add one dummy entry so popstate fires immediately
     window.history.pushState({ dummy: true }, "");
     window.history.replaceState({ dummy: true }, "");
     const handleBackButton = () => {
