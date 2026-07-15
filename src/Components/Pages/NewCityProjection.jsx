@@ -65,7 +65,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
 
   const projectionData = [
     {
-      heading: "First Year Enrollments For Tartget City",
+      heading: "First Year Enrollments For Target City",
       value: parseInt(enrollTarget),
     },
     { heading: "Cross Channel Movement", value: parseInt(custExitStore) },
@@ -303,7 +303,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
         GetCityStoreScore(similerStoreVal, targetCity),
         GetExteranalIndicatore(similerStoreVal, targetCity),
         GetNearByStoreShare(similerStoreVal, targetCity, targetPinCode),
-        GetEnrollTargetYear(similerStoreVal, targetPinCode),
+        GetEnrollTargetYear(targetCity, targetPinCode),
         GetCannibilization(similerStoreVal, targetCity, targetPinCode),
         GetNewCrossChannel(targetPinCode, similerStoreVal),
         GetPdfDecision(),
