@@ -1042,7 +1042,9 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
         <div className={`sticky_toolbar ${scrolled ? "scrolled" : ""}`}>
           <div className='form_container'>
             <div style={{ width: "100%" }}>
-              <b>Channel</b>
+              <b style={{ fontSize: "13px" }}>
+                Channel <span style={{ color: "red" }}>*</span>
+              </b>
               <Select
                 showSearch
                 style={{ width: "100%" }}
@@ -1059,7 +1061,9 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
               />
             </div>
             <div style={{ width: "100%" }}>
-              <b>Target City</b>
+              <b style={{ fontSize: "13px" }}>
+                Target City <span style={{ color: "red" }}>*</span>
+              </b>
               <Select
                 showSearch
                 style={{ width: "100%" }}
@@ -1075,7 +1079,9 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
               />
             </div>
             <div style={{ width: "100%" }}>
-              <b>Similar City</b>
+              <b style={{ fontSize: "13px" }}>
+                Similar City <span style={{ color: "red" }}>*</span>
+              </b>
               <Select
                 showSearch
                 style={{ width: "100%" }}
