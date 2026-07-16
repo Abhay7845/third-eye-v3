@@ -1140,7 +1140,6 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             <b style={{ fontSize: "13px" }}>
               Target Catchment <span style={{ color: "red" }}>*</span>
             </b>
-
             <Select
               style={{ width: "100%" }}
               mode='tags'
