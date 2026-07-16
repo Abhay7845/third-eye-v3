@@ -1140,17 +1140,6 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             <b style={{ fontSize: "13px" }}>
               Target Catchment <span style={{ color: "red" }}>*</span>
             </b>
-            {/* <Select
-              style={{ width: "100%" }}
-              mode='tags'
-              placeholder='Only 1 pincode allowed'
-              id='target_catchment'
-              value={targetPinCode}
-              onChange={(value) => HandelTargetPin(value)}
-              maxTagCount={1}
-              maxTagPlaceholder={(omittedValues) => `+${omittedValues.length}`}
-              disabled={lockBtn}
-            /> */}
 
             <Select
               style={{ width: "100%" }}
