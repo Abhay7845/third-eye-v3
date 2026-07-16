@@ -224,43 +224,6 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
     }
   }, [dicisionData?.bottom_line]);
 
-  // const retails_category = categorizeRetails(pdfMarkers?.retail);
-  // console.log("retails_category==>", retails_category);
-
-  // const HandelTargetPin = (value) => {
-  //   if (!value || value.length === 0) {
-  //     setTargetPinCode([]);
-  //     setSimilerStoreVal(null);
-  //     return;
-  //   }
-  //   const arrayVal = value
-  //     .flatMap((item) => item.split(","))
-  //     .map((item) => item.trim())
-  //     .filter((item) => item.length > 0);
-
-  //   const validPins = [];
-  //   const invalidPins = [];
-  //   arrayVal.forEach((pin) => {
-  //     if (/^\d{6}$/.test(pin)) {
-  //       validPins.push(pin);
-  //     } else {
-  //       invalidPins.push(pin);
-  //     }
-  //   });
-  //   const uniqueValidPins = [...new Set(validPins)];
-  //   if (invalidPins.length > 0) {
-  //     toast.error("Please enter valid 6-digit pincodes", {
-  //       theme: "colored",
-  //       autoClose: 2000,
-  //     });
-  //   }
-  //   if (uniqueValidPins.length > 0) {
-  //     setTargetPinCode(uniqueValidPins);
-  //   } else {
-  //     setTargetPinCode([]);
-  //   }
-  // };
-
   const HandelTargetPin = (value) => {
     if (!value || value.length === 0) {
       setTargetPinCode([]);
