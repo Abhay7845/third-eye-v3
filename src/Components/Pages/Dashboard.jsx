@@ -1140,6 +1140,18 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             <b style={{ fontSize: "13px" }}>
               Target Catchment <span style={{ color: "red" }}>*</span>
             </b>
+            {/* <Select
+              style={{ width: "100%" }}
+              mode='tags'
+              placeholder='Only 1 pincode allowed'
+              id='target_catchment'
+              value={targetPinCode}
+              onChange={(value) => HandelTargetPin(value)}
+              maxTagCount={1}
+              maxTagPlaceholder={(omittedValues) => `+${omittedValues.length}`}
+              disabled={lockBtn}
+            /> */}
+
             <Select
               style={{ width: "100%" }}
               mode='tags'
@@ -1150,6 +1162,28 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
               maxTagCount={1}
               maxTagPlaceholder={(omittedValues) => `+${omittedValues.length}`}
               disabled={lockBtn}
+              tokenSeparators={[",", " "]}
+              onInputKeyDown={(e) => {
+                const input = e.target.value;
+                const allowedKeys = [
+                  "Backspace",
+                  "Delete",
+                  "ArrowLeft",
+                  "ArrowRight",
+                  "Tab",
+                  "Enter",
+                ];
+                if (allowedKeys.includes(e.key)) {
+                  return;
+                }
+                if (!/^\d$/.test(e.key)) {
+                  e.preventDefault();
+                  return;
+                }
+                if (input.length >= 6) {
+                  e.preventDefault();
+                }
+              }}
             />
           </div>
           <div style={{ width: "50%" }}>
