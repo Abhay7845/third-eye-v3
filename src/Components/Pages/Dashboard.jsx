@@ -1115,7 +1115,9 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
       <div className={`sticky_toolbar ${scrolled ? "scrolled" : ""}`}>
         <div className='form_container'>
           <div style={{ width: "100%" }}>
-            <b>Channel</b>
+            <b style={{ fontSize: "13px" }}>
+              Channel <span style={{ color: "red" }}>*</span>
+            </b>
             <Select
               showSearch
               style={{ width: "100%" }}
@@ -1135,7 +1137,9 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             />
           </div>
           <div style={{ width: "100%" }}>
-            <b>Target Catchment</b>
+            <b style={{ fontSize: "13px" }}>
+              Target Catchment <span style={{ color: "red" }}>*</span>
+            </b>
             <Select
               style={{ width: "100%" }}
               mode='tags'
@@ -1149,7 +1153,9 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             />
           </div>
           <div style={{ width: "50%" }}>
-            <b>Similar Store </b>
+            <b style={{ fontSize: "13px" }}>
+              Similar Store <span style={{ color: "red" }}>*</span>
+            </b>
             <Select
               showSearch
               style={{ width: "100%" }}
@@ -1166,7 +1172,9 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             />
           </div>
           <div style={{ width: "100%" }}>
-            <b>Similar Catchment</b>
+            <b style={{ fontSize: "13px" }}>
+              Similar Catchment <span style={{ color: "red" }}>*</span>
+            </b>
             <Input
               style={{ width: "100%" }}
               placeholder='Pincode'
@@ -1181,7 +1189,9 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             />
           </div>
           <div style={{ width: "100%" }}>
-            <b>Store Size (sq ft)</b>
+            <b style={{ fontSize: "13px" }}>
+              Store Size (sq ft) <span style={{ color: "red" }}>*</span>
+            </b>
             <Input
               style={{ width: "100%" }}
               placeholder='Store Size'
@@ -1196,7 +1206,9 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             />
           </div>
           <div style={{ width: "100%" }}>
-            <b>Store Category</b>
+            <b style={{ fontSize: "13px" }}>
+              Store Category <span style={{ color: "red" }}>*</span>
+            </b>
             <Select
               showSearch
               style={{ width: "100%" }}
