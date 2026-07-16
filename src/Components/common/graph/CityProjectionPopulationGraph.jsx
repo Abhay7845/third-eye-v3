@@ -25,8 +25,7 @@ const CityProjectionPopulationGraph = ({ data, height, fixedWidth }) => {
         tick={{ fontSize: 12 }}
         tickLine={false}
       />
-      <Legend layout='horizontal' verticalAlign='top' align='end' />
-      {/* First Bar: Target Value */}
+      <Legend layout='horizontal' verticalAlign='top' align='start' />
       <Bar dataKey='targetCity' fill='#f58220' name='Target Value'>
         <LabelList
           dataKey='targetCity'

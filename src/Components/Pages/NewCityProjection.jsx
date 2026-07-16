@@ -96,6 +96,8 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
     { heading: "Cannibilization In 1 Year", value: cann_val },
   ];
 
+  console.log("projectionData==>", projectionData);
+
   const retails_category = categorizeRetails(pdfMarkers?.retail ?? []);
 
   // your function remains same

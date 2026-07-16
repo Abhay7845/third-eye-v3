@@ -50,6 +50,7 @@ const NewCityExpantionPdf = ({
   const brandList = pdfMarkers?.ourBrand || [];
   // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<GET OUR COMPETITOR JEWELERS >>>>>>>>>>>>>>>>>>>>>>>>>>
   const competitorsList = pdfMarkers?.competitor || [];
+  console.log("projectionData==>", projectionData);
 
   // -------------------------------UPLOAD PDF FUNCTIONALITY ---------------------------
   const UploadPdf = async (file) => {

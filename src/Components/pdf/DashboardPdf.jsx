@@ -32,6 +32,7 @@ const DashboardPdf = ({
   const newStoreRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [skeletonLoad, setSkeletonLoad] = useState(false);
+  console.log("projectionDataPdf==>", projectionData);
 
   //----------------------------------- REDUX STATE -----------------------------------------
   const catchmentData = useSelector(
@@ -872,11 +873,13 @@ const DashboardPdf = ({
                       const rawValue = Number(item.value);
                       if (!Number.isFinite(rawValue)) return item.value;
 
-                      if (i >= projectionData.length - 2) {
+                      if (
+                        i >= projectionData.length - 2 &&
+                        Math.abs(rawValue) >= 10000000
+                      ) {
                         const inCrore = Math.round(rawValue / 10000000);
                         return `₹${inCrore.toLocaleString("en-IN")} Cr`;
                       }
-
                       return item.value;
                     })()}
                   </Td>
