@@ -398,10 +398,10 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
   };
 
   useEffect(() => {
-    if (channelval) {
+    if (targetPinCode.length > 0 && channelval) {
       GetSimilerStore(channelval);
     }
-  }, [channelval]);
+  }, [channelval, targetPinCode.length]);
 
   const GetSimilerPincode = (chl, store, limit) => {
     setLoading(true);
@@ -1199,7 +1199,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
                 setStoreSize(null);
                 setStoreCatgerory(null);
               }}
-              disabled={lockBtn}
+              disabled={lockBtn || targetPinCode.length === 0}
             />
           </div>
           <div style={{ width: "100%" }}>
