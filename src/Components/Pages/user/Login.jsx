@@ -25,7 +25,9 @@ import packageJson from "../../../../package.json";
 import {
   isAuthSessionValid,
   startAuthSession,
+  getAuthRole,
 } from "../../../utils/authSession";
+import LoginPopUp from "../../custom/LoginPopUp";
 const VERSION = packageJson.version;
 const LOGIN_TIME_KEY = "3rd_eye_login_time";
 
@@ -34,14 +36,27 @@ export default function Login() {
   const { instance } = useMsal();
   const [loading, setLoading] = useState(false);
   const [slideOut, setSlideOut] = useState(false);
+  const [visiblePopup, setVisiblePopup] = useState(false);
+
   const navigate = useNavigate();
   const isDevMode = window.location.hostname === "localhost";
+
+  const userEmailList = [
+    "iteanzabhaykumar@titan.co.in",
+    "iteanzdurgesh@titan.co.in",
+    "mamathadl@titan.co.in",
+    "gantalalitha@titan.co.in",
+    "jewelry_analyst_2@titan.co.in",
+  ];
 
   // Redirect away immediately if already authenticated — prevents browser
   // back/forward navigating back to the login page.
   useEffect(() => {
     if (isAuthSessionValid()) {
-      navigate(routes.NEW_STORE, { replace: true });
+      const role = getAuthRole();
+      navigate(role === "admin" ? routes.ADMIN_LOGIN : routes.NEW_STORE, {
+        replace: true,
+      });
     }
   }, [navigate]);
 
@@ -66,10 +81,14 @@ export default function Login() {
             sessionStorage.setItem(LOGIN_TIME_KEY, loginTime);
             const logCred = { ...logRes, ...loginData, loginTime };
             dispatch(setUser(logCred));
-            setSlideOut(true);
-            setTimeout(() => {
-              navigate(routes.NEW_STORE, { replace: true });
-            }, 700);
+            if (userEmailList.includes(loginData.username)) {
+              setVisiblePopup(true);
+            } else {
+              setSlideOut(true);
+              setTimeout(() => {
+                navigate(routes.NEW_STORE, { replace: true });
+              }, 700);
+            }
           } else {
             toast.error("User Not Active", {
               theme: "colored",
@@ -177,6 +196,11 @@ export default function Login() {
     "  Powerful retail analytics suite designed to help you make smarter, data-driven decisions.";
   return (
     <main className='auth-page'>
+      <LoginPopUp
+        setVisiblePopup={setVisiblePopup}
+        visiblePopup={visiblePopup}
+        setSlideOut={setSlideOut}
+      />
       <section className={`auth-card ${slideOut ? "slide_animation" : ""}`}>
         <div className='form_side'>
           <h2>THIRD EYE...</h2>

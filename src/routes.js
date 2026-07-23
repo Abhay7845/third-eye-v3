@@ -7,4 +7,5 @@ export const routes = {
   NEW_CITY_PROJECTION: "/ThirdEye/new/city/projection",
   HISTORY: "/ThirdEye/projection/history",
   STORE_CATCHMENT_ANALYSIS: "/ThirdEye/store/catchment/analysis",
+  ADMIN_LOGIN: "/ThirdEye/admin_login",
 };

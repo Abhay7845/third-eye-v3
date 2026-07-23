@@ -56,6 +56,8 @@ const ThirdEyeHeader = ({ city, chl, cityTier }) => {
         return "Projection History";
       case routes.STORE_CATCHMENT_ANALYSIS:
         return "Store Catchment Analysis";
+      case routes.ADMIN_LOGIN:
+        return "Admin Pannel";
       default:
         return "Page Not Found";
     }

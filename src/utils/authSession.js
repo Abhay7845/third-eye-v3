@@ -1,5 +1,6 @@
 const AUTH_TOKEN_KEY = "3rd_eye_auth_token";
 const AUTH_EXPIRY_KEY = "3rd_eye_auth_token_expiry";
+const AUTH_ROLE_KEY = "3rd_eye_panel_role";
 
 const getSessionStorage = () => {
   try {
@@ -27,12 +28,21 @@ export const startAuthSession = () => {
   sessionStore.removeItem(AUTH_EXPIRY_KEY);
 };
 
+export const setAuthRole = (role) => {
+  getSessionStorage()?.setItem(AUTH_ROLE_KEY, role);
+};
+
+export const getAuthRole = () => {
+  return getSessionStorage()?.getItem(AUTH_ROLE_KEY) || null;
+};
+
 export const clearAuthSession = () => {
   const sessionStore = getSessionStorage();
   const localStore = getLocalStorage();
 
   sessionStore?.removeItem(AUTH_TOKEN_KEY);
   sessionStore?.removeItem(AUTH_EXPIRY_KEY);
+  sessionStore?.removeItem(AUTH_ROLE_KEY);
 
   // Backward compatibility for users who still have old localStorage keys.
   localStore?.removeItem(AUTH_TOKEN_KEY);

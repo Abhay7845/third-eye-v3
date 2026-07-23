@@ -26,19 +26,9 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [movementCount, setMovementCount] = useState(0);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const auth_token = isAuthSessionValid();
-
-  useEffect(() => {
-    const handleMouseMove = () => {
-      setMovementCount((prev) => prev + 1);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -81,7 +71,7 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
     if (path === pathname) return;
     setSlideOut(true);
     setTimeout(() => {
-      if (auth_token && movementCount > 0) {
+      if (auth_token) {
         navigate(path);
       } else {
         navigate(routes.LOGIN);
@@ -131,38 +121,42 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
               </div>
             )}
           </div>
-          {menuItem.map((item, i) => (
-            <div key={i}>
-              {toggle ? (
-                <NavLink
-                  to={(auth_token && item?.path) || routes.LOGIN}
-                  onClick={(e) => HandelClickSlid(e, item.path)}
-                  className={
-                    item.path === pathname ? "active_tab" : "link_active"
-                  }>
-                  <div className='icon'>{item.icon}</div>
-                  <div style={{ display: toggle ? "block" : "none" }}>
-                    {item.name}
-                  </div>
-                </NavLink>
-              ) : (
-                <Tippy content={<span>{item.name}</span>} placement='right'>
-                  <NavLink
-                    key={i}
-                    to={(auth_token && item?.path) || routes.LOGIN}
-                    onClick={(e) => HandelClickSlid(e, item.path)}
-                    className={
-                      item.path === pathname ? "active_tab" : "link_active"
-                    }>
-                    <div className='icon'>{item.icon}</div>
-                    <div style={{ display: toggle ? "block" : "none" }}>
-                      {item.name}
-                    </div>
-                  </NavLink>
-                </Tippy>
-              )}
+          {pathname === routes.ADMIN_LOGIN ? null : (
+            <div>
+              {menuItem.map((item, i) => (
+                <div key={i}>
+                  {toggle ? (
+                    <NavLink
+                      to={(auth_token && item?.path) || routes.LOGIN}
+                      onClick={(e) => HandelClickSlid(e, item.path)}
+                      className={
+                        item.path === pathname ? "active_tab" : "link_active"
+                      }>
+                      <div className='icon'>{item.icon}</div>
+                      <div style={{ display: toggle ? "block" : "none" }}>
+                        {item.name}
+                      </div>
+                    </NavLink>
+                  ) : (
+                    <Tippy content={<span>{item.name}</span>} placement='right'>
+                      <NavLink
+                        key={i}
+                        to={(auth_token && item?.path) || routes.LOGIN}
+                        onClick={(e) => HandelClickSlid(e, item.path)}
+                        className={
+                          item.path === pathname ? "active_tab" : "link_active"
+                        }>
+                        <div className='icon'>{item.icon}</div>
+                        <div style={{ display: toggle ? "block" : "none" }}>
+                          {item.name}
+                        </div>
+                      </NavLink>
+                    </Tippy>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
         <div>
           {toggle ? (
