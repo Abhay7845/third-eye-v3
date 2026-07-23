@@ -13,7 +13,7 @@ import HistoryPreview from "./Components/Pages/HistoryPreview";
 import StoreCatchmentAnalysis from "./Components/Pages/StoreCatchmentAnalysis";
 import InternetStatus from "./Components/trackOnline/InternetStatus";
 import CookieBanner from "./Components/custom/CookieBanner";
-import AdminDashboard from "./Components/Pages/AdminDashboard";
+import AdminPage from "./Components/Pages/AdminPage";
 
 const App = () => {
   const [toggle, setToggle] = useState(false);
@@ -82,9 +82,7 @@ const App = () => {
           <Route element={<RoleAuth allowedRole='admin' />}>
             <Route
               path={routes.ADMIN_LOGIN}
-              element={
-                <AdminDashboard toggle_open={toggle_open} toggle={toggle} />
-              }
+              element={<AdminPage toggle_open={toggle_open} toggle={toggle} />}
             />
           </Route>
         </Route>

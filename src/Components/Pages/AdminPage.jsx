@@ -5,8 +5,9 @@ import Sidebar from "../custom/Sidebar";
 import ThirdEyeHeader from "../custom/ThirdEyeHeader";
 import { axiosInstance } from "../../HostManger/API/Authorization";
 import Loader from "../custom/Loader";
+import AdminDashboard from "../custom/AdminDashboard";
 
-export default function AdminDashboard({ toggle_open, toggle }) {
+export default function AdminPage({ toggle_open, toggle }) {
   const [slideOut, setSlideOut] = useState(false);
   const [loading, setLoading] = useState(false);
   const userLog = useSelector((state) => state?.user?.user);
@@ -46,8 +47,7 @@ export default function AdminDashboard({ toggle_open, toggle }) {
           style={{
             display: "flex",
             gap: "10px",
-            marginTop: "10px",
-            marginRight: "5px",
+            margin: "10px 5px",
           }}>
           <DatePicker
             style={{ width: "100%" }}
@@ -63,6 +63,7 @@ export default function AdminDashboard({ toggle_open, toggle }) {
             Next
           </button>
         </div>
+        <AdminDashboard data={loginActivity} />
       </div>
     </React.Fragment>
   );
