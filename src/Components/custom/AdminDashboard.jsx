@@ -122,36 +122,19 @@ const AdminDashboard = ({ data }) => {
             <thead>
               <tr>
                 <th>Time</th>
-
                 <th>User</th>
-
-                <th>Endpoint</th>
-
-                <th>Method</th>
-
                 <th>IP</th>
               </tr>
             </thead>
-
             <tbody>
               {data.events.map((event, index) => (
                 <tr key={index}>
                   <td>{new Date(event.timestamp).toLocaleString()}</td>
-
                   <td>
                     <strong>{event.name}</strong>
-
                     <br />
-
                     <small>{event.email}</small>
                   </td>
-
-                  <td>{event.endpoint}</td>
-
-                  <td>
-                    <span className='method'>{event.method}</span>
-                  </td>
-
                   <td>{event.ip}</td>
                 </tr>
               ))}
