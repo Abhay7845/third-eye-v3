@@ -21,24 +21,15 @@
       #233044,
       #3a5072
     );
-
   color: white;
-
-  padding: 30px;
-
+  padding: 10px;
   border-radius: 2px;
-
   display: flex;
-
   justify-content: space-between;
-
   align-items: center;
-
-  margin-bottom: 30px;
-
+  margin-bottom: 15px;
   box-shadow:
-    0 15px 40px rgba(35,48,68,.25);
-
+    0 15px 40px #23304440;
 }
 
 
