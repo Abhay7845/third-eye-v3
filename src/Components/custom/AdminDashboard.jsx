@@ -18,7 +18,6 @@ const AdminDashboard = ({ data }) => {
             {data.fromDate} - {data.toDate}
           </p>
         </div>
-
         <div className='header-badge'>{data.events.length} Events</div>
       </div>
 
@@ -70,7 +69,6 @@ const AdminDashboard = ({ data }) => {
                     <strong>{user.loginCount}</strong>
                     Login
                   </span>
-
                   <span>
                     <strong>{user.reLoginCount}</strong>
                     Re-login

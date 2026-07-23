@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { DatePicker } from "antd";
 import Sidebar from "../custom/Sidebar";
@@ -14,6 +14,7 @@ export default function AdminPage({ toggle_open, toggle }) {
   const [loginActivity, setLoginActivity] = useState(null);
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
+  const [showShadow, setShowShadow] = useState(false);
 
   const getLoginActivityData = async () => {
     try {
@@ -33,6 +34,20 @@ export default function AdminPage({ toggle_open, toggle }) {
 
   console.log("loginActivity==>", loginActivity);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 10) {
+        setShowShadow(true);
+      } else {
+        setShowShadow(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
   return (
     <React.Fragment>
       <Sidebar
@@ -48,21 +63,31 @@ export default function AdminPage({ toggle_open, toggle }) {
             display: "flex",
             gap: "10px",
             margin: "10px 5px",
+            position: "sticky",
+            top: "0px",
+            zIndex: 1000,
+            background: "#fff",
+            padding: "10px 5px",
+            transition: "box-shadow 0.3s ease",
+            boxShadow: showShadow ? "0 4px 10px #00000026" : "none",
           }}>
           <DatePicker
             style={{ width: "100%" }}
             placeholder='From Date'
             onChange={(_, dateString) => setFromDate(dateString || null)}
           />
+
           <DatePicker
             style={{ width: "100%" }}
             placeholder='To Date'
             onChange={(_, dateString) => setToDate(dateString || null)}
           />
+
           <button className='CButton' onClick={getLoginActivityData}>
             Next
           </button>
         </div>
+
         <AdminDashboard data={loginActivity} />
       </div>
     </React.Fragment>
