@@ -1,0 +1,132 @@
+.user_table_card{
+    background:#fff;
+    border-radius:2px;
+    overflow:hidden;
+    border:1px solid #ddd;
+    box-shadow:0 5px 15px #00000014;
+}
+
+/* Scroll only inside table */
+
+.table_scroll{
+    max-height:420px;
+    overflow:auto;
+}
+
+/* Table */
+
+.user_table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:1000px;
+}
+
+.user_table thead{
+    position:sticky;
+    top:0;
+    background: linear-gradient(135deg,#233044,#233044);
+    color:#fff;
+    z-index:10;
+}
+
+.user_table th,
+.user_table td{
+    padding:14px 16px;
+    text-align:left;
+    border-bottom:1px solid #eee;
+    white-space:nowrap;
+}
+
+.user_table tbody tr:hover{
+    background:#f7fbff;
+}
+
+/* User */
+
+.user_info{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.table_avatar{
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    background:#233044;
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:bold;
+}
+
+/* Badges */
+
+.badge{
+    padding:5px 12px;
+    border-radius:2px;
+    font-size:13px;
+    font-weight:600;
+}
+
+.blue{
+    background:#dbeafe;
+    color:#1d4ed8;
+}
+
+.green{
+    background:#dcfce7;
+    color:#15803d;
+}
+
+/* Pagination */
+
+.pagination{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    gap:15px;
+    padding:15px;
+    border-top:1px solid #eee;
+}
+
+.pagination button{
+    padding:8px 18px;
+    border:none;
+    background:#233044;
+    color:white;
+    border-radius:2px;
+    cursor:pointer;
+}
+
+.pagination button:hover:not(:disabled){
+    background:#1d4ed8;
+}
+
+.pagination button:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+}
+
+.empty{
+    text-align:center;
+    padding:30px;
+    color:#888;
+}
+
+/* Scrollbar */
+
+.table_scroll::-webkit-scrollbar{
+    width:8px;
+    height:8px;
+}
+
+.table_scroll::-webkit-scrollbar-thumb{
+    background:#bbb;
+    border-radius:2px;
+}
+
+.table_scroll::-webkit-scrollbar-track{
+    background:#f3f3f3;
+}

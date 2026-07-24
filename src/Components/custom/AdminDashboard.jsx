@@ -28,13 +28,13 @@ const AdminDashboard = ({ data, setOpenSumTbl }) => {
     });
   };
 
-  const sortedUsers = sortUsersByPreviousDay(data?.userSummary);
+  const sortedUsers = sortUsersByPreviousDay(data?.userSummary).slice(0, 3);
 
   return (
     <div className='dashboard'>
       <div className='dashboard-header'>
         <div>
-          <h2>Login Activity Dashboard</h2>
+          <h2>Login Activity</h2>
           <p>
             {data.fromDate} - {data.toDate}
           </p>
@@ -61,7 +61,7 @@ const AdminDashboard = ({ data, setOpenSumTbl }) => {
 
         <div className='summary-card purple'>
           <h2>{data.events.length}</h2>
-          <span>Total Events</span>
+          <span>History</span>
         </div>
       </div>
 
@@ -69,13 +69,15 @@ const AdminDashboard = ({ data, setOpenSumTbl }) => {
 
       <div className='dashboard-card'>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <h2>User Summary</h2>{" "}
-          <IoIosList
-            size={20}
-            cursor='pointer'
-            title='View Full List'
-            onClick={() => setOpenSumTbl(true)}
-          />
+          <h2>User Summary</h2>
+          {data?.userSummary?.length > 3 && (
+            <IoIosList
+              size={20}
+              cursor='pointer'
+              title='View Full List'
+              onClick={() => setOpenSumTbl(true)}
+            />
+          )}
         </div>
         <div className='user-grid'>
           {sortedUsers?.map((user) => (
@@ -122,8 +124,15 @@ const AdminDashboard = ({ data, setOpenSumTbl }) => {
       {/* Daily Summary */}
 
       <div className='dashboard-card'>
-        <h2>Daily Summary</h2>
-
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <h2>Daily Summary</h2>
+          {/* <IoIosList
+            size={20}
+            cursor='pointer'
+            title='View Full List'
+            onClick={() => setOpenSumTbl(true)}
+          /> */}
+        </div>
         <div className='daily-grid'>
           {data.dailySummary.map((day) => (
             <div className='daily-card' key={day.date}>

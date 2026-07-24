@@ -91,7 +91,11 @@ export default function AdminPage({ toggle_open, toggle }) {
         </div>
         <AdminDashboard data={loginActivity} setOpenSumTbl={setOpenSumTbl} />
       </div>
-      <UserSummaryTblModal open={openSumTbl} setOpenSumTbl={setOpenSumTbl} />
+      <UserSummaryTblModal
+        open={openSumTbl}
+        setOpenSumTbl={setOpenSumTbl}
+        userSummary={loginActivity}
+      />
     </React.Fragment>
   );
 }

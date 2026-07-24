@@ -114,8 +114,6 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
     },
   ];
 
-  console.log("projectionData==>", projectionData);
-
   // your function remains same
   const myFunction = (isSave) => {
     if (isSave) {

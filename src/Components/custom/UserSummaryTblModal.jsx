@@ -1,11 +1,13 @@
 import React, { useEffect } from "react";
 import "../Styles/UserSummaryTblModal.css";
+import UserSummaryTable from "./UserSummaryTable";
 
 export default function UserSummaryTblModal({
   open,
   setOpenSumTbl,
   children,
   title = "User Login Summary",
+  userSummary,
 }) {
   useEffect(() => {
     if (open) {
@@ -27,7 +29,9 @@ export default function UserSummaryTblModal({
             ✕
           </button>
         </div>
-        <div className='modal-body'>{children}</div>
+        <div className='modal-body'>
+          <UserSummaryTable userSummary={userSummary} />
+        </div>
       </div>
     </div>
   );

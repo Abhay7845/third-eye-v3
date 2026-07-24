@@ -32,7 +32,6 @@ const DashboardPdf = ({
   const newStoreRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [skeletonLoad, setSkeletonLoad] = useState(false);
-  console.log("projectionDataPdf==>", projectionData);
 
   //----------------------------------- REDUX STATE -----------------------------------------
   const catchmentData = useSelector(

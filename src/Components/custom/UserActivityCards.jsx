@@ -15,8 +15,6 @@ const UserActivityCards = ({ users }) => {
   // Usage
   const previousDayData = getPreviousDayData(users);
 
-  console.log(previousDayData);
-
   const getInitials = (name = "") => {
     const cleanedName = name.replace(/\(.*?\)/g, "").trim();
     const words = cleanedName.split(" ").filter(Boolean);
