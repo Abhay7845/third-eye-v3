@@ -6,9 +6,11 @@ import ThirdEyeHeader from "../custom/ThirdEyeHeader";
 import { axiosInstance } from "../../HostManger/API/Authorization";
 import Loader from "../custom/Loader";
 import AdminDashboard from "../custom/AdminDashboard";
+import UserSummaryTblModal from "../custom/UserSummaryTblModal";
 
 export default function AdminPage({ toggle_open, toggle }) {
   const [slideOut, setSlideOut] = useState(false);
+  const [openSumTbl, setOpenSumTbl] = useState(false);
   const [loading, setLoading] = useState(false);
   const userLog = useSelector((state) => state?.user?.user);
   const [loginActivity, setLoginActivity] = useState(null);
@@ -87,8 +89,9 @@ export default function AdminPage({ toggle_open, toggle }) {
             Next
           </button>
         </div>
-        <AdminDashboard data={loginActivity} />
+        <AdminDashboard data={loginActivity} setOpenSumTbl={setOpenSumTbl} />
       </div>
+      <UserSummaryTblModal open={openSumTbl} setOpenSumTbl={setOpenSumTbl} />
     </React.Fragment>
   );
 }

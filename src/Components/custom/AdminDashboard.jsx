@@ -3,7 +3,7 @@ import "../Styles/AdminDashboard.css";
 import UserActivityCards from "./UserActivityCards";
 import { IoIosList } from "react-icons/io";
 
-const AdminDashboard = ({ data }) => {
+const AdminDashboard = ({ data, setOpenSumTbl }) => {
   if (!data) return null;
   const totalReLogins = data.userSummary.reduce(
     (sum, user) => sum + user.reLoginCount,
@@ -70,7 +70,12 @@ const AdminDashboard = ({ data }) => {
       <div className='dashboard-card'>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <h2>User Summary</h2>{" "}
-          <IoIosList size={20} cursor='pointer' title='View Full List' />
+          <IoIosList
+            size={20}
+            cursor='pointer'
+            title='View Full List'
+            onClick={() => setOpenSumTbl(true)}
+          />
         </div>
         <div className='user-grid'>
           {sortedUsers?.map((user) => (
