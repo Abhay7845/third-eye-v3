@@ -1,6 +1,7 @@
 import React from "react";
 import "../Styles/AdminDashboard.css";
 import UserActivityCards from "./UserActivityCards";
+import { IoIosList } from "react-icons/io";
 
 const AdminDashboard = ({ data }) => {
   if (!data) return null;
@@ -67,7 +68,10 @@ const AdminDashboard = ({ data }) => {
       {/* User Cards */}
 
       <div className='dashboard-card'>
-        <h2>User Summary</h2>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <h2>User Summary</h2>{" "}
+          <IoIosList size={20} cursor='pointer' title='View Full List' />
+        </div>
         <div className='user-grid'>
           {sortedUsers?.map((user) => (
             <div className='user-card' key={user.email}>
@@ -126,7 +130,6 @@ const AdminDashboard = ({ data }) => {
           ))}
         </div>
       </div>
-
       <div className='dashboard-card'>
         <h2>Recent Login Events</h2> <UserActivityCards users={data?.events} />
       </div>
