@@ -1,14 +1,6 @@
-/* Reset */
-
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
-}
-
 /* Background */
 
-.modal-overlay {
+.modal_overlay {
     position: fixed;
     inset: 0;
     display: flex;
@@ -22,7 +14,7 @@
 
 /* Modal */
 
-.modal-container {
+.modal_container {
     width: 92%;
     max-height: 90vh;
     background: #fff;
@@ -50,7 +42,7 @@
 
 /* Header */
 
-.modal-header {
+.modal_header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -59,32 +51,24 @@
     background: linear-gradient(135deg,#233044,#233044);
 }
 
-.modal-header h2 {
+.modal_header h2 {
     margin: 0;
     font-size: 20px;
 }
 
-.close-btn {
-
+.close_btn {
     width: 38px;
     height: 38px;
-
     border: none;
-
     border-radius: 50%;
-
     cursor: pointer;
-
     color: white;
-
     background: rgba(255,255,255,.15);
-
     font-size: 18px;
-
     transition: .2s;
 }
 
-.close-btn:hover {
+.close_btn:hover {
 
     background: rgba(255,255,255,.3);
 
@@ -92,32 +76,23 @@
 
 /* Body */
 
-.modal-body {
-
+.modal_body {
     padding: 20px;
-
     overflow-y: auto;
-
     flex: 1;
 }
 
 /* Responsive */
 
 @media (max-width:768px){
-
-.modal-container{
-
+.modal_container{
 width:100%;
 max-height:100vh;
-
 border-radius:0;
-
 }
 
-.modal-overlay{
-
+.modal_overlay{
 padding:0;
-
 }
 
 }

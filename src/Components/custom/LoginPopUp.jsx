@@ -28,7 +28,8 @@ const LoginPopUp = ({ setVisiblePopup, visiblePopup, setSlideOut }) => {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                marginTop: "-5%",
+                marginTop: "-4%",
+                marginBottom: "10px",
               }}>
               <h2>Select Panel</h2>
               <button
@@ -37,8 +38,8 @@ const LoginPopUp = ({ setVisiblePopup, visiblePopup, setSlideOut }) => {
                 aria-label='Close'
                 style={{
                   position: "absolute",
-                  right: 0,
-                  top: "50%",
+                  right: -30,
+                  top: "40%",
                   transform: "translateY(-50%)",
                 }}>
                 &times;

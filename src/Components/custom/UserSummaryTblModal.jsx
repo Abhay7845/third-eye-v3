@@ -21,15 +21,15 @@ export default function UserSummaryTblModal({
   if (!open) return null;
 
   return (
-    <div className='modal-overlay'>
-      <div className='modal-container'>
-        <div className='modal-header'>
+    <div className='modal_overlay'>
+      <div className='modal_container'>
+        <div className='modal_header'>
           <h2>{title}</h2>
-          <button className='close-btn' onClick={() => setOpenSumTbl(false)}>
+          <button className='close_btn' onClick={() => setOpenSumTbl(false)}>
             ✕
           </button>
         </div>
-        <div className='modal-body'>
+        <div className='modal_body'>
           <UserSummaryTable userSummary={userSummary} />
         </div>
       </div>

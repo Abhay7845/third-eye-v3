@@ -52,10 +52,10 @@ const UserActivityCards = ({ users }) => {
                   <span>{item.date}</span>
                 </div>
 
-                <div className='status'>
+                {/* <div className='status'>
                   <span className='dot'></span>
                   Active
-                </div>
+                </div> */}
               </div>
 
               <h2>{item.name}</h2>
