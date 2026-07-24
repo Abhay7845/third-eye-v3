@@ -1,0 +1,89 @@
+import { useState } from "react";
+import "../Styles/UserActivityCards.css";
+import { FaCalendarAlt, FaEnvelope, FaCopy, FaCheck } from "react-icons/fa";
+
+const UserActivityCards = ({ users }) => {
+  const [copiedIndex, setCopiedIndex] = useState(null);
+
+  const getPreviousDayData = (data) => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const previousDate = yesterday.toISOString().split("T")[0];
+    return data.filter((item) => item.date === previousDate);
+  };
+
+  // Usage
+  const previousDayData = getPreviousDayData(users);
+
+  console.log(previousDayData);
+
+  const getInitials = (name = "") => {
+    const cleanedName = name.replace(/\(.*?\)/g, "").trim();
+    const words = cleanedName.split(" ").filter(Boolean);
+    if (words.length === 1) {
+      return words[0][0].toUpperCase();
+    }
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  };
+
+  const copyToClipboard = async (email, index) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      setCopiedIndex(index);
+      setTimeout(() => {
+        setCopiedIndex(null);
+      }, 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  };
+
+  return (
+    <div className='activity-container'>
+      <div className='activity-grid'>
+        {previousDayData?.map((item, index) => (
+          <div className='activity-card' key={index}>
+            <div className='profile-section'>
+              <div className='profile-avatar'>{getInitials(item.name)}</div>
+            </div>
+
+            <div className='info-section'>
+              <div className='card-top'>
+                <div className='date'>
+                  <FaCalendarAlt />
+                  <span>{item.date}</span>
+                </div>
+
+                <div className='status'>
+                  <span className='dot'></span>
+                  Active
+                </div>
+              </div>
+
+              <h2>{item.name}</h2>
+
+              <div className='email'>
+                <div className='email-text'>
+                  <FaEnvelope />
+                  <span>{item.email}</span>
+                </div>
+
+                {copiedIndex === index ? (
+                  <FaCheck className='copied-icon' title='Copied' />
+                ) : (
+                  <FaCopy
+                    className='copy-icon'
+                    title='Copy Email'
+                    onClick={() => copyToClipboard(item.email, index)}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default UserActivityCards;

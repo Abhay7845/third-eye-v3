@@ -1,23 +1,33 @@
-import React, { useState } from "react";
+import React from "react";
 import "../Styles/AdminDashboard.css";
+import UserActivityCards from "./UserActivityCards";
 
 const AdminDashboard = ({ data }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-
   if (!data) return null;
-
   const totalReLogins = data.userSummary.reduce(
     (sum, user) => sum + user.reLoginCount,
     0,
   );
 
-  const rowsPerPage = 5;
+  const sortUsersByPreviousDay = (users) => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
 
-  const totalPages = Math.ceil(data.events.length / rowsPerPage);
+    const previousDate = [
+      yesterday.getFullYear(),
+      String(yesterday.getMonth() + 1).padStart(2, "0"),
+      String(yesterday.getDate()).padStart(2, "0"),
+    ].join("-");
 
-  const startIndex = (currentPage - 1) * rowsPerPage;
+    return [...users].sort((a, b) => {
+      const aIsPrevious = a.lastLoginAt.startsWith(previousDate);
+      const bIsPrevious = b.lastLoginAt.startsWith(previousDate);
+      if (aIsPrevious === bIsPrevious) return 0;
+      return aIsPrevious ? -1 : 1;
+    });
+  };
 
-  const currentEvents = data.events.slice(startIndex, startIndex + rowsPerPage);
+  const sortedUsers = sortUsersByPreviousDay(data?.userSummary);
 
   return (
     <div className='dashboard'>
@@ -59,7 +69,7 @@ const AdminDashboard = ({ data }) => {
       <div className='dashboard-card'>
         <h2>User Summary</h2>
         <div className='user-grid'>
-          {data.userSummary.map((user) => (
+          {sortedUsers?.map((user) => (
             <div className='user-card' key={user.email}>
               <div className='avatar'>
                 {user.name
@@ -109,104 +119,16 @@ const AdminDashboard = ({ data }) => {
           {data.dailySummary.map((day) => (
             <div className='daily-card' key={day.date}>
               <h3>{day.date}</h3>
-
               <div className='daily-value'>{day.totalLogins}</div>
-
               <p>Logins</p>
-
               <small>{day.totalUsers} Users</small>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Events */}
-
-      {/* <div className='dashboard-card'>
-        <h2>Recent Login Events</h2>
-        <div className='table-wrapper'>
-          <table>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>User</th>
-                <th>IP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.events.map((event, index) => (
-                <tr key={index}>
-                  <td>{new Date(event.timestamp).toLocaleString()}</td>
-                  <td>
-                    <strong>{event.name}</strong>
-                    <br />
-                    <small>{event.email}</small>
-                  </td>
-                  <td>{event.ip}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div> */}
-
       <div className='dashboard-card'>
-        <h2>Recent Login Events</h2>
-
-        <div className='table-wrapper'>
-          <table>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>User</th>
-                <th>IP</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {currentEvents.map((event, index) => (
-                <tr key={index}>
-                  <td>{new Date(event.timestamp).toLocaleString()}</td>
-
-                  <td>
-                    <strong>{event.name}</strong>
-
-                    <br />
-
-                    <small>{event.email}</small>
-                  </td>
-
-                  <td>{event.ip}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-
-        <div className='pagination'>
-          <button
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(currentPage - 1)}>
-            Previous
-          </button>
-
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              className={currentPage === i + 1 ? "active-page" : ""}
-              onClick={() => setCurrentPage(i + 1)}>
-              {i + 1}
-            </button>
-          ))}
-
-          <button
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(currentPage + 1)}>
-            Next
-          </button>
-        </div>
+        <h2>Recent Login Events</h2> <UserActivityCards users={data?.events} />
       </div>
     </div>
   );

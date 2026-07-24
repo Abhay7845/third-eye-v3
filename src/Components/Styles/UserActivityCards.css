@@ -1,0 +1,295 @@
+/* ==========================================
+   UserActivityCards.css
+   Compact Dashboard - 4 Cards Per Row
+========================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", sans-serif;
+  background: #f4f7fb;
+}
+
+/* ===========================
+   Container
+=========================== */
+
+.activity-container {
+  padding: 10px;
+  background: linear-gradient(135deg, #2052db, #185bada2);
+}
+
+/* ===========================
+   Grid (4 Cards)
+=========================== */
+
+.activity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(250px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 1400px) {
+  .activity-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1050px) {
+  .activity-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .activity-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===========================
+   Card
+=========================== */
+
+.activity-card {
+  background: #fff;
+  border-radius: 2px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  transition: 0.25s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.activity-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: #2962ff;
+}
+
+.activity-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px #2962ff2e;
+}
+
+/* ===========================
+   Profile
+=========================== */
+
+.profile-section {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 12px;
+ background:#233044;
+ color: #fff;
+  border-radius: 50%;
+}
+
+.profile-icon {
+  font-size: 36px;
+  color: #2962ff;
+}
+
+/* ===========================
+   Info
+=========================== */
+
+.info-section {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ===========================
+   Date & Status
+=========================== */
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.date {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #2962ff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.date svg {
+  font-size: 10px;
+}
+
+/* ===========================
+   Status
+=========================== */
+
+.status {
+  background: #e9f8ed;
+  color: #1b8a3a;
+  padding: 3px 8px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #28c840;
+}
+
+/* ===========================
+   Name
+=========================== */
+
+.info-section h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 6px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===========================
+   Email
+=========================== */
+.email {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.email-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.email-text span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.copy-icon,
+.copied-icon {
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.25s;
+  flex-shrink: 0;
+}
+
+.copy-icon {
+  color: #6b7280;
+}
+
+.copy-icon:hover {
+  color: #2563eb;
+  transform: scale(1.15);
+}
+
+.copied-icon {
+  color: #22c55e;
+  animation: pop 0.25s ease;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ===========================
+   Footer
+=========================== */
+
+.footer-text {
+  margin: 20px auto 0;
+  width: fit-content;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px 18px;
+  border-radius: 2px;
+  font-size: 12px;
+  color: #555;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* ===========================
+   Mobile
+=========================== */
+
+@media (max-width: 700px) {
+  .activity-container {
+    padding: 15px;
+  }
+
+  .activity-card {
+    padding: 10px;
+  }
+
+  .profile-section {
+    width: 46px;
+    min-width: 46px;
+    margin-right: 10px;
+  }
+
+  .profile-icon {
+    font-size: 30px;
+  }
+
+  .info-section h2 {
+    font-size: 14px;
+  }
+
+  .email {
+    font-size: 10px;
+  }
+
+  .date {
+    font-size: 10px;
+  }
+
+  .status {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  .activity-header h1 {
+    font-size: 22px;
+  }
+
+  .activity-header p {
+    font-size: 12px;
+  }
+}
