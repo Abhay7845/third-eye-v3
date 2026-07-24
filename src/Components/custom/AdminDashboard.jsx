@@ -1,13 +1,23 @@
-import React from "react";
+import React, { useState } from "react";
 import "../Styles/AdminDashboard.css";
 
 const AdminDashboard = ({ data }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+
   if (!data) return null;
 
   const totalReLogins = data.userSummary.reduce(
     (sum, user) => sum + user.reLoginCount,
     0,
   );
+
+  const rowsPerPage = 5;
+
+  const totalPages = Math.ceil(data.events.length / rowsPerPage);
+
+  const startIndex = (currentPage - 1) * rowsPerPage;
+
+  const currentEvents = data.events.slice(startIndex, startIndex + rowsPerPage);
 
   return (
     <div className='dashboard'>
@@ -112,9 +122,8 @@ const AdminDashboard = ({ data }) => {
 
       {/* Events */}
 
-      <div className='dashboard-card'>
+      {/* <div className='dashboard-card'>
         <h2>Recent Login Events</h2>
-
         <div className='table-wrapper'>
           <table>
             <thead>
@@ -138,6 +147,65 @@ const AdminDashboard = ({ data }) => {
               ))}
             </tbody>
           </table>
+        </div>
+      </div> */}
+
+      <div className='dashboard-card'>
+        <h2>Recent Login Events</h2>
+
+        <div className='table-wrapper'>
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>User</th>
+                <th>IP</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {currentEvents.map((event, index) => (
+                <tr key={index}>
+                  <td>{new Date(event.timestamp).toLocaleString()}</td>
+
+                  <td>
+                    <strong>{event.name}</strong>
+
+                    <br />
+
+                    <small>{event.email}</small>
+                  </td>
+
+                  <td>{event.ip}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+
+        <div className='pagination'>
+          <button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(currentPage - 1)}>
+            Previous
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              className={currentPage === i + 1 ? "active-page" : ""}
+              onClick={() => setCurrentPage(i + 1)}>
+              {i + 1}
+            </button>
+          ))}
+
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(currentPage + 1)}>
+            Next
+          </button>
         </div>
       </div>
     </div>

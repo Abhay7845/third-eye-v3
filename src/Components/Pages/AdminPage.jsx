@@ -62,14 +62,14 @@ export default function AdminPage({ toggle_open, toggle }) {
           style={{
             display: "flex",
             gap: "10px",
-            margin: "10px 5px",
             position: "sticky",
             top: "0px",
             zIndex: 1000,
             background: "#fff",
-            padding: "10px 5px",
+            padding: "10px 4px",
             transition: "box-shadow 0.3s ease",
-            boxShadow: showShadow ? "0 4px 10px #00000026" : "none",
+            boxShadow: showShadow ? "2px 4px 10px #00000026" : "none",
+            borderBottom: "1px solid #c7c3c3",
           }}>
           <DatePicker
             style={{ width: "100%" }}
@@ -87,7 +87,6 @@ export default function AdminPage({ toggle_open, toggle }) {
             Next
           </button>
         </div>
-
         <AdminDashboard data={loginActivity} />
       </div>
     </React.Fragment>
