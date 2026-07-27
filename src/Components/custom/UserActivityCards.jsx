@@ -4,16 +4,25 @@ import { FaCalendarAlt, FaEnvelope, FaCopy, FaCheck } from "react-icons/fa";
 
 const UserActivityCards = ({ users }) => {
   const [copiedIndex, setCopiedIndex] = useState(null);
+  console.log("users==>", users);
 
-  const getPreviousDayData = (data) => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const previousDate = yesterday.toISOString().split("T")[0];
-    return data.filter((item) => item.date === previousDate);
-  };
+  function getCurrentAndPreviousDateData(data) {
+    // Get unique dates and sort descending
+    const dates = [...new Set(data.map((item) => item.date))].sort(
+      (a, b) => new Date(b) - new Date(a),
+    );
 
-  // Usage
-  const previousDayData = getPreviousDayData(users);
+    const currentDate = dates[0];
+    const previousDate = dates[1];
+
+    return data.filter(
+      (item) => item.date === currentDate || item.date === previousDate,
+    );
+  }
+
+  const previousDayData = getCurrentAndPreviousDateData(users);
+
+  console.log("previousDayData==>", previousDayData);
 
   const getInitials = (name = "") => {
     const cleanedName = name.replace(/\(.*?\)/g, "").trim();

@@ -6,7 +6,7 @@ export default function UserSummaryTblModal({
   open,
   setOpenSumTbl,
   children,
-  title = "User Login Summary",
+  title = "User Summary",
   userSummary,
 }) {
   useEffect(() => {

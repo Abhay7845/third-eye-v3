@@ -70,7 +70,7 @@ const AdminDashboard = ({ data, setOpenSumTbl }) => {
       <div className='dashboard-card'>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <h2>User Summary</h2>
-          {data?.userSummary?.length > 3 && (
+          {data?.userSummary?.length > 1 && (
             <IoIosList
               size={20}
               cursor='pointer'
