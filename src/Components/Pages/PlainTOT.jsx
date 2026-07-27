@@ -4,6 +4,7 @@ import "../../Plain_tot/totstyle/PlainTOT.css";
 import YearsTotTable from "../../Plain_tot/YearsTotTable";
 import { dummy_data } from "../../Plain_tot/DummryTotData";
 import NSVRangeTable from "../../Plain_tot/NSVRangeTable";
+import WeightedRateTable from "../../Plain_tot/WeightedRateTable";
 
 const PlainTOT = () => {
   console.log("dummy_data==>", dummy_data?.ucp_sales_forcast);
@@ -67,6 +68,19 @@ const PlainTOT = () => {
           data={dummy_data?.net_amc_data?.nsvRangeSummary}
           columns={dummy_data?.net_amc_data?.columns}
           title='Net AMC'
+        />
+      </div>
+
+      <div className='net_amc_table_layout'>
+        <WeightedRateTable
+          data={dummy_data?.tot_percentage?.weightedRateSummary}
+          columns={dummy_data?.tot_percentage?.columns}
+          title='Weighted Rate'
+        />
+        <WeightedRateTable
+          data={dummy_data?.tot_percentage?.weightedRateSummary}
+          columns={dummy_data?.tot_percentage?.columns}
+          title='Weighted Rate'
         />
       </div>
     </React.Fragment>
