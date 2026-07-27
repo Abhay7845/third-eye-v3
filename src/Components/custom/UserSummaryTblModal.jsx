@@ -6,7 +6,7 @@ export default function UserSummaryTblModal({
   open,
   setOpenSumTbl,
   children,
-  title = "User Summary",
+  title,
   userSummary,
 }) {
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function UserSummaryTblModal({
           </button>
         </div>
         <div className='modal_body'>
-          <UserSummaryTable userSummary={userSummary} />
+          <UserSummaryTable userSummary={userSummary?.userSummary} />
         </div>
       </div>
     </div>

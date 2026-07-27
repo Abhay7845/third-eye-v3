@@ -24,7 +24,7 @@ export default function UserSummaryTable({ userSummary }) {
     });
   };
 
-  const sortedUsers = sortUsersByPreviousDay(userSummary?.userSummary);
+  const sortedUsers = sortUsersByPreviousDay(userSummary);
 
   const totalPages = Math.max(1, Math.ceil(sortedUsers.length / ROWS_PER_PAGE));
 

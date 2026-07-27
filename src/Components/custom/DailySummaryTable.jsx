@@ -3,35 +3,18 @@ import "../Styles/UserSummaryTable.css";
 
 const ROWS_PER_PAGE = 6;
 
-export default function DailySummaryTable({ userSummary }) {
+export default function DailySummaryTable({ dailySummary }) {
   const [page, setPage] = useState(1);
 
-  const sortUsersByPreviousDay = (users) => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const previousDate = [
-      yesterday.getFullYear(),
-      String(yesterday.getMonth() + 1).padStart(2, "0"),
-      String(yesterday.getDate()).padStart(2, "0"),
-    ].join("-");
-
-    return [...users].sort((a, b) => {
-      const aIsPrevious = a.lastLoginAt.startsWith(previousDate);
-      const bIsPrevious = b.lastLoginAt.startsWith(previousDate);
-      if (aIsPrevious === bIsPrevious) return 0;
-      return aIsPrevious ? -1 : 1;
-    });
-  };
-
-  const sortedUsers = sortUsersByPreviousDay(userSummary?.userSummary);
-
-  const totalPages = Math.max(1, Math.ceil(sortedUsers.length / ROWS_PER_PAGE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(dailySummary.length / ROWS_PER_PAGE),
+  );
 
   const tableData = useMemo(() => {
     const start = (page - 1) * ROWS_PER_PAGE;
-    return sortedUsers.slice(start, start + ROWS_PER_PAGE);
-  }, [page, sortedUsers]);
+    return dailySummary.slice(start, start + ROWS_PER_PAGE);
+  }, [page, dailySummary]);
 
   return (
     <div className='user_table_card'>

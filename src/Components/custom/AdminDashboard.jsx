@@ -70,7 +70,7 @@ const AdminDashboard = ({ data, setOpenSumTbl, setOpenDailySumTbl }) => {
       <div className='dashboard-card'>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <h2>User Summary</h2>
-          {data?.userSummary?.length > 1 && (
+          {data?.userSummary?.length > 3 && (
             <IoIosList
               size={20}
               cursor='pointer'
@@ -126,12 +126,14 @@ const AdminDashboard = ({ data, setOpenSumTbl, setOpenDailySumTbl }) => {
       <div className='dashboard-card'>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <h2>Daily Summary</h2>
-          <IoIosList
-            size={20}
-            cursor='pointer'
-            title='View Full List'
-            onClick={() => setOpenDailySumTbl(true)}
-          />
+          {data?.userSummary?.length > 3 && (
+            <IoIosList
+              size={20}
+              cursor='pointer'
+              title='View Full List'
+              onClick={() => setOpenDailySumTbl(true)}
+            />
+          )}
         </div>
         <div className='daily-grid'>
           {data.dailySummary.map((day) => (

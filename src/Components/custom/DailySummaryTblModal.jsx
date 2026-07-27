@@ -30,7 +30,7 @@ export default function DailySummaryTblModal({
           </button>
         </div>
         <div className='modal_body'>
-          <DailySummaryTable userSummary={userSummary} />
+          <DailySummaryTable dailySummary={userSummary?.dailySummary} />
         </div>
       </div>
     </div>
