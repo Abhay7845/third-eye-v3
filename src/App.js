@@ -14,7 +14,7 @@ import StoreCatchmentAnalysis from "./Components/Pages/StoreCatchmentAnalysis";
 import InternetStatus from "./Components/trackOnline/InternetStatus";
 import CookieBanner from "./Components/custom/CookieBanner";
 import AdminPage from "./Components/Pages/AdminPage";
-import PlainTOT from "./Plain_tot/PlainTOT.jsx";
+import PlainTOT from "./Components/Pages/PlainTOT.jsx";
 
 const App = () => {
   const [toggle, setToggle] = useState(false);

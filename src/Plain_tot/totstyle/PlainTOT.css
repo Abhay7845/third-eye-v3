@@ -1,0 +1,12 @@
+.tot_table_layout {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .tot_table_layout {
+    grid-template-columns: 1fr;
+  }
+}
