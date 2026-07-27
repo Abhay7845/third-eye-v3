@@ -3,6 +3,7 @@ import TotTableInfo from "../../Plain_tot/TotTableInfo";
 import "../../Plain_tot/totstyle/PlainTOT.css";
 import YearsTotTable from "../../Plain_tot/YearsTotTable";
 import { dummy_data } from "../../Plain_tot/DummryTotData";
+import NSVRangeTable from "../../Plain_tot/NSVRangeTable";
 
 const PlainTOT = () => {
   console.log("dummy_data==>", dummy_data?.ucp_sales_forcast);
@@ -53,6 +54,19 @@ const PlainTOT = () => {
           data={dummy_data?.financialSummary?.row_data}
           columns={dummy_data?.financialSummary?.col}
           table_title='Y2 TOT'
+        />
+      </div>
+
+      <div className='net_amc_table_layout'>
+        <NSVRangeTable
+          data={dummy_data?.net_amc_data?.nsvRangeSummary}
+          columns={dummy_data?.net_amc_data?.columns}
+          title='Net AMC'
+        />
+        <NSVRangeTable
+          data={dummy_data?.net_amc_data?.nsvRangeSummary}
+          columns={dummy_data?.net_amc_data?.columns}
+          title='Net AMC'
         />
       </div>
     </React.Fragment>

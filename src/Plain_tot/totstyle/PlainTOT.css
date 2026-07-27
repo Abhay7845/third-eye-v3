@@ -25,3 +25,19 @@
   }
 }
 
+/* ----------------------Net AMC  TABLE CSS FORMAT------------------  */
+
+
+.net_amc_table_layout {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .net_amc_table_layout {
+    grid-template-columns: 1fr;
+  }
+}
+
