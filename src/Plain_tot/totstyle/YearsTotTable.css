@@ -1,0 +1,171 @@
+.years_tot_container {
+  width: 100%;
+  padding: 5px;
+  display: flex;
+  justify-content: center;
+}
+
+.years_tot_card {
+  width: 100%;
+  background: white;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+}
+
+
+/* TOP HEADER */
+
+.years_tot_title {
+
+  padding: 5px;
+
+  text-align: center;
+
+  font-size: 16px;
+
+  font-weight: 700;
+
+  color: white;
+
+  letter-spacing: 1px;
+
+  background:
+  linear-gradient(
+    135deg,
+    #1d4ed8,
+    #2563eb
+  );
+
+}
+
+
+/* TABLE */
+
+.years_tot_table {
+
+  width: 100%;
+
+  border-collapse: collapse;
+
+}
+
+
+.years_tot_table th {
+
+  padding: 8px 10px;
+
+  text-align: center;
+
+  background: #eef4ff;
+
+  color: #1e3a8a;
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  border: 1px solid #cbd5e1;
+
+}
+
+
+
+.years_tot_table td {
+
+  padding: 8px 10px;
+
+  text-align: center;
+
+  font-size: 11px;
+
+  color: #374151;
+
+  border: 1px solid #cbd5e1;
+
+}
+
+
+
+/* FIRST COLUMN */
+
+.years_metric {
+
+  text-align: left !important;
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  color: #2563eb !important;
+
+}
+
+
+
+/* ROW STYLE */
+
+.years_tot_table tbody tr:nth-child(even){
+
+  background:#fafcff;
+
+}
+
+
+
+/* LAST TOTAL COLUMN */
+
+.years_tot_table td:last-child,
+.years_tot_table th:last-child {
+
+  background:#f1f5ff;
+
+  font-weight:700;
+
+}
+
+
+
+/* RESPONSIVE */
+
+@media(max-width:768px){
+
+
+  .years_tot_container{
+
+    padding:5px;
+
+  }
+
+
+  .years_tot_table th,
+  .years_tot_table td{
+
+    padding:6px 8px;
+
+    font-size:10px;
+
+  }
+
+
+  .years_metric {
+
+    font-size:10px;
+
+  }
+
+
+  .years_tot_title{
+
+    font-size:16px;
+
+  }
+
+
+  .years_tot_card{
+
+    overflow-x:auto;
+
+  }
+
+}

@@ -2,6 +2,8 @@ import React from "react";
 import "../Plain_tot/totstyle/TotTableInfo.css";
 
 const TotTableInfo = ({ data, columns }) => {
+  console.log("data==>", data);
+  console.log("columns==>", columns);
   return (
     <div className='tot_table_container'>
       <div className='tot_table_card'>
@@ -21,7 +23,7 @@ const TotTableInfo = ({ data, columns }) => {
               <tr key={item.category}>
                 <td className='tot_category'>{item.category}</td>
                 {columns.map((year) => (
-                  <td key={year}>{item[year].toLocaleString()}</td>
+                  <td key={year}>{item[year]}</td>
                 ))}
               </tr>
             ))}

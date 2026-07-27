@@ -10,3 +10,18 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ----------------------YEASRS TOT TABLE CSS FORMAT------------------  */
+.years_tot_table_layout {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .years_tot_table_layout {
+    grid-template-columns: 1fr;
+  }
+}
+
