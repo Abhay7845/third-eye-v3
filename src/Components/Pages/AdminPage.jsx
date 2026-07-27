@@ -7,10 +7,12 @@ import { axiosInstance } from "../../HostManger/API/Authorization";
 import Loader from "../custom/Loader";
 import AdminDashboard from "../custom/AdminDashboard";
 import UserSummaryTblModal from "../custom/UserSummaryTblModal";
+import DailySummaryTblModal from "../custom/DailySummaryTblModal";
 
 export default function AdminPage({ toggle_open, toggle }) {
   const [slideOut, setSlideOut] = useState(false);
   const [openSumTbl, setOpenSumTbl] = useState(false);
+  const [openDailySumTbl, setOpenDailySumTbl] = useState(false);
   const [loading, setLoading] = useState(false);
   const userLog = useSelector((state) => state?.user?.user);
   const [loginActivity, setLoginActivity] = useState(null);
@@ -89,12 +91,23 @@ export default function AdminPage({ toggle_open, toggle }) {
             Next
           </button>
         </div>
-        <AdminDashboard data={loginActivity} setOpenSumTbl={setOpenSumTbl} />
+        <AdminDashboard
+          data={loginActivity}
+          setOpenSumTbl={setOpenSumTbl}
+          setOpenDailySumTbl={setOpenDailySumTbl}
+        />
       </div>
       <UserSummaryTblModal
         open={openSumTbl}
         setOpenSumTbl={setOpenSumTbl}
         userSummary={loginActivity}
+        title='User Summary'
+      />
+      <DailySummaryTblModal
+        open={openDailySumTbl}
+        setOpenSumTbl={setOpenDailySumTbl}
+        userSummary={loginActivity}
+        title='Daily Summary'
       />
     </React.Fragment>
   );

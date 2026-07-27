@@ -3,7 +3,7 @@ import "../Styles/AdminDashboard.css";
 import UserActivityCards from "./UserActivityCards";
 import { IoIosList } from "react-icons/io";
 
-const AdminDashboard = ({ data, setOpenSumTbl }) => {
+const AdminDashboard = ({ data, setOpenSumTbl, setOpenDailySumTbl }) => {
   if (!data) return null;
   const totalReLogins = data.userSummary.reduce(
     (sum, user) => sum + user.reLoginCount,
@@ -126,12 +126,12 @@ const AdminDashboard = ({ data, setOpenSumTbl }) => {
       <div className='dashboard-card'>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <h2>Daily Summary</h2>
-          {/* <IoIosList
+          <IoIosList
             size={20}
             cursor='pointer'
             title='View Full List'
-            onClick={() => setOpenSumTbl(true)}
-          /> */}
+            onClick={() => setOpenDailySumTbl(true)}
+          />
         </div>
         <div className='daily-grid'>
           {data.dailySummary.map((day) => (
