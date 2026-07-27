@@ -14,6 +14,7 @@ import StoreCatchmentAnalysis from "./Components/Pages/StoreCatchmentAnalysis";
 import InternetStatus from "./Components/trackOnline/InternetStatus";
 import CookieBanner from "./Components/custom/CookieBanner";
 import AdminPage from "./Components/Pages/AdminPage";
+import PlainTOT from "./Plain_tot/PlainTOT.jsx";
 
 const App = () => {
   const [toggle, setToggle] = useState(false);
@@ -83,6 +84,10 @@ const App = () => {
             <Route
               path={routes.ADMIN_LOGIN}
               element={<AdminPage toggle_open={toggle_open} toggle={toggle} />}
+            />
+            <Route
+              path={routes.PLAIN_TOT}
+              element={<PlainTOT toggle_open={toggle_open} toggle={toggle} />}
             />
           </Route>
         </Route>

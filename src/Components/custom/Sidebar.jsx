@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { FaBars } from "react-icons/fa";
-import { menuItem } from "../Data/Data";
+import { menuItem, ror_menu_items } from "../Data/Data";
 import Tippy from "@tippyjs/react";
 import { HiOutlineLogout } from "react-icons/hi";
 import { routes } from "../../routes";
@@ -121,7 +121,42 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
               </div>
             )}
           </div>
-          {pathname === routes.ADMIN_LOGIN ? null : (
+          {pathname === routes.ADMIN_LOGIN ? (
+            <div>
+              {ror_menu_items.map((item, i) => (
+                <div key={i}>
+                  {toggle ? (
+                    <NavLink
+                      to={(auth_token && item?.path) || routes.LOGIN}
+                      onClick={(e) => HandelClickSlid(e, item.path)}
+                      className={
+                        item.path === pathname ? "active_tab" : "link_active"
+                      }>
+                      <div className='icon'>{item.icon}</div>
+                      <div style={{ display: toggle ? "block" : "none" }}>
+                        {item.name}
+                      </div>
+                    </NavLink>
+                  ) : (
+                    <Tippy content={<span>{item.name}</span>} placement='right'>
+                      <NavLink
+                        key={i}
+                        to={(auth_token && item?.path) || routes.LOGIN}
+                        onClick={(e) => HandelClickSlid(e, item.path)}
+                        className={
+                          item.path === pathname ? "active_tab" : "link_active"
+                        }>
+                        <div className='icon'>{item.icon}</div>
+                        <div style={{ display: toggle ? "block" : "none" }}>
+                          {item.name}
+                        </div>
+                      </NavLink>
+                    </Tippy>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
             <div>
               {menuItem.map((item, i) => (
                 <div key={i}>

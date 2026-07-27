@@ -2,7 +2,7 @@ import { routes } from "../../routes";
 import { MdStore } from "react-icons/md";
 import PublicIcon from "@mui/icons-material/Public";
 import PolicyIcon from "@mui/icons-material/Policy";
-import { MdManageHistory } from "react-icons/md";
+import { MdManageHistory, MdMarkChatRead } from "react-icons/md";
 import { SiGoogleanalytics } from "react-icons/si";
 export const GOOGLE_MAP_LIBRARIES = ["places", "geometry", "drawing"];
 
@@ -46,6 +46,14 @@ export const menuItem = [
     path: routes.HISTORY,
     name: "Projection History",
     icon: <MdManageHistory />,
+  },
+];
+
+export const ror_menu_items = [
+  {
+    path: routes.PLAIN_TOT,
+    name: "Plain TOT",
+    icon: <MdMarkChatRead />,
   },
 ];
 
