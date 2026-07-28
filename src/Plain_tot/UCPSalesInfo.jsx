@@ -1,13 +1,13 @@
 import React from "react";
 import "../Plain_tot/totstyle/TotTableInfo.css";
 
-const TotTableInfo = ({ data, columns }) => {
+const UCPSalesInfo = ({ data, columns, title }) => {
   console.log("data==>", data);
   console.log("columns==>", columns);
   return (
     <div className='tot_table_container'>
       <div className='tot_table_card'>
-        <h6 className='tot_table_title'>UCP Sales Forecast</h6>
+        <h6 className='tot_table_title'>{title}</h6>
         <table className='tot_sales_table'>
           <thead>
             <tr>
@@ -34,4 +34,4 @@ const TotTableInfo = ({ data, columns }) => {
   );
 };
 
-export default TotTableInfo;
+export default UCPSalesInfo;

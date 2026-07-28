@@ -1,50 +1,71 @@
 import React from "react";
-import TotTableInfo from "../../Plain_tot/TotTableInfo";
+import UCPSalesInfo from "../../Plain_tot/UCPSalesInfo";
 import "../../Plain_tot/totstyle/PlainTOT.css";
 import YearsTotTable from "../../Plain_tot/YearsTotTable";
 import { dummy_data } from "../../Plain_tot/DummryTotData";
 import NSVRangeTable from "../../Plain_tot/NSVRangeTable";
 import WeightedRateTable from "../../Plain_tot/WeightedRateTable";
+import RoteTable from "../../Plain_tot/RateTable";
 
 const PlainTOT = () => {
   console.log("dummy_data==>", dummy_data?.ucp_sales_forcast);
   return (
     <React.Fragment>
       <div className='tot_table_layout'>
-        <TotTableInfo
+        <UCPSalesInfo
           title='UCP Sales'
           data={dummy_data?.ucp_sales_forcast?.row_data}
           columns={dummy_data?.ucp_sales_forcast?.col}
         />
-        <TotTableInfo
-          title='Projected Sales'
+
+        <UCPSalesInfo
+          title='AMC/gm'
           data={dummy_data?.ucp_sales_forcast?.row_data}
           columns={dummy_data?.ucp_sales_forcast?.col}
         />
-        <TotTableInfo
-          title='UCP Sales'
+
+        <UCPSalesInfo
+          title='Gold_Rate+AMC+MU'
+          data={dummy_data?.ucp_sales_forcast?.row_data}
+          columns={dummy_data?.ucp_sales_forcast?.col}
+        />
+
+        <UCPSalesInfo
+          title='Grammage'
+          data={dummy_data?.ucp_sales_forcast?.row_data}
+          columns={dummy_data?.ucp_sales_forcast?.col}
+        />
+
+        <UCPSalesInfo
+          title='AMC in Lakhs'
+          data={dummy_data?.ucp_sales_forcast?.row_data}
+          columns={dummy_data?.ucp_sales_forcast?.col}
+        />
+
+        <UCPSalesInfo
+          title='AMC Crores'
           data={dummy_data?.ucp_sales_forcast?.row_data}
           columns={dummy_data?.ucp_sales_forcast?.col}
         />
       </div>
 
-      <div className='tot_table_layout'>
-        <TotTableInfo
-          title='Projected Sales'
+      {/* <div className='tot_table_layout'>
+        <UCPSalesInfo
+          title='Grammage'
           data={dummy_data?.ucp_sales_forcast?.row_data}
           columns={dummy_data?.ucp_sales_forcast?.col}
         />
-        <TotTableInfo
-          title='UCP Sales'
+        <UCPSalesInfo
+          title='AMC in Lakhs'
           data={dummy_data?.ucp_sales_forcast?.row_data}
           columns={dummy_data?.ucp_sales_forcast?.col}
         />
-        <TotTableInfo
-          title='Projected Sales'
+        <UCPSalesInfo
+          title='AMC Crores'
           data={dummy_data?.ucp_sales_forcast?.row_data}
           columns={dummy_data?.ucp_sales_forcast?.col}
         />
-      </div>
+      </div> */}
       <div className='years_tot_table_layout'>
         <YearsTotTable
           data={dummy_data?.financialSummary?.row_data}
@@ -62,12 +83,12 @@ const PlainTOT = () => {
         <NSVRangeTable
           data={dummy_data?.net_amc_data?.nsvRangeSummary}
           columns={dummy_data?.net_amc_data?.columns}
-          title='Net AMC'
+          title='Net AMC Y1'
         />
         <NSVRangeTable
           data={dummy_data?.net_amc_data?.nsvRangeSummary}
           columns={dummy_data?.net_amc_data?.columns}
-          title='Net AMC'
+          title='Net AMC Y2'
         />
       </div>
 
@@ -75,12 +96,32 @@ const PlainTOT = () => {
         <WeightedRateTable
           data={dummy_data?.tot_percentage?.weightedRateSummary}
           columns={dummy_data?.tot_percentage?.columns}
-          title='Weighted Rate'
+          title='TOT Default'
         />
-        <WeightedRateTable
+        {/* <WeightedRateTable
           data={dummy_data?.tot_percentage?.weightedRateSummary}
           columns={dummy_data?.tot_percentage?.columns}
-          title='Weighted Rate'
+          title='Plain TOT Pre Final'
+        /> */}
+      </div>
+
+      <div className='rote_table_layout'>
+        <RoteTable
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
+          title='PlainTOT_PreFinalY1'
+        />
+        <RoteTable
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
+        />
+        <RoteTable
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
+        />
+        <RoteTable
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
         />
       </div>
     </React.Fragment>

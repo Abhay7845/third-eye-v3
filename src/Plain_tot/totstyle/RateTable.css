@@ -1,0 +1,126 @@
+.rate_table_wrapper {
+  width: 100%;
+  margin: 16px 0;
+  padding: 0 8px;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.rate_table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  background: #fff;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.rate_table th,
+.rate_table td {
+  border: 1px solid #e5e7eb;
+  padding: 12px 16px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* ===== Header ===== */
+
+.rate_table__header {
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.rate_table__header--last-working-day {
+  background: #34495e;
+}
+
+.rate_table__header--lcg {
+  background: #27ae60;
+}
+
+.rate_table__header--mcg {
+  background: #2980b9;
+}
+
+.rate_table__header--hcg {
+  background: #f39c12;
+}
+
+.rate_table__header--hcg-stone {
+  background: #8e44ad;
+}
+
+.rate_table__header--total {
+  background: #e74c3c;
+}
+
+/* ===== Cells ===== */
+
+.rate_table__cell--last-working-day {
+  text-align: left;
+  font-weight: 600;
+  padding-left: 20px;
+}
+
+.rate_table__cell--lcg {
+  color: #27ae60;
+}
+
+.rate_table__cell--mcg {
+  color: #2980b9;
+}
+
+.rate_table__cell--hcg {
+  color: #f39c12;
+}
+
+.rate_table__cell--hcg-stone {
+  color: #8e44ad;
+}
+
+.rate_table__cell--total {
+  font-weight: 700;
+  color: #e74c3c;
+}
+
+/* ===== Rows ===== */
+
+.rate_table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.rate_table tbody tr:hover {
+  background: #eef6ff;
+  transition: background 0.2s ease;
+}
+
+.rate_table__total_row {
+  background: #ecfdf5 !important;
+  font-weight: 700;
+}
+
+.rate_table__total_row td {
+  border-top: 2px solid #16a34a;
+}
+
+/* ===== Responsive ===== */
+
+@media (max-width: 768px) {
+  .rate_table {
+    font-size: 13px;
+  }
+
+  .rate_table th,
+  .rate_table td {
+    padding: 10px 12px;
+  }
+
+  .rate_table__cell--last-working-day {
+    padding-left: 12px;
+  }
+}

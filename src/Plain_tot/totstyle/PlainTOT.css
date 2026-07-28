@@ -1,27 +1,73 @@
 .tot_table_layout {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: nowrap;
   gap: 20px;
   width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px 8px;
+  margin: 10px 0;
+  scroll-behavior: smooth;
+  box-sizing: border-box;
+
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #6b7280 #f3f4f6;
 }
+
+/* Each table card */
+.tot_table_layout > * {
+  flex: 0 0 450px; /* Change width as needed */
+  min-width: 450px;
+  max-width: 450px;
+}
+
+/* ===========================
+   Chrome / Edge / Safari
+=========================== */
+
+.tot_table_layout::-webkit-scrollbar {
+  height: 5px; /* Thin scrollbar */
+}
+
+.tot_table_layout::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 20px;
+}
+
+.tot_table_layout::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 20px;
+  transition: background 0.3s ease;
+}
+
+.tot_table_layout::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+/* Optional: scrollbar corner */
+.tot_table_layout::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ===========================
+   Mobile
+=========================== */
 
 @media (max-width: 768px) {
   .tot_table_layout {
-    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 8px;
   }
-}
 
-/* ----------------------YEASRS TOT TABLE CSS FORMAT------------------  */
-.years_tot_table_layout {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  width: 100%;
-}
+  .tot_table_layout > * {
+    flex: 0 0 340px;
+    min-width: 340px;
+    max-width: 340px;
+  }
 
-@media (max-width: 768px) {
-  .years_tot_table_layout {
-    grid-template-columns: 1fr;
+  .tot_table_layout::-webkit-scrollbar {
+    height: 4px;
   }
 }
 
@@ -37,6 +83,21 @@
 
 @media (max-width: 768px) {
   .net_amc_table_layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* --------------------ROTE TABLE CSS STYLE-------------  */
+.rote_table_layout {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .rote_table_layout {
     grid-template-columns: 1fr;
   }
 }
