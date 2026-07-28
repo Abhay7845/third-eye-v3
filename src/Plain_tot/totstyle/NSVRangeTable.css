@@ -21,7 +21,7 @@
   text-align: center;
   font-size: 15px;
   font-weight: 700;
-  color: #fff;
+  color: #ffffff;
   letter-spacing: 0.8px;
   background: linear-gradient(
     135deg,
@@ -41,21 +41,22 @@
   border-radius: 2px;
 }
 
-/* Header */
+/* ================= HEADER ================= */
 
 .nsv_table thead th {
   padding: 9px 8px;
   text-align: center;
   font-size: 11px;
   font-weight: 700;
-  color: #ffffff;
-  border-right: 1px solid rgba(255, 255, 255, 0.18);
-  border-bottom: 2px solid #8b5cf6;
+  color: #5b21b6;
+  border-right: 1px solid #ddd6fe;
+  border-bottom: 2px solid #c4b5fd;
+
   background: linear-gradient(
     180deg,
-    #8b5cf6 0%,
-    #7c3aed 55%,
-    #6d28d9 100%
+    #faf5ff 0%,
+    #f3e8ff 50%,
+    #ede9fe 100%
   );
 }
 
@@ -63,15 +64,17 @@
   border-right: none;
 }
 
-/* Body */
+/* ================= BODY ================= */
 
 .nsv_table tbody td {
   padding: 9px 8px;
   text-align: center;
   font-size: 11px;
   color: #374151;
+
   border-bottom: 1px solid #ede9fe;
   border-right: 1px solid #ede9fe;
+
   transition: all 0.25s ease;
 }
 
@@ -79,7 +82,8 @@
   border-right: none;
 }
 
-/* Zebra Rows */
+
+/* ================= ROW COLORS ================= */
 
 .nsv_table tbody tr:nth-child(odd) {
   background: linear-gradient(
@@ -89,6 +93,7 @@
   );
 }
 
+
 .nsv_table tbody tr:nth-child(even) {
   background: linear-gradient(
     90deg,
@@ -97,7 +102,8 @@
   );
 }
 
-/* Hover Effect */
+
+/* ================= HOVER ================= */
 
 .nsv_table tbody tr:hover {
   background: linear-gradient(
@@ -108,12 +114,15 @@
   );
 }
 
-/* First Two Columns */
+
+/* ================= FIRST COLUMNS ================= */
 
 .nsv_table td:first-child,
 .nsv_table td:nth-child(2) {
+
   font-weight: 700;
   color: #6d28d9;
+
   background: linear-gradient(
     90deg,
     #faf5ff,
@@ -121,12 +130,16 @@
   );
 }
 
+
 /* ================= TOTAL ROW ================= */
 
 .nsv_table tbody tr:last-child td {
+
   font-weight: 700;
   color: #ffffff;
+
   border-top: 2px solid #6d28d9;
+
   background: linear-gradient(
     135deg,
     #7c3aed 0%,
@@ -135,7 +148,8 @@
   );
 }
 
-/* Rounded Corners - 2px */
+
+/* ================= BORDER RADIUS 2PX ================= */
 
 .nsv_table thead th:first-child {
   border-top-left-radius: 2px;
@@ -153,6 +167,7 @@
   border-bottom-right-radius: 2px;
 }
 
+
 /* ================= SCROLLBAR ================= */
 
 .nsv_table_card::-webkit-scrollbar {
@@ -160,18 +175,24 @@
 }
 
 .nsv_table_card::-webkit-scrollbar-thumb {
+
   background: linear-gradient(
     90deg,
     #7c3aed,
     #a855f7
   );
+
   border-radius: 2px;
 }
 
+
 .nsv_table_card::-webkit-scrollbar-track {
+
   background: #f5f3ff;
   border-radius: 2px;
+
 }
+
 
 /* ================= MOBILE ================= */
 
@@ -181,20 +202,30 @@
     padding: 5px;
   }
 
+
   .nsv_table_card {
+
     overflow-x: auto;
     border-radius: 2px;
+
   }
+
 
   .nsv_table th,
   .nsv_table td {
+
     padding: 7px 6px;
     font-size: 10px;
     white-space: nowrap;
+
   }
 
+
   .nsv_table_title {
+
     font-size: 14px;
     padding: 7px;
+
   }
+
 }
