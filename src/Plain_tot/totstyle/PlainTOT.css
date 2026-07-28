@@ -71,34 +71,246 @@
   }
 }
 
-/* ----------------------Net AMC  TABLE CSS FORMAT------------------  */
+/* -------------------------- YEARS 1-6 Table------------------  */
 
-
-.net_amc_table_layout {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+.years_tot_table_layout {
+  display: flex;
+  flex-wrap: nowrap;
   gap: 20px;
   width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px 8px;
+  margin: 10px 0;
+  scroll-behavior: smooth;
+  box-sizing: border-box;
+
+  /* Firefox scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #6b7280 #f3f4f6;
 }
 
+/* Keep every YearsTotTable in one row */
+.years_tot_table_layout > * {
+  flex: 0 0 450px;
+  min-width: 450px;
+  max-width: 450px;
+}
+
+
+/* ===========================
+   Chrome / Edge / Safari
+=========================== */
+
+.years_tot_table_layout::-webkit-scrollbar {
+  height: 5px;
+}
+
+.years_tot_table_layout::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 20px;
+}
+
+.years_tot_table_layout::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 20px;
+}
+
+.years_tot_table_layout::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+.years_tot_table_layout::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+
+/* ===========================
+   Mobile Responsive
+=========================== */
+
 @media (max-width: 768px) {
-  .net_amc_table_layout {
-    grid-template-columns: 1fr;
+  .years_tot_table_layout {
+    gap: 12px;
+    padding: 8px;
+  }
+
+  .years_tot_table_layout > * {
+    flex: 0 0 340px;
+    min-width: 340px;
+    max-width: 340px;
+  }
+
+  .years_tot_table_layout::-webkit-scrollbar {
+    height: 4px;
   }
 }
 
 
-/* --------------------ROTE TABLE CSS STYLE-------------  */
-.rote_table_layout {
+
+/* ----------------------Net AMC  TABLE CSS FORMAT------------------  */
+
+
+.net_amc_table_layout {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 20px;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px 8px;
+  margin: 10px 0;
+  scroll-behavior: smooth;
+  box-sizing: border-box;
+
+  /* Firefox scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #6b7280 #f3f4f6;
+}
+
+
+/* Keep every NSVRangeTable in one row */
+.net_amc_table_layout > * {
+  flex: 0 0 450px;
+  min-width: 450px;
+  max-width: 450px;
+}
+
+
+/* ===========================
+   Chrome / Edge / Safari
+=========================== */
+
+.net_amc_table_layout::-webkit-scrollbar {
+  height: 5px;
+}
+
+.net_amc_table_layout::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 20px;
+}
+
+.net_amc_table_layout::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 20px;
+}
+
+.net_amc_table_layout::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+.net_amc_table_layout::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+
+/* ===========================
+   Mobile Responsive
+=========================== */
+
+@media (max-width: 768px) {
+  .net_amc_table_layout {
+    gap: 12px;
+    padding: 8px;
+  }
+
+  .net_amc_table_layout > * {
+    flex: 0 0 340px;
+    min-width: 340px;
+    max-width: 340px;
+  }
+
+  .net_amc_table_layout::-webkit-scrollbar {
+    height: 4px;
+  }
+}
+
+
+
+/* -----------------------TOT DEFAULT TABLE LAYOUT--------------  */
+.tot_default_table_layout {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(1, 1fr);
   gap: 20px;
   width: 100%;
 }
 
 @media (max-width: 768px) {
-  .rote_table_layout {
+  .tot_default_table_layout {
     grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------ROTE TABLE CSS STYLE-------------  */
+.rote_table_layout {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 5px 0;
+  scroll-behavior: smooth;
+  box-sizing: border-box;
+
+  /* Firefox scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #6b7280 #f3f4f6;
+}
+
+
+/* Keep every RoteTable in one row */
+.rote_table_layout > * {
+  flex: 0 0 450px;
+  min-width: 450px;
+  max-width: 450px;
+}
+
+
+/* ===========================
+   Chrome / Edge / Safari
+=========================== */
+
+.rote_table_layout::-webkit-scrollbar {
+  height: 5px;
+}
+
+.rote_table_layout::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 20px;
+}
+
+.rote_table_layout::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 20px;
+}
+
+.rote_table_layout::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+.rote_table_layout::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+
+/* ===========================
+   Mobile Responsive
+=========================== */
+
+@media (max-width: 768px) {
+  .rote_table_layout {
+    gap: 12px;
+    padding: 8px;
+  }
+
+  .rote_table_layout > * {
+    flex: 0 0 340px;
+    min-width: 340px;
+    max-width: 340px;
+  }
+
+  .rote_table_layout::-webkit-scrollbar {
+    height: 4px;
   }
 }
 

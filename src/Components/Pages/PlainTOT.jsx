@@ -49,23 +49,6 @@ const PlainTOT = () => {
         />
       </div>
 
-      {/* <div className='tot_table_layout'>
-        <UCPSalesInfo
-          title='Grammage'
-          data={dummy_data?.ucp_sales_forcast?.row_data}
-          columns={dummy_data?.ucp_sales_forcast?.col}
-        />
-        <UCPSalesInfo
-          title='AMC in Lakhs'
-          data={dummy_data?.ucp_sales_forcast?.row_data}
-          columns={dummy_data?.ucp_sales_forcast?.col}
-        />
-        <UCPSalesInfo
-          title='AMC Crores'
-          data={dummy_data?.ucp_sales_forcast?.row_data}
-          columns={dummy_data?.ucp_sales_forcast?.col}
-        />
-      </div> */}
       <div className='years_tot_table_layout'>
         <YearsTotTable
           data={dummy_data?.financialSummary?.row_data}
@@ -76,6 +59,26 @@ const PlainTOT = () => {
           data={dummy_data?.financialSummary?.row_data}
           columns={dummy_data?.financialSummary?.col}
           table_title='Y2 TOT'
+        />
+        <YearsTotTable
+          data={dummy_data?.financialSummary?.row_data}
+          columns={dummy_data?.financialSummary?.col}
+          table_title='Y3 TOT'
+        />
+        <YearsTotTable
+          data={dummy_data?.financialSummary?.row_data}
+          columns={dummy_data?.financialSummary?.col}
+          table_title='Y4 TOT'
+        />
+        <YearsTotTable
+          data={dummy_data?.financialSummary?.row_data}
+          columns={dummy_data?.financialSummary?.col}
+          table_title='Y5 TOT'
+        />
+        <YearsTotTable
+          data={dummy_data?.financialSummary?.row_data}
+          columns={dummy_data?.financialSummary?.col}
+          table_title='Y6 TOT'
         />
       </div>
 
@@ -90,19 +93,34 @@ const PlainTOT = () => {
           columns={dummy_data?.net_amc_data?.columns}
           title='Net AMC Y2'
         />
+        <NSVRangeTable
+          data={dummy_data?.net_amc_data?.nsvRangeSummary}
+          columns={dummy_data?.net_amc_data?.columns}
+          title='Net AMC Y3'
+        />
+        <NSVRangeTable
+          data={dummy_data?.net_amc_data?.nsvRangeSummary}
+          columns={dummy_data?.net_amc_data?.columns}
+          title='Net AMC Y4'
+        />
+        <NSVRangeTable
+          data={dummy_data?.net_amc_data?.nsvRangeSummary}
+          columns={dummy_data?.net_amc_data?.columns}
+          title='Net AMC Y5'
+        />
+        <NSVRangeTable
+          data={dummy_data?.net_amc_data?.nsvRangeSummary}
+          columns={dummy_data?.net_amc_data?.columns}
+          title='Net AMC Y6'
+        />
       </div>
 
-      <div className='net_amc_table_layout'>
+      <div className='tot_default_table_layout'>
         <WeightedRateTable
           data={dummy_data?.tot_percentage?.weightedRateSummary}
           columns={dummy_data?.tot_percentage?.columns}
           title='TOT Default'
         />
-        {/* <WeightedRateTable
-          data={dummy_data?.tot_percentage?.weightedRateSummary}
-          columns={dummy_data?.tot_percentage?.columns}
-          title='Plain TOT Pre Final'
-        /> */}
       </div>
 
       <div className='rote_table_layout'>
@@ -114,14 +132,27 @@ const PlainTOT = () => {
         <RoteTable
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
+          title='PlainTOT_PreFinalY2'
         />
         <RoteTable
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
+          title='PlainTOT_PreFinalY3'
         />
         <RoteTable
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
+          title='PlainTOT_PreFinalY4'
+        />
+        <RoteTable
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
+          title='PlainTOT_PreFinalY5'
+        />
+        <RoteTable
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
+          title='PlainTOT_PreFinalY6'
         />
       </div>
     </React.Fragment>
