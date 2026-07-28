@@ -25,7 +25,7 @@ const PlainTOT = () => {
         />
 
         <UCPSalesInfo
-          title='Gold_Rate+AMC+MU'
+          title='Gold Rate+AMC+MU'
           data={dummy_data?.ucp_sales_forcast?.row_data}
           columns={dummy_data?.ucp_sales_forcast?.col}
         />

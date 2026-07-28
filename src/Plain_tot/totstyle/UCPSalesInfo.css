@@ -61,6 +61,28 @@
   color: #2563eb;
 }
 
+/* Highlight Btq rate row */
+.btq_rate_row {
+ 
+  font-weight: 700;
+  transition: background 0.3s ease;
+}
+
+.btq_rate_row td {
+   background: linear-gradient(
+    90deg,
+    #fef3c7 0%,
+    #f0e3ac 50%,
+    #fef3c7 100%
+  );
+}
+
+.btq_rate_row:hover {
+  background: linear-gradient(
+    90deg,
+    #fde68a 
+  );
+}
 @media (max-width: 768px) {
   .tot_table_container {
     padding: 15px;
