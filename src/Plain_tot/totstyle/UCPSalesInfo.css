@@ -1,108 +1,142 @@
 .tot_table_container {
-  padding: 5px;
+  padding: 0 2px;
   display: flex;
   justify-content: center;
 }
 
 .tot_table_card {
   width: 100%;
-  background: #fff;
+  background: #ffffff;
   border-radius: 2px;
   overflow: hidden;
+  border: 1px solid #dbeafe;
 }
 
 .tot_table_title {
   margin: 0;
-  padding: 5px;
+  padding: 10px;
   text-align: center;
-  background: linear-gradient(135deg, #1d4ed8, #2563eb);
-  color: white;
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  color: #fff;
   font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 1px;
+  font-weight: 700;
+  letter-spacing: .5px;
 }
+
+/* ================= TABLE ================= */
 
 .tot_sales_table {
   width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #cbd5e1;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
-.tot_sales_table thead {
-  background: #eef4ff;
-}
+/* Header */
 
-.tot_sales_table th {
-  padding: 8px 10px;
-  text-align: center;
+.tot_sales_table thead th {
+  background: linear-gradient(180deg, #eff6ff, #dbeafe);
   color: #1e3a8a;
-  font-size: 11px;
-  font-weight: 600;
-  border: 1px solid #cbd5e1;
-  position: sticky;
-  top: 0;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 10px;
+  text-align: center;
+  border-bottom: 2px solid #bfdbfe;
+  border-right: 1px solid #dbeafe;
 }
 
-.tot_sales_table td {
-  padding: 8px 10px;
-  text-align: center;
+.tot_sales_table thead th:last-child {
+  border-right: none;
+}
+
+/* Body */
+
+.tot_sales_table tbody td {
+  padding: 10px;
   font-size: 11px;
-  border: 1px solid #cbd5e1;
+  text-align: center;
   color: #374151;
+  border-bottom: 1px solid #edf2f7;
+  border-right: 1px solid #edf2f7;
+  transition: all .25s ease;
+}
+
+.tot_sales_table tbody td:last-child {
+  border-right: none;
+}
+
+/* Zebra */
+
+.tot_sales_table tbody tr:nth-child(odd) {
+  background: #ffffff;
 }
 
 .tot_sales_table tbody tr:nth-child(even) {
-  background: #fafcff;
+  background: #f8fbff;
 }
+
+/* Hover */
+
+.tot_sales_table tbody tr:hover {
+  background: #eaf3ff;
+  transform: scale(1.003);
+}
+
+/* Category */
 
 .tot_category {
-  font-size: 11px;
   font-weight: 700;
   color: #2563eb;
+  background: #f0f7ff;
 }
 
-/* Highlight Btq rate row */
-.btq_rate_row {
- 
-  font-weight: 700;
-  transition: background 0.3s ease;
+/* Rounded Corners */
+
+.tot_sales_table thead th:first-child {
+  border-top-left-radius: 8px;
 }
+
+.tot_sales_table thead th:last-child {
+  border-top-right-radius: 8px;
+}
+
+/* ================= BTQ ROW ================= */
 
 .btq_rate_row td {
-   background: linear-gradient(
-    90deg,
-    #fef3c7 0%,
-    #f0e3ac 50%,
-    #fef3c7 100%
-  );
-}
-
-.btq_rate_row:hover {
   background: linear-gradient(
     90deg,
-    #fde68a 
+    #fff7cc,
+    #ffe58f,
+    #fff7cc
+  );
+  color: #8a5800;
+  font-weight: 700;
+  border-top: 2px solid #facc15;
+}
+
+.btq_rate_row:hover td {
+  background: linear-gradient(
+    90deg,
+    #fde68a,
+    #fcd34d,
+    #fde68a
   );
 }
-@media (max-width: 768px) {
-  .tot_table_container {
-    padding: 15px;
-  }
 
-  .tot_sales_table {
-    font-size: 12px;
+/* Responsive */
+
+@media (max-width: 768px) {
+
+  .tot_table_card {
+    overflow-x: auto;
   }
 
   .tot_sales_table th,
   .tot_sales_table td {
-    padding: 6px 8px;
+    padding: 8px;
     font-size: 10px;
   }
 
-  .tot_category {
-    font-size: 10px;
-  }
-
-  .tot_table_card {
-    overflow-x: auto;
+  .tot_table_title {
+    font-size: 14px;
   }
 }
