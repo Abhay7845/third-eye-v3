@@ -1,7 +1,6 @@
 .tot_table_layout {
   display: flex;
   flex-wrap: nowrap;
-  gap: 20px;
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
@@ -76,7 +75,6 @@
 .years_tot_table_layout {
   display: flex;
   flex-wrap: nowrap;
-  gap: 20px;
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
@@ -154,7 +152,6 @@
 .net_amc_table_layout {
   display: flex;
   flex-wrap: nowrap;
-  gap: 20px;
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
