@@ -1,166 +1,200 @@
 .nsv_table_container {
-
-  width:100%;
-
-  padding:5px;
-
-  display:flex;
-
-  justify-content:center;
-
+  width: 100%;
+  padding: 6px;
+  display: flex;
+  justify-content: center;
 }
-
-
 
 .nsv_table_card {
-
-  width:100%;
-
-  background:white;
-
-  border-radius:2px;
-
-  overflow:hidden;
-
-  border:1px solid #cbd5e1;
-
+  width: 100%;
+  background: #ffffff;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid #d8d4fe;
 }
 
-
-
-/* HEADER */
+/* ================= TITLE ================= */
 
 .nsv_table_title {
-
-  padding:5px;
-
-  text-align:center;
-
-  font-size:16px;
-
-  font-weight:700;
-
-  color:white;
-
-  letter-spacing:1px;
-
-  background:
-  linear-gradient(
+  margin: 0;
+  padding: 8px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.8px;
+  background: linear-gradient(
     135deg,
-    #1d4ed8,
-    #2563eb
+    #6d28d9 0%,
+    #7c3aed 30%,
+    #8b5cf6 65%,
+    #a855f7 100%
   );
-
 }
 
-
-
-/* TABLE */
+/* ================= TABLE ================= */
 
 .nsv_table {
-
-  width:100%;
-
-  border-collapse:collapse;
-
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 2px;
 }
 
+/* Header */
 
-
-.nsv_table th {
-
-
-  padding:8px 10px;
-
-  text-align:center;
-
-  background:#eef4ff;
-
-  color:#1e3a8a;
-
-  font-size:11px;
-
-  font-weight:700;
-
-  border:1px solid #cbd5e1;
-
+.nsv_table thead th {
+  padding: 9px 8px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  border-bottom: 2px solid #8b5cf6;
+  background: linear-gradient(
+    180deg,
+    #8b5cf6 0%,
+    #7c3aed 55%,
+    #6d28d9 100%
+  );
 }
 
-
-
-.nsv_table td {
-
-
-  padding:8px 10px;
-
-  text-align:center;
-
-  font-size:11px;
-
-  color:#374151;
-
-  border:1px solid #cbd5e1;
-
+.nsv_table thead th:last-child {
+  border-right: none;
 }
 
+/* Body */
 
-
-/* TOTAL ROW */
-
-.nsv_table tbody tr:last-child {
-
-  background:#f1f5ff;
-
-  font-weight:700;
-
+.nsv_table tbody td {
+  padding: 9px 8px;
+  text-align: center;
+  font-size: 11px;
+  color: #374151;
+  border-bottom: 1px solid #ede9fe;
+  border-right: 1px solid #ede9fe;
+  transition: all 0.25s ease;
 }
 
+.nsv_table tbody td:last-child {
+  border-right: none;
+}
 
+/* Zebra Rows */
 
-/* FIRST TWO COLUMNS */
+.nsv_table tbody tr:nth-child(odd) {
+  background: linear-gradient(
+    90deg,
+    #ffffff,
+    #fcfbff
+  );
+}
+
+.nsv_table tbody tr:nth-child(even) {
+  background: linear-gradient(
+    90deg,
+    #faf5ff,
+    #f5f3ff
+  );
+}
+
+/* Hover Effect */
+
+.nsv_table tbody tr:hover {
+  background: linear-gradient(
+    90deg,
+    #ede9fe,
+    #ddd6fe,
+    #ede9fe
+  );
+}
+
+/* First Two Columns */
 
 .nsv_table td:first-child,
 .nsv_table td:nth-child(2) {
-
-  font-weight:600;
-
+  font-weight: 700;
+  color: #6d28d9;
+  background: linear-gradient(
+    90deg,
+    #faf5ff,
+    #f3e8ff
+  );
 }
 
+/* ================= TOTAL ROW ================= */
 
+.nsv_table tbody tr:last-child td {
+  font-weight: 700;
+  color: #ffffff;
+  border-top: 2px solid #6d28d9;
+  background: linear-gradient(
+    135deg,
+    #7c3aed 0%,
+    #8b5cf6 50%,
+    #a855f7 100%
+  );
+}
 
-/* MOBILE */
+/* Rounded Corners - 2px */
 
-@media(max-width:768px){
+.nsv_table thead th:first-child {
+  border-top-left-radius: 2px;
+}
 
+.nsv_table thead th:last-child {
+  border-top-right-radius: 2px;
+}
 
-  .nsv_table_container{
+.nsv_table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 2px;
+}
 
-    padding:5px;
+.nsv_table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 2px;
+}
 
+/* ================= SCROLLBAR ================= */
+
+.nsv_table_card::-webkit-scrollbar {
+  height: 8px;
+}
+
+.nsv_table_card::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    90deg,
+    #7c3aed,
+    #a855f7
+  );
+  border-radius: 2px;
+}
+
+.nsv_table_card::-webkit-scrollbar-track {
+  background: #f5f3ff;
+  border-radius: 2px;
+}
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 768px) {
+
+  .nsv_table_container {
+    padding: 5px;
   }
 
+  .nsv_table_card {
+    overflow-x: auto;
+    border-radius: 2px;
+  }
 
   .nsv_table th,
-  .nsv_table td{
-
-    padding:6px 8px;
-
-    font-size:10px;
-
+  .nsv_table td {
+    padding: 7px 6px;
+    font-size: 10px;
+    white-space: nowrap;
   }
 
-
-  .nsv_table_title{
-
-    font-size:16px;
-
+  .nsv_table_title {
+    font-size: 14px;
+    padding: 7px;
   }
-
-
-  .nsv_table_card{
-
-    overflow-x:auto;
-
-  }
-
 }
