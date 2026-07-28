@@ -226,7 +226,7 @@ export default function Login() {
             loading='lazy'
             className='third_eye_image'
           />
-          <p className='footer-text'>
+          <p className='footer_text'>
             &copy; {new Date().getFullYear()} Third Eye Portal, Version:{" "}
             {VERSION}
           </p>
