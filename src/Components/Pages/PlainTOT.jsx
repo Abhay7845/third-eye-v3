@@ -127,32 +127,32 @@ const PlainTOT = () => {
         <RoteTable
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
-          title='PlainTOT_PreFinalY1'
+          title='Plain TOT Pre Final Y1'
         />
         <RoteTable
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
-          title='PlainTOT_PreFinalY2'
+          title='Plain TOT Pre Final Y2'
         />
         <RoteTable
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
-          title='PlainTOT_PreFinalY3'
+          title='Plain TOT Pre Final Y3'
         />
         <RoteTable
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
-          title='PlainTOT_PreFinalY4'
+          title='Plain TOT Pre Final Y4'
         />
         <RoteTable
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
-          title='PlainTOT_PreFinalY5'
+          title='Plain TOT Pre Final Y5'
         />
         <RoteTable
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
-          title='PlainTOT_PreFinalY6'
+          title='Plain TOT Pre Final Y6'
         />
       </div>
     </React.Fragment>

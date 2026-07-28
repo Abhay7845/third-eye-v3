@@ -254,7 +254,7 @@ export const dummy_data = {
   rote_table_data: {
     data: [
       {
-        "Last Working Day": "0 - 20",
+        Band: "0 - 20",
         LCG: 0.12,
         MCG: 0.42,
         HCG: 0.22,
@@ -262,7 +262,7 @@ export const dummy_data = {
         Total: 0.77,
       },
       {
-        "Last Working Day": "20 - 40",
+        Band: "20 - 40",
         LCG: 0.1,
         MCG: 0.37,
         HCG: 0.21,
@@ -270,7 +270,7 @@ export const dummy_data = {
         Total: 0.69,
       },
       {
-        "Last Working Day": "40 - 60",
+        Band: "40 - 60",
         LCG: 0.09,
         MCG: 0.32,
         HCG: 0.18,
@@ -278,7 +278,7 @@ export const dummy_data = {
         Total: 0.6,
       },
       {
-        "Last Working Day": "60 - 80",
+        Band: "60 - 80",
         LCG: 0.08,
         MCG: 0.29,
         HCG: 0.16,
@@ -286,7 +286,7 @@ export const dummy_data = {
         Total: 0.54,
       },
       {
-        "Last Working Day": "80 - 100",
+        Band: "80 - 100",
         LCG: 0.07,
         MCG: 0.26,
         HCG: 0.14,
@@ -294,7 +294,7 @@ export const dummy_data = {
         Total: 0.48,
       },
       {
-        "Last Working Day": "100+",
+        Band: "100+",
         LCG: "-",
         MCG: "-",
         HCG: "-",
@@ -302,7 +302,7 @@ export const dummy_data = {
         Total: "-",
       },
       {
-        "Last Working Day": "Total",
+        Band: "Total",
         LCG: 0.47,
         MCG: 1.66,
         HCG: 0.91,
