@@ -365,6 +365,12 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
   const GetAdjusentPin = async (data) => {
     try {
       setLoading(true);
+      // clear previous store's results so stale data never stays on screen
+      setPincodeSummary([]);
+      setStoreSummary(null);
+      setCustStrPerc([]);
+      setMomStoreTrend([]);
+      setStoreTypeData(null);
       const res = await axiosInstance.get(
         `/ThirdEye/get/adjacent/pincodes/db?pincode=${data?.pincode}`,
       );
@@ -385,7 +391,10 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
       const mom_trend_details = await GetMomTrendData(channelval, store);
       setMomStoreTrend(mom_trend_details);
       const grouped_cachment = await GetCityDormancyData(channelval, cityName);
-      console.log("grouped_cachment==>", grouped_cachment);
+      if (!grouped_cachment || grouped_cachment.length === 0) {
+        setLoading(false);
+        return;
+      }
       // Step 2: Get summaries
       const pincode_summary = await GetPincodeSummary(channelval, AdjacentPins);
       const store_summary = await GetStoreSummary(channelval, AdjacentPins);
