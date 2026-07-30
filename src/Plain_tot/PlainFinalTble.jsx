@@ -18,6 +18,7 @@ const PlainFinalTble = ({ data, columns, title }) => {
           <tbody>
             {data.map((row, rowIndex) => {
               const isTotal = row.Metric === "Net TOT";
+
               return (
                 <tr
                   key={rowIndex}
