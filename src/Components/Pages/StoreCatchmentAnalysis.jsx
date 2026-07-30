@@ -249,7 +249,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
         }, {});
         return Object.values(grouped_by_catchment);
       } else {
-        toast.error("No data fond for this Store!", {
+        toast.error("No data found for this Store!", {
           theme: "colored",
           autoClose: 2000,
         });
@@ -375,7 +375,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
         `/ThirdEye/get/adjacent/pincodes/db?pincode=${data?.pincode}`,
       );
       if (res?.data?.code !== "1000") {
-        toast.info("Data not fond.", {
+        toast.info("Data not found.", {
           theme: "colored",
           autoClose: 2000,
           position: "bottom-right",
