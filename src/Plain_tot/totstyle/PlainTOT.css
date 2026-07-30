@@ -239,7 +239,7 @@
 }
 
 /* --------------------ROTE TABLE CSS STYLE-------------  */
-.rote_table_layout {
+.pre_final_table_layout {
   display: flex;
   flex-wrap: nowrap;
   width: 100%;
@@ -256,7 +256,7 @@
 
 
 /* Keep every RoteTable in one row */
-.rote_table_layout > * {
+.pre_final_table_layout > * {
   flex: 0 0 450px;
   min-width: 450px;
   max-width: 450px;
@@ -267,25 +267,25 @@
    Chrome / Edge / Safari
 =========================== */
 
-.rote_table_layout::-webkit-scrollbar {
+.pre_final_table_layout::-webkit-scrollbar {
   height: 5px;
 }
 
-.rote_table_layout::-webkit-scrollbar-track {
+.pre_final_table_layout::-webkit-scrollbar-track {
   background: #f3f4f6;
   border-radius: 20px;
 }
 
-.rote_table_layout::-webkit-scrollbar-thumb {
+.pre_final_table_layout::-webkit-scrollbar-thumb {
   background: #6b7280;
   border-radius: 20px;
 }
 
-.rote_table_layout::-webkit-scrollbar-thumb:hover {
+.pre_final_table_layout::-webkit-scrollbar-thumb:hover {
   background: #374151;
 }
 
-.rote_table_layout::-webkit-scrollbar-corner {
+.pre_final_table_layout::-webkit-scrollbar-corner {
   background: transparent;
 }
 
@@ -295,18 +295,18 @@
 =========================== */
 
 @media (max-width: 768px) {
-  .rote_table_layout {
+  .pre_final_table_layout {
     gap: 12px;
     padding: 8px;
   }
 
-  .rote_table_layout > * {
+  .pre_final_table_layout > * {
     flex: 0 0 340px;
     min-width: 340px;
     max-width: 340px;
   }
 
-  .rote_table_layout::-webkit-scrollbar {
+  .pre_final_table_layout::-webkit-scrollbar {
     height: 4px;
   }
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import "./totstyle/RateTable.css";
+import "./totstyle/PlainPreFinalTbl.css";
 
 const getClassName = (name) =>
   name
@@ -7,7 +7,7 @@ const getClassName = (name) =>
     .replace(/\s+/g, "-")
     .replace(/[^\w-]/g, "");
 
-function RateTable({ data = [], columns = [], title }) {
+function PlainPreFinalTbl({ data = [], columns = [], title }) {
   return (
     <div className='rate_table_wrapper'>
       {title && <div className='rate_table_title'>{title}</div>}
@@ -55,4 +55,4 @@ function RateTable({ data = [], columns = [], title }) {
   );
 }
 
-export default RateTable;
+export default PlainPreFinalTbl;

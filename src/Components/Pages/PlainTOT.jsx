@@ -5,7 +5,7 @@ import YearsTotTable from "../../Plain_tot/YearsTotTable";
 import { dummy_data } from "../../Plain_tot/DummryTotData";
 import NSVRangeTable from "../../Plain_tot/NSVRangeTable";
 import WeightedRateTable from "../../Plain_tot/WeightedRateTable";
-import RoteTable from "../../Plain_tot/RateTable";
+import PlainPreFinalTbl from "../../Plain_tot/PlainPreFinalTbl";
 
 const PlainTOT = () => {
   console.log("dummy_data==>", dummy_data?.ucp_sales_forcast);
@@ -123,33 +123,33 @@ const PlainTOT = () => {
         />
       </div>
 
-      <div className='rote_table_layout'>
-        <RoteTable
+      <div className='pre_final_table_layout'>
+        <PlainPreFinalTbl
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
           title='Plain TOT Pre Final Y1'
         />
-        <RoteTable
+        <PlainPreFinalTbl
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
           title='Plain TOT Pre Final Y2'
         />
-        <RoteTable
+        <PlainPreFinalTbl
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
           title='Plain TOT Pre Final Y3'
         />
-        <RoteTable
+        <PlainPreFinalTbl
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
           title='Plain TOT Pre Final Y4'
         />
-        <RoteTable
+        <PlainPreFinalTbl
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
           title='Plain TOT Pre Final Y5'
         />
-        <RoteTable
+        <PlainPreFinalTbl
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
           title='Plain TOT Pre Final Y6'
