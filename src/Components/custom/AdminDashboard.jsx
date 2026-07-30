@@ -126,7 +126,7 @@ const AdminDashboard = ({ data, setOpenSumTbl, setOpenDailySumTbl }) => {
       <div className='dashboard-card'>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <h2>Daily Summary</h2>
-          {data?.userSummary?.length > 3 && (
+          {data?.dailySummary?.length > 4 && (
             <IoIosList
               size={20}
               cursor='pointer'
@@ -136,7 +136,7 @@ const AdminDashboard = ({ data, setOpenSumTbl, setOpenDailySumTbl }) => {
           )}
         </div>
         <div className='daily-grid'>
-          {data.dailySummary.map((day) => (
+          {data?.dailySummary?.slice(0, 4)?.map((day) => (
             <div className='daily-card' key={day.date}>
               <h3>{day.date}</h3>
               <div className='daily-value'>{day.totalLogins}</div>
