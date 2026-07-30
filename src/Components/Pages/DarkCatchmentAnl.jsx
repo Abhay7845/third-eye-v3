@@ -218,6 +218,13 @@ const DarkCatchmentAnl = ({ toggle_open, toggle }) => {
                     ? (pinInfo.cityDormancy * 100).toFixed(1) + "%"
                     : "N/A";
                   const storePresence = pinInfo?.storePresence || "N/A";
+                  const encircleBaseCust = pinInfo?.encircleBaseCust || "N/A";
+                  const channelBaseCust = pinInfo?.channelBaseCust || "N/A";
+                  const penetration = pinInfo?.penetration || "N/A";
+                  const encircleSegment = pinInfo?.encircleSegment || "N/A";
+                  const penetrationSegment =
+                    pinInfo?.penetrationSegment || "N/A";
+                  const decision = pinInfo?.decision || "N/A";
 
                   // Determine direction based on click position vs map center
                   const mapCenter = googleMapInstance.getCenter();
@@ -257,6 +264,30 @@ const DarkCatchmentAnl = ({ toggle_open, toggle }) => {
           <tr>
             <td style="padding:2px 3px;">Store Presence:</td>
             <td style="padding:2px 3px;"><strong>${storePresence}</strong></td>
+          </tr>
+           <tr>
+            <td style="padding:2px 3px;">Encircle Base Cust:</td>
+            <td style="padding:2px 3px;">${encircleBaseCust}</td>
+          </tr> 
+          <tr>
+            <td style="padding:2px 3px;">Channel Base Cust:</td>
+            <td style="padding:2px 3px;">${channelBaseCust}</td>
+          </tr>
+           <tr>
+            <td style="padding:2px 3px;">Penetration:</td>
+            <td style="padding:2px 3px;">${penetration}</td>
+          </tr>
+           <tr>
+            <td style="padding:2px 3px;">Encircle Segment:</td>
+            <td style="padding:2px 3px;">${encircleSegment}</td>
+          </tr>
+           <tr>
+            <td style="padding:2px 3px;">Penetration Segment:</td>
+            <td style="padding:2px 3px;">${penetrationSegment}</td>
+          </tr>
+           <tr>
+            <td style="padding:2px 3px;">Decision:</td>
+            <td style="padding:2px 3px;"><strong>${decision?.toUpperCase()}</strong></td>
           </tr>
         </tbody>
       </table>

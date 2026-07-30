@@ -47,11 +47,11 @@ const LoginPopUp = ({ setVisiblePopup, visiblePopup, setSlideOut }) => {
             </div>
             <div className='box-container'>
               <div className='panel-box store-box'>
-                <h2>Store</h2>
+                <h2>Store user</h2>
                 <p>Manage store operations</p>
                 <button
                   onClick={() => HandelPannelLogin(routes.NEW_STORE, "store")}>
-                  Store &rarr;
+                  Store user &rarr;
                 </button>
               </div>
 

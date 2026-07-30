@@ -249,6 +249,10 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
         }, {});
         return Object.values(grouped_by_catchment);
       } else {
+        toast.error("No data fond for this Store!", {
+          theme: "colored",
+          autoClose: 2000,
+        });
         return [];
       }
     } catch (err) {
@@ -381,6 +385,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
       const mom_trend_details = await GetMomTrendData(channelval, store);
       setMomStoreTrend(mom_trend_details);
       const grouped_cachment = await GetCityDormancyData(channelval, cityName);
+      console.log("grouped_cachment==>", grouped_cachment);
       // Step 2: Get summaries
       const pincode_summary = await GetPincodeSummary(channelval, AdjacentPins);
       const store_summary = await GetStoreSummary(channelval, AdjacentPins);
