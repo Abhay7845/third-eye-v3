@@ -239,6 +239,7 @@
 }
 
 /* --------------------ROTE TABLE CSS STYLE-------------  */
+
 .pre_final_table_layout {
   display: flex;
   flex-wrap: nowrap;
@@ -311,3 +312,76 @@
   }
 }
 
+
+/*------------------ PLAIN FINAL YEARS TABLE CSS LAYOUT------------------  */
+.tot_final_table_layout {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 5px 0;
+  scroll-behavior: smooth;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #6b7280 #f3f4f6;
+}
+
+
+/* Keep every PlainFinalTble in one row */
+.tot_final_table_layout > * {
+  flex: 0 0 450px;
+  min-width: 450px;
+  max-width: 450px;
+}
+
+
+/* ===========================
+   Chrome / Edge / Safari
+=========================== */
+
+.tot_final_table_layout::-webkit-scrollbar {
+  height: 5px;
+}
+
+.tot_final_table_layout::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 20px;
+}
+
+.tot_final_table_layout::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 20px;
+}
+
+.tot_final_table_layout::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+.tot_final_table_layout::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+
+/* ===========================
+   Mobile Responsive
+=========================== */
+
+@media (max-width: 768px) {
+
+  .tot_final_table_layout {
+    gap: 12px;
+    padding: 8px;
+  }
+
+  .tot_final_table_layout > * {
+    flex: 0 0 340px;
+    min-width: 340px;
+    max-width: 340px;
+  }
+
+  .tot_final_table_layout::-webkit-scrollbar {
+    height: 4px;
+  }
+
+}

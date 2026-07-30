@@ -6,6 +6,7 @@ import { dummy_data } from "../../Plain_tot/DummryTotData";
 import NSVRangeTable from "../../Plain_tot/NSVRangeTable";
 import WeightedRateTable from "../../Plain_tot/WeightedRateTable";
 import PlainPreFinalTbl from "../../Plain_tot/PlainPreFinalTbl";
+import PlainFinalTble from "../../Plain_tot/PlainFinalTble";
 
 const PlainTOT = () => {
   console.log("dummy_data==>", dummy_data?.ucp_sales_forcast);
@@ -153,6 +154,39 @@ const PlainTOT = () => {
           data={dummy_data?.rote_table_data?.data}
           columns={dummy_data?.rote_table_data?.columns}
           title='Plain TOT Pre Final Y6'
+        />
+      </div>
+
+      <div className='tot_final_table_layout'>
+        <PlainFinalTble
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
+          title='Plain TOT Final Y1'
+        />
+        <PlainFinalTble
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
+          title='Plain TOT Final Y2'
+        />
+        <PlainFinalTble
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
+          title='Plain TOT Final Y3'
+        />
+        <PlainFinalTble
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
+          title='Plain TOT Final Y4'
+        />
+        <PlainFinalTble
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
+          title='Plain TOT Final Y5'
+        />
+        <PlainFinalTble
+          data={dummy_data?.rote_table_data?.data}
+          columns={dummy_data?.rote_table_data?.columns}
+          title='Plain TOT Final Y6'
         />
       </div>
     </React.Fragment>
