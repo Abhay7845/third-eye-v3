@@ -40,9 +40,7 @@ function PlainPreFinalTbl({ data = [], columns = [], title }) {
                 {columns.map((column) => (
                   <td
                     key={column}
-                    className={`rate_table__cell rate_table__cell--${getClassName(
-                      column,
-                    )}`}>
+                    className='rate_table__cell rate_table__cell'>
                     {row[column] ?? "-"}
                   </td>
                 ))}
