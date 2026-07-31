@@ -12,7 +12,7 @@ export const studded_tot = {
       total: 39.1,
     },
     {
-      metric: "Share%",
+      metric: "Share(%)",
       gis: 16.0,
       regular: 55.0,
       colorStones: 28.0,
@@ -45,7 +45,7 @@ export const studded_tot = {
       total: 0.1,
     },
     {
-      metric: "DiscountPercentage",
+      metric: "Discount(%)",
       gis: 7.9,
       regular: 8.5,
       colorStones: 2.8,

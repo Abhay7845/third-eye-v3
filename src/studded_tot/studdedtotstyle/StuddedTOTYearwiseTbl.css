@@ -25,7 +25,7 @@
 
 .StuddedTOTYearwiseTbl__table {
     width: 100%;
-    min-width: 950px;
+    min-width: 910px;
     table-layout: fixed;
     border-collapse: collapse;
 }
@@ -36,14 +36,21 @@
 }
 
 .StuddedTOTYearwiseTbl__heading {
-    padding: 6px 0px;
+    padding: 5px 2px;
     text-align: center;
     font-size: 11px;
     font-weight: 600;
     line-height: 1.2;
+    border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.StuddedTOTYearwiseTbl__headingText {
+    display: inline-block;
+    max-width: 60px;
     white-space: normal;
     word-break: break-word;
-    border-right: 1px solid rgba(255, 255, 255, 0.15);
+    overflow-wrap: anywhere;
+    text-align: center;
 }
 
 .StuddedTOTYearwiseTbl__heading:last-child {
@@ -51,8 +58,8 @@
 }
 
 .StuddedTOTYearwiseTbl__metric {
-    width: 115px;
-    padding: 6px 6px;
+    width: 90px;
+    padding: 5px 5px;
     text-align: left;
     font-size: 11px;
     font-weight: 600;
@@ -82,9 +89,9 @@
 }
 
 .StuddedTOTYearwiseTbl__cell {
-    padding: 6px 3px;
+    padding: 5px 2px;
     text-align: center;
-    font-size: 11px;
+    font-size: 10px;
     color: #475569;
     border-top: 1px solid #e2e8f0;
     border-right: 1px solid #e2e8f0;

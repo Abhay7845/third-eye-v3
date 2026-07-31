@@ -25,7 +25,9 @@ const StuddedTOTYearwiseTbl = ({ data, columns, title }) => {
 
               {columns.map((item) => (
                 <th key={item} className='StuddedTOTYearwiseTbl__heading'>
-                  {item}
+                  <span className='StuddedTOTYearwiseTbl__headingText'>
+                    {item}
+                  </span>
                 </th>
               ))}
             </tr>
