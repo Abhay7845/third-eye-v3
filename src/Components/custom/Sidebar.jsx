@@ -122,7 +122,7 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
             )}
           </div>
           {pathname === routes.ADMIN_LOGIN ? (
-            <div>
+            <React.Fragment>
               {ror_menu_items.map((item, i) => (
                 <div key={i}>
                   {toggle ? (
@@ -155,7 +155,7 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
                   )}
                 </div>
               ))}
-            </div>
+            </React.Fragment>
           ) : (
             <div>
               {menuItem.map((item, i) => (

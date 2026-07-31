@@ -1,5 +1,6 @@
 import { routes } from "../../routes";
 import { MdStore } from "react-icons/md";
+import { FaSellcast } from "react-icons/fa";
 import PublicIcon from "@mui/icons-material/Public";
 import PolicyIcon from "@mui/icons-material/Policy";
 import { MdManageHistory, MdMarkChatRead } from "react-icons/md";
@@ -51,9 +52,14 @@ export const menuItem = [
 
 export const ror_menu_items = [
   {
-    path: routes.PLAIN_TOT,
+    path: routes.PLAIN_TOT_HOME,
     name: "Plain TOT",
     icon: <MdMarkChatRead />,
+  },
+  {
+    path: routes.STUDDED_TOT_HOME,
+    name: "Studded TOT",
+    icon: <FaSellcast />,
   },
 ];
 

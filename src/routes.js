@@ -8,5 +8,6 @@ export const routes = {
   HISTORY: "/ThirdEye/projection/history",
   STORE_CATCHMENT_ANALYSIS: "/ThirdEye/store/catchment/analysis",
   ADMIN_LOGIN: "/ThirdEye/admin_login",
-  PLAIN_TOT: "/ThirdEye/plain_tot",
+  PLAIN_TOT_HOME: "/ThirdEye/plain_tot/home",
+  STUDDED_TOT_HOME: "/ThirdEye/studded_tot/home",
 };

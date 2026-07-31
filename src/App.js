@@ -15,6 +15,7 @@ import InternetStatus from "./Components/trackOnline/InternetStatus";
 import CookieBanner from "./Components/custom/CookieBanner";
 import AdminPage from "./Components/Pages/AdminPage";
 import PlainTOTHome from "./Components/Pages/PlainTOTHome";
+import StuddedTOTHome from "./studded_tot/StuddedTOTHome";
 
 const App = () => {
   const [toggle, setToggle] = useState(false);
@@ -86,9 +87,15 @@ const App = () => {
               element={<AdminPage toggle_open={toggle_open} toggle={toggle} />}
             />
             <Route
-              path={routes.PLAIN_TOT}
+              path={routes.PLAIN_TOT_HOME}
               element={
                 <PlainTOTHome toggle_open={toggle_open} toggle={toggle} />
+              }
+            />
+            <Route
+              path={routes.STUDDED_TOT_HOME}
+              element={
+                <StuddedTOTHome toggle_open={toggle_open} toggle={toggle} />
               }
             />
           </Route>
