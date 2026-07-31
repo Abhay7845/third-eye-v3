@@ -1,0 +1,168 @@
+/* ==========================================
+   BPM Field Values Table
+   ========================================== */
+
+.bpm_field_values_table {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #dbe4ee;
+    border-radius: 2px;
+    background: #ffffff;
+}
+
+/* ==========================
+   Table
+   ========================== */
+
+.bpm_field_values_table__table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-family: "Inter", sans-serif;
+    font-size: 12px;
+}
+
+.bpm_field_values_table__col--field {
+    width: 90%;
+}
+
+.bpm_field_values_table__col--remarks {
+    width: 10%;
+}
+
+/* ==========================
+   Header
+   ========================== */
+
+.bpm_field_values_table__header {
+    background: linear-gradient(
+        90deg,
+        #4338ca,
+        #2563eb,
+        #0891b2
+    );
+}
+
+.bpm_field_values_table__heading {
+    padding: 8px 10px;
+    color: #ffffff;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    line-height: 1.2;
+    border-right: 1px solid rgba(255,255,255,.15);
+}
+
+.bpm_field_values_table__heading:last-child {
+    border-right: none;
+}
+
+/* Rounded Header */
+
+.bpm_field_values_table__heading:first-child {
+    border-top-left-radius: 2px;
+}
+
+.bpm_field_values_table__heading:last-child {
+    border-top-right-radius: 2px;
+}
+
+/* ==========================
+   Body
+   ========================== */
+
+.bpm_field_values_table__row {
+    transition: background .2s ease;
+}
+
+.bpm_field_values_table__row--even {
+    background: #f8fafc;
+}
+
+.bpm_field_values_table__row:hover {
+    background: #ecfeff;
+}
+
+/* ==========================
+   Cells
+   ========================== */
+
+.bpm_field_values_table__field,
+.bpm_field_values_table__remarks {
+    padding: 7px 10px;
+    font-size: 11px;
+    color: #334155;
+    border-top: 1px solid #e5e7eb;
+    vertical-align: middle;
+    line-height: 1.25;
+}
+
+.bpm_field_values_table__field {
+    font-weight: 600;
+    border-right: 1px solid #e5e7eb;
+    color: #1e293b;
+    text-align: left;
+}
+
+.bpm_field_values_table__remarks {
+    color: #475569;
+    text-align: left;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+/* ==========================
+   Bottom Radius
+   ========================== */
+
+.bpm_field_values_table__body tr:last-child .bpm_field_values_table__field {
+    border-bottom-left-radius: 2px;
+}
+
+.bpm_field_values_table__body tr:last-child .bpm_field_values_table__remarks {
+    border-bottom-right-radius: 2px;
+}
+
+/* ==========================
+   Responsive
+   ========================== */
+
+@media (max-width: 768px) {
+
+    .bpm_field_values_table__heading,
+    .bpm_field_values_table__field,
+    .bpm_field_values_table__remarks {
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+}
+
+/* ==========================
+   Scrollbar
+   ========================== */
+
+.bpm_field_values_table::-webkit-scrollbar {
+    height: 8px;
+}
+
+.bpm_field_values_table::-webkit-scrollbar-track {
+    background: #edf2f7;
+    border-radius: 2px;
+}
+
+.bpm_field_values_table::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+        90deg,
+        #4338ca,
+        #2563eb,
+        #0891b2
+    );
+    border-radius: 2px;
+}
+
+.bpm_field_values_table {
+    scrollbar-width: thin;
+    scrollbar-color: #2563eb #edf2f7;
+}
