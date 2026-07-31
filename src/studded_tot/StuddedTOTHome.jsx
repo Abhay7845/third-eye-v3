@@ -12,21 +12,32 @@ const StuddedTOTHome = () => {
         <StuddedTOTYearwiseTbl
           data={studded_tot.studded_nsv_y1_6}
           columns={studded_tot.columns}
+          title='Y1 TOT'
         />
-
         <StuddedTOTYearwiseTbl
           data={studded_tot.studded_nsv_y1_6}
           columns={studded_tot.columns}
+          title='Y2 TOT'
         />
-
         <StuddedTOTYearwiseTbl
           data={studded_tot.studded_nsv_y1_6}
           columns={studded_tot.columns}
+          title='Y3 TOT'
         />
-
         <StuddedTOTYearwiseTbl
           data={studded_tot.studded_nsv_y1_6}
           columns={studded_tot.columns}
+          title='Y4 TOT'
+        />
+        <StuddedTOTYearwiseTbl
+          data={studded_tot.studded_nsv_y1_6}
+          columns={studded_tot.columns}
+          title='Y5 TOT'
+        />
+        <StuddedTOTYearwiseTbl
+          data={studded_tot.studded_nsv_y1_6}
+          columns={studded_tot.columns}
+          title='Y6 TOT'
         />
       </div>
     </React.Fragment>

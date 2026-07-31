@@ -1,7 +1,7 @@
 import React from "react";
 import "../studded_tot/studdedtotstyle/StuddedTOTYearwiseTbl.css";
 
-const StuddedTOTYearwiseTbl = ({ data, columns }) => {
+const StuddedTOTYearwiseTbl = ({ data, columns, title }) => {
   const columnKeys = [
     "gis",
     "regular",
@@ -15,6 +15,9 @@ const StuddedTOTYearwiseTbl = ({ data, columns }) => {
   return (
     <div className='StuddedTOTYearwiseTbl'>
       <div className='StuddedTOTYearwiseTbl__wrapper'>
+        {title ? (
+          <h5 className='StuddedTOTYearwiseTbl__title'>{title}</h5>
+        ) : null}
         <table className='StuddedTOTYearwiseTbl__table'>
           <thead className='StuddedTOTYearwiseTbl__thead'>
             <tr>

@@ -11,11 +11,23 @@
     background: #fff;
 }
 
+.StuddedTOTYearwiseTbl__title {
+    margin: 0;
+    text-align: center;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #ffffff;
+    background: linear-gradient(90deg, #4338ca, #2563eb, #0891b2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
 .StuddedTOTYearwiseTbl__table {
     width: 100%;
-    min-width: 1100px;
-    border-collapse: separate;
-    border-spacing: 0;
+    min-width: 950px;
+    table-layout: fixed;
+    border-collapse: collapse;
 }
 
 .StuddedTOTYearwiseTbl__thead {
@@ -28,7 +40,9 @@
     text-align: center;
     font-size: 11px;
     font-weight: 600;
-    white-space: nowrap;
+    line-height: 1.2;
+    white-space: normal;
+    word-break: break-word;
     border-right: 1px solid rgba(255, 255, 255, 0.15);
 }
 
@@ -37,15 +51,26 @@
 }
 
 .StuddedTOTYearwiseTbl__metric {
-    padding: 6px 0px;
+    width: 115px;
+    padding: 6px 6px;
+    text-align: left;
     font-size: 11px;
     font-weight: 600;
-    background: linear-gradient(90deg, #f8fafc, #eef2ff);
-    color: #1e293b;
     position: sticky;
     left: 0;
     z-index: 2;
     border-right: 1px solid #e2e8f0;
+}
+
+.StuddedTOTYearwiseTbl__thead .StuddedTOTYearwiseTbl__metric {
+    background: linear-gradient(90deg, #4338ca, #2563eb, #0891b2);
+    color: #ffffff;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.StuddedTOTYearwiseTbl__table tbody .StuddedTOTYearwiseTbl__metric {
+    background: linear-gradient(90deg, #f8fafc, #eef2ff);
+    color: #1e293b;
 }
 
 .StuddedTOTYearwiseTbl__row:nth-child(even) {
@@ -57,7 +82,7 @@
 }
 
 .StuddedTOTYearwiseTbl__cell {
-    padding: 6px 1px;
+    padding: 6px 3px;
     text-align: center;
     font-size: 11px;
     color: #475569;
@@ -72,5 +97,6 @@
 
 .StuddedTOTYearwiseTbl__table th,
 .StuddedTOTYearwiseTbl__table td {
-    white-space: nowrap;
+    vertical-align: middle;
+    box-sizing: border-box;
 }
