@@ -1,0 +1,131 @@
+.snv_turnover_year_wise_tbl_wrapper {
+  width: 100%;
+  overflow: visible;
+  border-radius: 2px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+}
+
+.snv_turnover_year_wise_tbl {
+  width: 100%;
+  min-width: 1060px;
+  border-collapse: collapse;
+  border: 1px solid #d6dde7;
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* HEADER */
+
+.snv_turnover_year_wise_tbl thead th {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, #0f4c81, #1565c0);
+  color: #fff;
+  padding: 10px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.snv_turnover_year_wise_tbl thead th:first-child {
+  text-align: left;
+  min-width: 300px;
+}
+
+/* BODY */
+
+.snv_turnover_year_wise_tbl tbody tr {
+  transition: all 0.25s ease;
+}
+
+.snv_turnover_year_wise_tbl tbody tr:nth-child(even) {
+  background: #f6f8fb;
+}
+
+.snv_turnover_year_wise_tbl tbody tr:hover {
+  background: #e8f2ff;
+}
+
+.snv_turnover_year_wise_tbl tbody td {
+  padding: 9px 8px;
+  border-bottom: 1px solid #e3e8ef;
+  border-right: 1px solid #e3e8ef;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.snv_turnover_year_wise_tbl tbody td:last-child {
+  border-right: none;
+}
+
+/* Metric Column */
+
+.snv_turnover_year_wise_tbl .metric-column {
+  font-weight: 600;
+  text-align: left;
+  color: #1e293b;
+  min-width: 300px;
+}
+
+/* Value Columns */
+
+.snv_turnover_year_wise_tbl tbody td:not(.metric-column) {
+  text-align: right;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* Highlight Rows */
+
+.snv_turnover_year_wise_tbl .highlight-row.turnover {
+  background: linear-gradient(
+    90deg,
+    rgba(76, 175, 80, 0.08),
+    rgba(76, 175, 80, 0.02)
+  );
+}
+
+.snv_turnover_year_wise_tbl .highlight-row.payout {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 152, 0, 0.08),
+    rgba(255, 152, 0, 0.02)
+  );
+}
+
+.snv_turnover_year_wise_tbl .highlight-row.pbt {
+  background: linear-gradient(
+    90deg,
+    rgba(33, 150, 243, 0.08),
+    rgba(33, 150, 243, 0.02)
+  );
+}
+
+/* Negative Values */
+
+.snv_turnover_year_wise_tbl td {
+  position: relative;
+}
+
+.snv_turnover_year_wise_tbl td:has(span.negative) {
+  color: #d32f2f;
+}
+
+/* Responsive */
+
+@media (max-width: 992px) {
+  .snv_turnover_year_wise_tbl thead th,
+  .snv_turnover_year_wise_tbl tbody td {
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+
+  .snv_turnover_year_wise_tbl .metric-column {
+    min-width: 240px;
+  }
+}
