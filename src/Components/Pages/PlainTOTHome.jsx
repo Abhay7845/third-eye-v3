@@ -1,6 +1,6 @@
 import React from "react";
 import UCPSalesInfo from "../../Plain_tot/UCPSalesInfo";
-import "../../Plain_tot/totstyle/PlainTOT.css";
+import "../../Plain_tot/totstyle/PlainTOTHome.css";
 import YearsTotTable from "../../Plain_tot/YearsTotTable";
 import { dummy_data } from "../../Plain_tot/DummryTotData";
 import NSVRangeTable from "../../Plain_tot/NSVRangeTable";
@@ -8,8 +8,7 @@ import WeightedRateTable from "../../Plain_tot/WeightedRateTable";
 import PlainPreFinalTbl from "../../Plain_tot/PlainPreFinalTbl";
 import PlainFinalTble from "../../Plain_tot/PlainFinalTble";
 
-const PlainTOT = () => {
-  console.log("dummy_data==>", dummy_data?.ucp_sales_forcast);
+const PlainTOTHome = () => {
   return (
     <React.Fragment>
       <div className='tot_table_layout'>
@@ -193,4 +192,4 @@ const PlainTOT = () => {
   );
 };
 
-export default PlainTOT;
+export default PlainTOTHome;
