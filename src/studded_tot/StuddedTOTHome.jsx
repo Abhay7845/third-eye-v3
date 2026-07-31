@@ -3,6 +3,7 @@ import "./studdedtotstyle/StuddedTOTHome.css";
 import ThirdEyeHeader from "../Components/custom/ThirdEyeHeader";
 import { studded_tot } from "./studdedtotDummy";
 import StuddedTOTYearwiseTbl from "./StuddedTOTYearwiseTbl";
+import StuddedTOTBandwiseTbl from "./StuddedTOTBandwiseTbl";
 
 const StuddedTOTHome = () => {
   return (
@@ -38,6 +39,39 @@ const StuddedTOTHome = () => {
           data={studded_tot.studded_nsv_y1_6}
           columns={studded_tot.columns}
           title='Y6 TOT'
+        />
+      </div>
+
+      <div className='studded_tot_bandwise_layout'>
+        <StuddedTOTBandwiseTbl
+          data={studded_tot.studded_bandwise_data.data}
+          columns={studded_tot.studded_bandwise_data.columns}
+          title='TOT Bandwise'
+        />
+        <StuddedTOTBandwiseTbl
+          data={studded_tot.studded_bandwise_data.data}
+          columns={studded_tot.studded_bandwise_data.columns}
+          title='TOT Bandwise'
+        />
+        <StuddedTOTBandwiseTbl
+          data={studded_tot.studded_bandwise_data.data}
+          columns={studded_tot.studded_bandwise_data.columns}
+          title='TOT Bandwise'
+        />
+        <StuddedTOTBandwiseTbl
+          data={studded_tot.studded_bandwise_data.data}
+          columns={studded_tot.studded_bandwise_data.columns}
+          title='TOT Bandwise'
+        />
+        <StuddedTOTBandwiseTbl
+          data={studded_tot.studded_bandwise_data.data}
+          columns={studded_tot.studded_bandwise_data.columns}
+          title='TOT Bandwise'
+        />
+        <StuddedTOTBandwiseTbl
+          data={studded_tot.studded_bandwise_data.data}
+          columns={studded_tot.studded_bandwise_data.columns}
+          title='TOT Bandwise'
         />
       </div>
     </React.Fragment>
