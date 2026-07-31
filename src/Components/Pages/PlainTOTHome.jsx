@@ -7,10 +7,12 @@ import NSVRangeTable from "../../Plain_tot/NSVRangeTable";
 import WeightedRateTable from "../../Plain_tot/WeightedRateTable";
 import PlainPreFinalTbl from "../../Plain_tot/PlainPreFinalTbl";
 import PlainFinalTble from "../../Plain_tot/PlainFinalTble";
+import ThirdEyeHeader from "../custom/ThirdEyeHeader";
 
 const PlainTOTHome = () => {
   return (
     <React.Fragment>
+      <ThirdEyeHeader />
       <div className='tot_table_layout'>
         <UCPSalesInfo
           title='UCP Sales'
