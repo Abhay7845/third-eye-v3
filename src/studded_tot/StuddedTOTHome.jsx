@@ -43,7 +43,7 @@ const StuddedTOTHome = () => {
           title='Y6 TOT'
         />
       </div>
-
+      <br />
       <div className='studded_tot_bandwise_layout'>
         <StuddedTOTBandwiseTbl
           data={studded_tot.studded_bandwise_data.data}
@@ -76,6 +76,8 @@ const StuddedTOTHome = () => {
           title='TOT Bandwise'
         />
       </div>
+      <br />
+
       <div className='studded_tot_refrence_layout'>
         <StuddedTOTReference
           data={studded_tot.studded_tot_refrence.data}
@@ -108,6 +110,7 @@ const StuddedTOTHome = () => {
           title='Studded TOT Refrence'
         />
       </div>
+      <br />
 
       <div className='studded_tot_final_table_layout'>
         <StuddedTOTFinalTbl
@@ -141,6 +144,7 @@ const StuddedTOTHome = () => {
           title='Studded TOT Final'
         />
       </div>
+      <br />
     </React.Fragment>
   );
 };
