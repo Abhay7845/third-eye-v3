@@ -1,0 +1,74 @@
+.studded_tot_reference_tbl_wrapper {
+  width: 100%;
+  overflow: visible;
+  margin-top: 16px;
+}
+.studded_tot_refrence_title {
+    margin: 0;
+    width: 100%;
+    min-width: var(--studded-bandwise-min-width);
+    box-sizing: border-box;
+    text-align: center;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #ffffff;
+    background: linear-gradient(90deg, #0f766e, #0d9488, #14b8a6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.studded_tot_reference_tbl {
+  width: 100%;
+  min-width: 880px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 11px;
+  font-family: Arial, sans-serif;
+}
+
+.studded_tot_reference_tbl th,
+.studded_tot_reference_tbl td {
+  padding: 6px 4px;
+  border: 1px solid #cde5df;
+  text-align: center;
+  vertical-align: middle;
+  box-sizing: border-box;
+}
+
+.studded_tot_reference_tbl_headCell {
+  background: linear-gradient(90deg, #0f766e, #0d9488, #14b8a6);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.studded_tot_reference_tbl_headText {
+  display: inline-block;
+  max-width: 68px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.studded_tot_reference_tbl tbody tr:nth-child(even) {
+  background-color: #f3faf8;
+}
+
+.studded_tot_reference_tbl tbody tr:hover {
+  background-color: #e6f7f3;
+}
+
+.studded_tot_reference_tbl td {
+  color: #333333;
+}
+
+.studded_tot_reference_tbl_cell {
+  font-size: 11px;
+  line-height: 1.2;
+}

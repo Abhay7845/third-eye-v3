@@ -4,6 +4,7 @@ import ThirdEyeHeader from "../Components/custom/ThirdEyeHeader";
 import { studded_tot } from "./studdedtotDummy";
 import StuddedTOTYearwiseTbl from "./StuddedTOTYearwiseTbl";
 import StuddedTOTBandwiseTbl from "./StuddedTOTBandwiseTbl";
+import StuddedTOTReference from "./StuddedTOTReference";
 
 const StuddedTOTHome = () => {
   return (
@@ -72,6 +73,38 @@ const StuddedTOTHome = () => {
           data={studded_tot.studded_bandwise_data.data}
           columns={studded_tot.studded_bandwise_data.columns}
           title='TOT Bandwise'
+        />
+      </div>
+      <div className='studded_tot_refrence_layout'>
+        <StuddedTOTReference
+          data={studded_tot.studded_tot_refrence.data}
+          columns={studded_tot.studded_tot_refrence.columns}
+          title='Studded TOT Refrence'
+        />
+        <StuddedTOTReference
+          data={studded_tot.studded_tot_refrence.data}
+          columns={studded_tot.studded_tot_refrence.columns}
+          title='Studded TOT Refrence'
+        />
+        <StuddedTOTReference
+          data={studded_tot.studded_tot_refrence.data}
+          columns={studded_tot.studded_tot_refrence.columns}
+          title='Studded TOT Refrence'
+        />
+        <StuddedTOTReference
+          data={studded_tot.studded_tot_refrence.data}
+          columns={studded_tot.studded_tot_refrence.columns}
+          title='Studded TOT Refrence'
+        />
+        <StuddedTOTReference
+          data={studded_tot.studded_tot_refrence.data}
+          columns={studded_tot.studded_tot_refrence.columns}
+          title='Studded TOT Refrence'
+        />
+        <StuddedTOTReference
+          data={studded_tot.studded_tot_refrence.data}
+          columns={studded_tot.studded_tot_refrence.columns}
+          title='Studded TOT Refrence'
         />
       </div>
     </React.Fragment>
