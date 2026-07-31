@@ -84,31 +84,6 @@ const StuddedTOTHome = () => {
           columns={studded_tot.studded_tot_refrence.columns}
           title='Studded TOT Refrence'
         />
-        <StuddedTOTReference
-          data={studded_tot.studded_tot_refrence.data}
-          columns={studded_tot.studded_tot_refrence.columns}
-          title='Studded TOT Refrence'
-        />
-        <StuddedTOTReference
-          data={studded_tot.studded_tot_refrence.data}
-          columns={studded_tot.studded_tot_refrence.columns}
-          title='Studded TOT Refrence'
-        />
-        <StuddedTOTReference
-          data={studded_tot.studded_tot_refrence.data}
-          columns={studded_tot.studded_tot_refrence.columns}
-          title='Studded TOT Refrence'
-        />
-        <StuddedTOTReference
-          data={studded_tot.studded_tot_refrence.data}
-          columns={studded_tot.studded_tot_refrence.columns}
-          title='Studded TOT Refrence'
-        />
-        <StuddedTOTReference
-          data={studded_tot.studded_tot_refrence.data}
-          columns={studded_tot.studded_tot_refrence.columns}
-          title='Studded TOT Refrence'
-        />
       </div>
       <br />
 
