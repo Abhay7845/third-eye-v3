@@ -1,27 +1,62 @@
+
+
+
 .studded_tot_final_tbl_wrapper {
+  width: max-content;
+  min-width: 860px;
+  overflow: visible;
+  border: 1px solid #dbe4ee;
+  border-radius: 2px;
+  background: #ffffff;
+}
+
+.studded_tot_final_title {
+  margin: 0;
   width: 100%;
-  overflow-x: auto;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #ffffff;
+  background:  #1e4e8c;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .studded_tot_final_tbl {
   width: 100%;
+  min-width: 860px;
+  table-layout: fixed;
   border-collapse: collapse;
   background: #ffffff;
-  font-size: 14px;
+  font-size: 10px;
+  margin: 0;
 }
 
 .studded_tot_final_tbl th,
 .studded_tot_final_tbl td {
   border: 1px solid #d9d9d9;
-  padding: 10px 12px;
+  padding: 5px 3px;
   text-align: center;
+  vertical-align: middle;
+  box-sizing: border-box;
 }
 
 .studded_tot_final_tbl th {
   background-color: #1e4e8c;
   color: #ffffff;
   font-weight: 600;
-  white-space: nowrap;
+  font-size: 10px;
+}
+
+.studded_tot_final_tbl_head_text {
+  display: inline-block;
+  max-width: 58px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 
 .studded_tot_final_tbl tbody tr:nth-child(even) {
@@ -39,7 +74,7 @@
 
 .studded_tot_final_tbl_metric_cell {
   text-align: left;
-  padding-left: 16px;
+  padding-left: 10px;
 }
 
 .studded_tot_final_tbl td:last-child,

@@ -180,3 +180,59 @@
     scrollbar-color: #14b8a6 #e2e8f0;
 }
 
+/* ------------------------STUDDED TOT FINAL TABLE LAYOUT ---------------------------------- */
+
+
+
+.studded_tot_final_table_layout {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    width: fit-content;
+    gap: 5px;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 5px;
+    background: #f8fafc;
+    border: 1px solid #dbe4ee;
+    border-radius: 2px;
+    scroll-behavior: smooth;
+}
+
+
+/* Remove unnecessary scaling */
+.studded_tot_final_table_layout > * {
+    transform: none;
+}
+
+
+/* ======================
+   Custom Scrollbar
+   ====================== */
+
+.studded_tot_final_table_layout::-webkit-scrollbar {
+    height: 8px;
+}
+
+.studded_tot_final_table_layout::-webkit-scrollbar-track {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
+.studded_tot_final_table_layout::-webkit-scrollbar-thumb {
+    background: #1e4e8c;
+    border-radius: 10px;
+}
+
+.studded_tot_final_table_layout::-webkit-scrollbar-thumb:hover {
+    background: #1e4e8c;
+}
+
+
+/* Firefox */
+.studded_tot_final_table_layout {
+    scrollbar-width: thin;
+    scrollbar-color: #1e4e8c #e2e8f0;
+}
+

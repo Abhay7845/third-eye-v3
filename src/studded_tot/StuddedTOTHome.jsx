@@ -108,10 +108,37 @@ const StuddedTOTHome = () => {
           title='Studded TOT Refrence'
         />
       </div>
-      <div>
+
+      <div className='studded_tot_final_table_layout'>
         <StuddedTOTFinalTbl
           data={studded_tot.studdet_final_data.final_data}
           columns={studded_tot.studdet_final_data.columns}
+          title='Studded TOT Final'
+        />
+        <StuddedTOTFinalTbl
+          data={studded_tot.studdet_final_data.final_data}
+          columns={studded_tot.studdet_final_data.columns}
+          title='Studded TOT Final'
+        />
+        <StuddedTOTFinalTbl
+          data={studded_tot.studdet_final_data.final_data}
+          columns={studded_tot.studdet_final_data.columns}
+          title='Studded TOT Final'
+        />
+        <StuddedTOTFinalTbl
+          data={studded_tot.studdet_final_data.final_data}
+          columns={studded_tot.studdet_final_data.columns}
+          title='Studded TOT Final'
+        />
+        <StuddedTOTFinalTbl
+          data={studded_tot.studdet_final_data.final_data}
+          columns={studded_tot.studdet_final_data.columns}
+          title='Studded TOT Final'
+        />
+        <StuddedTOTFinalTbl
+          data={studded_tot.studdet_final_data.final_data}
+          columns={studded_tot.studdet_final_data.columns}
+          title='Studded TOT Final'
         />
       </div>
     </React.Fragment>
