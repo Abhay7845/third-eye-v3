@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { FaBars } from "react-icons/fa";
-import { menuItem, ror_menu_items } from "../Data/Data";
+import { menuItem, roi_menu_items } from "../Data/Data";
 import Tippy from "@tippyjs/react";
 import { HiOutlineLogout } from "react-icons/hi";
 import { routes } from "../../routes";
@@ -123,7 +123,7 @@ const Sidebar = ({ toggle_open, toggle, setSlideOut }) => {
           </div>
           {pathname === routes.ADMIN_LOGIN ? (
             <React.Fragment>
-              {ror_menu_items.map((item, i) => (
+              {roi_menu_items.map((item, i) => (
                 <div key={i}>
                   {toggle ? (
                     <NavLink

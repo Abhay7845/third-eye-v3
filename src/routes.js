@@ -10,4 +10,5 @@ export const routes = {
   ADMIN_LOGIN: "/ThirdEye/admin_login",
   PLAIN_TOT_HOME: "/ThirdEye/plain_tot/home",
   STUDDED_TOT_HOME: "/ThirdEye/studded_tot/home",
+  BPM_SUMMARY_HOME: "/ThirdEye/bpm_summary/home",
 };

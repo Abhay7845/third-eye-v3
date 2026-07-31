@@ -16,6 +16,7 @@ import CookieBanner from "./Components/custom/CookieBanner";
 import AdminPage from "./Components/Pages/AdminPage";
 import PlainTOTHome from "./Components/Pages/PlainTOTHome";
 import StuddedTOTHome from "./studded_tot/StuddedTOTHome";
+import BPMSummaryHome from "./BPMSummary/BPMSummaryHome";
 
 const App = () => {
   const [toggle, setToggle] = useState(false);
@@ -96,6 +97,12 @@ const App = () => {
               path={routes.STUDDED_TOT_HOME}
               element={
                 <StuddedTOTHome toggle_open={toggle_open} toggle={toggle} />
+              }
+            />
+            <Route
+              path={routes.BPM_SUMMARY_HOME}
+              element={
+                <BPMSummaryHome toggle_open={toggle_open} toggle={toggle} />
               }
             />
           </Route>
