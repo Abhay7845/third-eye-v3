@@ -1,0 +1,76 @@
+.StuddedTOTYearwiseTbl {
+    width: 100%;
+    font-family: "Inter", sans-serif;
+    font-size: 12px;
+}
+
+.StuddedTOTYearwiseTbl__wrapper {
+    overflow: hidden;
+    border: 1px solid #dbe3ec;
+    border-radius: 2px;
+    background: #fff;
+}
+
+.StuddedTOTYearwiseTbl__table {
+    width: 100%;
+    min-width: 1100px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.StuddedTOTYearwiseTbl__thead {
+    background: linear-gradient(90deg, #4338ca, #2563eb, #0891b2);
+    color: #fff;
+}
+
+.StuddedTOTYearwiseTbl__heading {
+    padding: 6px 0px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.StuddedTOTYearwiseTbl__heading:last-child {
+    border-right: none;
+}
+
+.StuddedTOTYearwiseTbl__metric {
+    padding: 6px 0px;
+    font-size: 11px;
+    font-weight: 600;
+    background: linear-gradient(90deg, #f8fafc, #eef2ff);
+    color: #1e293b;
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    border-right: 1px solid #e2e8f0;
+}
+
+.StuddedTOTYearwiseTbl__row:nth-child(even) {
+    background: #f8fafc;
+}
+
+.StuddedTOTYearwiseTbl__row:hover {
+    background: #ecfeff;
+}
+
+.StuddedTOTYearwiseTbl__cell {
+    padding: 6px 1px;
+    text-align: center;
+    font-size: 11px;
+    color: #475569;
+    border-top: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.StuddedTOTYearwiseTbl__cell:last-child {
+    border-right: none;
+}
+
+.StuddedTOTYearwiseTbl__table th,
+.StuddedTOTYearwiseTbl__table td {
+    white-space: nowrap;
+}
