@@ -16,7 +16,7 @@
 }
 
 .plain_final_tble_title {
-    background:linear-gradient(135deg,#3b82f6,#2563eb,#a61dd8);
+    background:linear-gradient(135deg,#3b82f6,#2563eb);
     color:#ffffff;
     font-size:12px;
     font-weight:700;
@@ -36,7 +36,7 @@
 
 .plain_final_tble thead th {
     padding:6px 4px;
-    background:linear-gradient(135deg,#2563eb,#4f46e5,#7c3aed);
+    background:linear-gradient(135deg,#2563eb,#4f46e5);
     color:#ffffff;
     font-size:10px;
     font-weight:700;

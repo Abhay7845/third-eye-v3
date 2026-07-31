@@ -100,28 +100,7 @@
   border-top-right-radius: 8px;
 }
 
-/* ================= BTQ ROW ================= */
 
-.btq_rate_row td {
-  background: linear-gradient(
-    90deg,
-    #fff7cc,
-    #ffe58f,
-    #fff7cc
-  );
-  color: #8a5800;
-  font-weight: 700;
-  border-top: 2px solid #facc15;
-}
-
-.btq_rate_row:hover td {
-  background: linear-gradient(
-    90deg,
-    #fde68a,
-    #fcd34d,
-    #fde68a
-  );
-}
 
 /* Responsive */
 

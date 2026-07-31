@@ -30,7 +30,7 @@ const UCPSalesInfo = ({ data, columns, title }) => {
             ))}
 
             {title === "UCP Sales" && (
-              <tr className='btq_rate_row'>
+              <tr>
                 <td className='tot_category'>Btq Rate</td>
                 <td>11760</td>
                 <td>11760</td>
