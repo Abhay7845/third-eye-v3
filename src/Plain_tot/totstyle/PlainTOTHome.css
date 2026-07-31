@@ -8,8 +8,7 @@
   margin: 10px 0;
   scroll-behavior: smooth;
   box-sizing: border-box;
-
-  /* Firefox */
+  gap:10px;
   scrollbar-width: thin;
   scrollbar-color: #6b7280 #f3f4f6;
 }
@@ -82,8 +81,7 @@
   margin: 10px 0;
   scroll-behavior: smooth;
   box-sizing: border-box;
-
-  /* Firefox scrollbar */
+  gap: 5px;
   scrollbar-width: thin;
   scrollbar-color: #6b7280 #f3f4f6;
 }
@@ -159,8 +157,7 @@
   margin: 10px 0;
   scroll-behavior: smooth;
   box-sizing: border-box;
-
-  /* Firefox scrollbar */
+  gap: 5px;
   scrollbar-width: thin;
   scrollbar-color: #6b7280 #f3f4f6;
 }
@@ -249,8 +246,6 @@
   margin: 5px 0;
   scroll-behavior: smooth;
   box-sizing: border-box;
-
-  /* Firefox scrollbar */
   scrollbar-width: thin;
   scrollbar-color: #6b7280 #f3f4f6;
 }
