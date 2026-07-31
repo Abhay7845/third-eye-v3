@@ -5,6 +5,7 @@ import { studded_tot } from "./studdedtotDummy";
 import StuddedTOTYearwiseTbl from "./StuddedTOTYearwiseTbl";
 import StuddedTOTBandwiseTbl from "./StuddedTOTBandwiseTbl";
 import StuddedTOTReference from "./StuddedTOTReference";
+import StuddedTOTFinalTbl from "./StuddedTOTFinalTbl";
 
 const StuddedTOTHome = () => {
   return (
@@ -105,6 +106,12 @@ const StuddedTOTHome = () => {
           data={studded_tot.studded_tot_refrence.data}
           columns={studded_tot.studded_tot_refrence.columns}
           title='Studded TOT Refrence'
+        />
+      </div>
+      <div>
+        <StuddedTOTFinalTbl
+          data={studded_tot.studdet_final_data.final_data}
+          columns={studded_tot.studdet_final_data.columns}
         />
       </div>
     </React.Fragment>

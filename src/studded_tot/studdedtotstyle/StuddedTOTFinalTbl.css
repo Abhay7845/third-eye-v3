@@ -1,0 +1,48 @@
+.studded_tot_final_tbl_wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.studded_tot_final_tbl {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  font-size: 14px;
+}
+
+.studded_tot_final_tbl th,
+.studded_tot_final_tbl td {
+  border: 1px solid #d9d9d9;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.studded_tot_final_tbl th {
+  background-color: #1e4e8c;
+  color: #ffffff;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.studded_tot_final_tbl tbody tr:nth-child(even) {
+  background-color: #f8f9fb;
+}
+
+.studded_tot_final_tbl tbody tr:hover {
+  background-color: #eef5ff;
+}
+
+.studded_tot_final_tbl_summary_row {
+  background-color: #f3f7ff !important;
+  font-weight: 600;
+}
+
+.studded_tot_final_tbl_metric_cell {
+  text-align: left;
+  padding-left: 16px;
+}
+
+.studded_tot_final_tbl td:last-child,
+.studded_tot_final_tbl th:last-child {
+  font-weight: 600;
+}
