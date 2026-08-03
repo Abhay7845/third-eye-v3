@@ -49,8 +49,8 @@ function ROIMainPage() {
               className='relative z-10 w-full max-w-sm text-center rounded-2xl p-8'
               style={{
                 background: "rgba(255,255,255,0.10)",
-                backdropFilter: "blur(18px)",
-                WebkitBackdropFilter: "blur(18px)",
+                backdropFilter: "blur(3px)",
+                WebkitBackdropFilter: "blur(3px)",
                 border: "1px solid rgba(255,255,255,0.22)",
                 boxShadow:
                   "0 0 0 1px rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.4), 0 -4px 16px rgba(99,102,241,0.15)",
