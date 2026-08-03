@@ -65,10 +65,10 @@ function ROIMainPage() {
 
               {/* icon badge */}
               <div
-                className='flex items-center justify-center w-14 h-14 rounded-xl mx-auto mb-4'
+                className='flex items-center justify-center w-12 h-12 rounded-xl mx-auto mb-2'
                 style={{
                   background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                  boxShadow: "0 4px 20px rgba(99,102,241,0.5)",
+                  boxShadow: "0 4px 15px #6366f180",
                 }}>
                 <span style={{ fontSize: "24px" }}>📈</span>
               </div>

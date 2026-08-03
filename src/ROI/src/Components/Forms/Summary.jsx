@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { BASE_URL } from "./data/baseUrl";
 
 const YEARS = ["Yr 0", "Yr 1", "Yr 2", "Yr 3", "Yr 4", "Yr 5", "Yr 6"];
 
@@ -241,7 +242,9 @@ function Num({ v, bold = false, highlight = false }) {
     <td
       className={`border border-gray-200 px-3 py-2 text-right text-xs tabular-nums whitespace-nowrap ${
         highlight ? "bg-amber-50" : "bg-white"
-      } ${bold ? "font-bold" : ""} ${isNeg ? "text-red-600" : "text-gray-800"}`}>
+      } ${bold ? "font-bold" : ""} ${
+        isNeg ? "text-red-600" : "text-gray-800"
+      }`}>
       {text}
     </td>
   );
@@ -252,7 +255,13 @@ function Label({ children, indent = false, bold = false, muted = false }) {
     <td
       className={`border border-gray-200 px-3 py-2 text-xs min-w-[230px] sticky left-0 z-10 bg-white ${
         indent ? "pl-6" : ""
-      } ${bold ? "font-bold text-gray-900" : muted ? "text-gray-500" : "text-gray-700"}`}>
+      } ${
+        bold
+          ? "font-bold text-gray-900"
+          : muted
+          ? "text-gray-500"
+          : "text-gray-700"
+      }`}>
       {children}
     </td>
   );
@@ -288,7 +297,9 @@ function TotalRow({ label, values, color = "amber" }) {
         return (
           <td
             key={i}
-            className={`border px-3 py-2 text-xs text-right tabular-nums whitespace-nowrap ${cls} ${isNeg ? "text-red-700" : ""}`}>
+            className={`border px-3 py-2 text-xs text-right tabular-nums whitespace-nowrap ${cls} ${
+              isNeg ? "text-red-700" : ""
+            }`}>
             {fmt(v)}
           </td>
         );
@@ -337,7 +348,7 @@ export default function SummaryPage5({ roiContext, onPrevious }) {
     (async () => {
       try {
         const res = await fetch(
-          `http://127.0.0.1:8000/summary_screen_5/${roiContext.roiId}`,
+          `${BASE_URL}/summary_screen_5/${roiContext.roiId}`,
         );
         if (!res.ok) throw new Error("Failed to load summary data.");
         const json = await res.json();
@@ -356,20 +367,17 @@ export default function SummaryPage5({ roiContext, onPrevious }) {
     if (!d || !roiContext?.roiId) return;
     setSubmitting(true);
     try {
-      const saveRes = await fetch(
-        "http://127.0.0.1:8000/summary_screen_5/save",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            roiid: roiContext.roiId,
-            summary_data: buildSubmitPayload(d),
-          }),
-        },
-      );
+      const saveRes = await fetch(`${BASE_URL}/summary_screen_5/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roiid: roiContext.roiId,
+          summary_data: buildSubmitPayload(d),
+        }),
+      });
       if (!saveRes.ok) throw new Error("Failed to save summary.");
       const statusRes = await fetch(
-        `http://127.0.0.1:8000/roi/submit/${roiContext.roiId}`,
+        `${BASE_URL}/roi/submit/${roiContext.roiId}`,
         { method: "POST" },
       );
       if (!statusRes.ok) throw new Error("Failed to update status.");
@@ -783,7 +791,9 @@ export default function SummaryPage5({ roiContext, onPrevious }) {
                 {label}
               </p>
               <p
-                className={`text-lg font-extrabold mt-1 ${value === "—" ? "text-gray-300" : "text-gray-900"}`}>
+                className={`text-lg font-extrabold mt-1 ${
+                  value === "—" ? "text-gray-300" : "text-gray-900"
+                }`}>
                 {value}
               </p>
             </div>

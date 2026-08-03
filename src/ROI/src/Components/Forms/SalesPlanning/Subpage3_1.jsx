@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useSection3Context } from "./Section3Context";
 import { toast } from "react-toastify";
+import { BASE_URL } from "../data/baseUrl";
 
 const particularsFields = [
   "Super Built Up Area",
@@ -181,7 +182,7 @@ export default function Subpage3_1({ handleNext }) {
       };
 
       // TODO: Replace with real API call
-      const res = await fetch("http://127.0.0.1:8000/sales_planning_page_1", {
+      const res = await fetch(`${BASE_URL}/sales_planning_page_1`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -319,10 +320,10 @@ export default function Subpage3_1({ handleNext }) {
                           isSaved
                             ? "bg-gray-100 cursor-not-allowed text-gray-500 border-gray-200"
                             : hasError
-                              ? "border-red-400 bg-red-50 focus:ring-1 focus:ring-red-300"
-                              : warning
-                                ? "border-yellow-400 bg-yellow-50 focus:ring-1 focus:ring-yellow-200"
-                                : "border-blue-200 bg-blue-50 focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
+                            ? "border-red-400 bg-red-50 focus:ring-1 focus:ring-red-300"
+                            : warning
+                            ? "border-yellow-400 bg-yellow-50 focus:ring-1 focus:ring-yellow-200"
+                            : "border-blue-200 bg-blue-50 focus:border-blue-400 focus:ring-1 focus:ring-blue-200"
                         }`}
                       />
 

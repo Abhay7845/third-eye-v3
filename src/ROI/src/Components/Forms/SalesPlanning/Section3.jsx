@@ -5,6 +5,7 @@ import Subpage3_2 from "./Subpage3_2";
 import Subpage3_3 from "./Subpage3_3";
 import Subpage3_4 from "./Subpage3_4";
 import { toast } from "react-toastify";
+import { BASE_URL } from "../data/baseUrl";
 
 // ─── Reference store data (TODO: replace with API call) ──────────────────────
 const referenceDatabase = {
@@ -73,8 +74,8 @@ function Stepper({ currentStep, savedSteps }) {
                   saved
                     ? "bg-green-500 border-green-500 text-white"
                     : active
-                      ? "bg-blue-600 border-blue-600 text-white"
-                      : "bg-gray-100 border-gray-300 text-gray-400"
+                    ? "bg-blue-600 border-blue-600 text-white"
+                    : "bg-gray-100 border-gray-300 text-gray-400"
                 }`}>
                 {saved ? "✓" : step.id}
               </div>
@@ -83,8 +84,8 @@ function Stepper({ currentStep, savedSteps }) {
                   saved
                     ? "text-green-600"
                     : active
-                      ? "text-blue-700"
-                      : "text-gray-400"
+                    ? "text-blue-700"
+                    : "text-gray-400"
                 }`}>
                 {step.label}
               </span>
@@ -140,7 +141,7 @@ export default function Section3({ roiContext, onNext }) {
   };
 
   const fetchRefStoreMixDetail = async (storeCode) => {
-    const res = await fetch(`http://127.0.0.1:8000/refStore/${storeCode}`);
+    const res = await fetch(`${BASE_URL}/refStore/${storeCode}`);
     if (!res.ok) {
       toast.error("Failed to fetch reference store details.");
       setStoreParticulars({});
@@ -176,7 +177,7 @@ export default function Section3({ roiContext, onNext }) {
 
   const fetchScreen2Detail = async (roiid) => {
     const res = await fetch(
-      `http://127.0.0.1:8000/fetchScreen?parameter=roi_store_retail_specifications&roiid=${roiid}`,
+      `${BASE_URL}/fetchScreen?parameter=roi_store_retail_specifications&roiid=${roiid}`,
     );
     if (!res.ok) {
       throw new Error("ROI ID not found. Please check and try again.");
@@ -194,7 +195,7 @@ export default function Section3({ roiContext, onNext }) {
     const roi_id = roiContext?.roiId;
     try {
       if (roiContext?.projectType !== "New Store") {
-        const res = await fetch(`http://127.0.0.1:8000/area_detail/${roi_id}`);
+        const res = await fetch(`${BASE_URL}/area_detail/${roi_id}`);
         if (!res.ok) {
           toast.error("Failed to fetch store area details.");
           return;

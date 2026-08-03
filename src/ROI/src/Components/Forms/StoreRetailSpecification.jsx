@@ -2,6 +2,7 @@
 import { useForm, useWatch } from "react-hook-form";
 import { Input, Select } from "../FormControl";
 import { toast } from "react-toastify";
+import { BASE_URL } from "./data/baseUrl";
 
 const Section = ({ title, completed, children, isExpanded, onToggle }) => (
   <div
@@ -9,8 +10,8 @@ const Section = ({ title, completed, children, isExpanded, onToggle }) => (
       isExpanded
         ? "border-blue-500 shadow-md bg-white"
         : completed
-          ? "border-green-500 bg-green-50"
-          : "border-gray-200 bg-gray-50"
+        ? "border-green-500 bg-green-50"
+        : "border-gray-200 bg-gray-50"
     }`}>
     <div
       onClick={onToggle}
@@ -169,7 +170,7 @@ export default function StoreRetailSpecifications({
 
   const fetchAttribute = async (parameter) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/attribute/${parameter}`);
+      const res = await fetch(`${BASE_URL}/attribute/${parameter}`);
       if (!res.ok) {
         toast.error(`Failed to load ${parameter.replace(/_/g, " ")} options.`);
         return;
@@ -298,7 +299,7 @@ export default function StoreRetailSpecifications({
         remarks: data.remarks,
       };
 
-      const res = await fetch(`http://127.0.0.1:8000/store-retail-spec`, {
+      const res = await fetch(`${BASE_URL}/store-retail-spec`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -473,7 +474,11 @@ export default function StoreRetailSpecifications({
         {/* New Retail Area — all types */}
         <>
           <Input
-            label={`New Retail Area *${isNewStore && roiContext?.historyRetailArea ? " (from History ID)" : ""}`}
+            label={`New Retail Area *${
+              isNewStore && roiContext?.historyRetailArea
+                ? " (from History ID)"
+                : ""
+            }`}
             name='newRetailArea'
             type='number'
             register={register}
@@ -714,7 +719,11 @@ export default function StoreRetailSpecifications({
                 placeholder='Add notes...'
               />
               <span
-                className={`text-xs font-medium mt-2 block ${(remarks?.length ?? 0) > 180 ? "text-red-600" : "text-gray-500"}`}>
+                className={`text-xs font-medium mt-2 block ${
+                  (remarks?.length ?? 0) > 180
+                    ? "text-red-600"
+                    : "text-gray-500"
+                }`}>
                 {remarks?.length ?? 0}/200
               </span>
             </div>

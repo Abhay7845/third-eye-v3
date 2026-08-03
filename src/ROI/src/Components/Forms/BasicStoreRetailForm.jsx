@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Input, Select } from "../FormControl";
+import { BASE_URL } from "./data/baseUrl";
 
 const Section = ({
   title,
@@ -17,8 +18,8 @@ const Section = ({
         active || isExpanded
           ? "border-blue-500 shadow-md bg-white"
           : completed
-            ? "border-green-500 bg-green-50"
-            : "border-gray-200 bg-gray-50"
+          ? "border-green-500 bg-green-50"
+          : "border-gray-200 bg-gray-50"
       }
     `}>
     <div
@@ -132,8 +133,8 @@ export default function BasicStoreDetails({ onNext }) {
   const effectiveStoreFormat = isNewStore
     ? selectedNewStoreFormat
     : storeFormatChange === "Yes"
-      ? selectedNewStoreFormat
-      : existingStoreFormat;
+    ? selectedNewStoreFormat
+    : existingStoreFormat;
 
   // ── Completion flags ────────────────────────────────────────────────────────
   const projectTypeCompleted = !!selectedProjectType;
@@ -149,11 +150,11 @@ export default function BasicStoreDetails({ onNext }) {
     (isNewStore
       ? !!selectedNewStoreFormat
       : isRenovation
-        ? !!existingStoreFormat
-        : !!storeFormatChange &&
-          (storeFormatChange === "Yes"
-            ? !!selectedNewStoreFormat
-            : !!existingStoreFormat));
+      ? !!existingStoreFormat
+      : !!storeFormatChange &&
+        (storeFormatChange === "Yes"
+          ? !!selectedNewStoreFormat
+          : !!existingStoreFormat));
 
   const showFranchise =
     storeFormatCompleted &&
@@ -281,7 +282,7 @@ export default function BasicStoreDetails({ onNext }) {
     const fetchDetails = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`http://127.0.0.1:8000/history/${historyId}`);
+        const res = await fetch(`${BASE_URL}/history/${historyId}`);
         if (!res.ok) {
           setValue("city", "");
           setValue("state", "");
@@ -334,7 +335,7 @@ export default function BasicStoreDetails({ onNext }) {
     const fetchHistoryIds = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`http://127.0.0.1:8000/history_id`);
+        const res = await fetch(`${BASE_URL}/history_id`);
         if (res.ok) {
           const response = await res.json();
           setHistoryIds(response.data ?? []);
@@ -358,7 +359,7 @@ export default function BasicStoreDetails({ onNext }) {
     const fetchBtqStores = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`http://127.0.0.1:8000/btq_details`);
+        const res = await fetch(`${BASE_URL}/btq_details`);
         if (res.ok) {
           const response = await res.json();
           setBtqStores(response.data ?? []);
@@ -375,7 +376,7 @@ export default function BasicStoreDetails({ onNext }) {
 
   const fetchAttribute = async (parameter) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/attribute/${parameter}`);
+      const res = await fetch(`${BASE_URL}/attribute/${parameter}`);
       if (res.ok) {
         const response = await res.json();
         if (parameter === "store_format") setStoreFormats(response.data);
@@ -394,9 +395,7 @@ export default function BasicStoreDetails({ onNext }) {
     }
     try {
       setLoading(true);
-      const res = await fetch(
-        `http://127.0.0.1:8000/store/${franchiseeStoreCode}`,
-      );
+      const res = await fetch(`${BASE_URL}/store/${franchiseeStoreCode}`);
       if (!res.ok) {
         setFranchiseeFound(false);
         setValue("franchiseeStoreName", "");
@@ -449,7 +448,7 @@ export default function BasicStoreDetails({ onNext }) {
         partnerScore: data.partnerScore,
       };
 
-      const res = await fetch(`http://127.0.0.1:8000/basic-store-details`, {
+      const res = await fetch(`${BASE_URL}/basic-store-details`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -539,8 +538,8 @@ export default function BasicStoreDetails({ onNext }) {
                   {loading
                     ? "Loading..."
                     : historyIds.length === 0
-                      ? "No records found"
-                      : "Select History ID"}
+                    ? "No records found"
+                    : "Select History ID"}
                 </option>
                 {historyIds.map((it) => (
                   <option key={it.history_id} value={it.history_id}>
@@ -614,8 +613,8 @@ export default function BasicStoreDetails({ onNext }) {
                   {loading
                     ? "Loading..."
                     : btqStores.length === 0
-                      ? "No stores found"
-                      : "Select Store Code"}
+                    ? "No stores found"
+                    : "Select Store Code"}
                 </option>
                 {btqStores.map((it) => (
                   <option key={it.store_code} value={it.store_code}>
