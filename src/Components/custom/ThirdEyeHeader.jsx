@@ -64,6 +64,8 @@ const ThirdEyeHeader = ({ city, chl, cityTier }) => {
         return "STUDDED TOT";
       case routes.BPM_SUMMARY_HOME:
         return "BPM Summary";
+      case routes.ROI_HOME:
+        return "ROI (Return on Investment)";
       default:
         return "Page Not Found";
     }
