@@ -96,7 +96,7 @@ const ThirdEyeHeader = ({ city, chl, cityTier }) => {
             width: "100%",
           }}>
           {logo ? (
-            <img src={logo} height={25} alt='logo' />
+            <img src={logo} alt='logo' style={{ height: "25px" }} />
           ) : (
             <IoPersonSharp size={20} />
           )}

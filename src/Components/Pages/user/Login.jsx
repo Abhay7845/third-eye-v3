@@ -26,6 +26,7 @@ import {
   isAuthSessionValid,
   startAuthSession,
   getAuthRole,
+  setAuthRole,
 } from "../../../utils/authSession";
 import LoginPopUp from "../../custom/LoginPopUp";
 const VERSION = packageJson.version;
@@ -84,6 +85,7 @@ export default function Login() {
             if (userEmailList.includes(loginData.username)) {
               setVisiblePopup(true);
             } else {
+              setAuthRole("store");
               setSlideOut(true);
               setTimeout(() => {
                 navigate(routes.NEW_STORE, { replace: true });

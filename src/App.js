@@ -17,6 +17,7 @@ import AdminPage from "./Components/Pages/AdminPage";
 import PlainTOTHome from "./Components/Pages/PlainTOTHome";
 import StuddedTOTHome from "./studded_tot/StuddedTOTHome";
 import BPMSummaryHome from "./BPMSummary/BPMSummaryHome";
+import ROIMainPage from "./ROI/src/Components/ROIMainPage";
 
 const App = () => {
   const [toggle, setToggle] = useState(false);
@@ -79,6 +80,12 @@ const App = () => {
               path={routes.HISTORY}
               element={
                 <HistoryPreview toggle_open={toggle_open} toggle={toggle} />
+              }
+            />
+            <Route
+              path={routes.ROI_HOME}
+              element={
+                <ROIMainPage toggle_open={toggle_open} toggle={toggle} />
               }
             />
           </Route>

@@ -11,4 +11,5 @@ export const routes = {
   PLAIN_TOT_HOME: "/ThirdEye/plain_tot/home",
   STUDDED_TOT_HOME: "/ThirdEye/studded_tot/home",
   BPM_SUMMARY_HOME: "/ThirdEye/bpm_summary/home",
+  ROI_HOME: "/ThirdEye/roi/home/page",
 };

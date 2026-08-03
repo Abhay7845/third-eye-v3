@@ -2,6 +2,7 @@ import { routes } from "../../routes";
 import { MdStore, MdSummarize } from "react-icons/md";
 import { FaSellcast } from "react-icons/fa";
 import PublicIcon from "@mui/icons-material/Public";
+import { FaFileInvoiceDollar } from "react-icons/fa6";
 import PolicyIcon from "@mui/icons-material/Policy";
 import { MdManageHistory, MdMarkChatRead } from "react-icons/md";
 import { SiGoogleanalytics } from "react-icons/si";
@@ -47,6 +48,11 @@ export const menuItem = [
     path: routes.HISTORY,
     name: "Projection History",
     icon: <MdManageHistory />,
+  },
+  {
+    path: routes.ROI_HOME,
+    name: "ROI",
+    icon: <FaFileInvoiceDollar />,
   },
 ];
 
