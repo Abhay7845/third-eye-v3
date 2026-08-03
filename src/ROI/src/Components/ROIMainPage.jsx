@@ -36,6 +36,7 @@ function ROIMainPage() {
               backgroundSize: "80%",
               backgroundPosition: "center 40%",
               backgroundRepeat: "no-repeat",
+              backgroundColor: "#0d1017",
               minHeight: "100%",
             }}>
             {/* dark scrim so text stays readable over any banner */}
