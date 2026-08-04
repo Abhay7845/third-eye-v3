@@ -18,6 +18,7 @@ const STEPS = [
 
 export default function MultiStepROIForm({
   initialStep = 1,
+  initialSubStep = 1,
   initialRoiContext = null,
   onExit,
 }) {
@@ -85,6 +86,7 @@ export default function MultiStepROIForm({
             {activeForm === 3 && (
               <Section3
                 roiContext={roiContext}
+                initialSubStep={initialStep === 3 ? initialSubStep : 1}
                 onNext={() => setActiveForm(4)}
                 onPrevious={() => setActiveForm(2)}
               />
@@ -92,6 +94,7 @@ export default function MultiStepROIForm({
             {activeForm === 4 && (
               <Section4
                 roiContext={roiContext}
+                initialSubStep={initialStep === 4 ? initialSubStep : 1}
                 onNext={() => setActiveForm(5)}
                 onPrevious={() => setActiveForm(3)}
               />

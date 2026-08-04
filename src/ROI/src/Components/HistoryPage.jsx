@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { BASE_URL } from "./Forms/data/baseUrl";
 import { useSelector } from "react-redux";
+import { BASE_URL } from "./Forms/data/baseUrl";
 
 // ─── Page definitions ─────────────────────────────────────────────────────────
 const PAGES = [
@@ -60,32 +60,36 @@ function daysAgo(dateStr) {
   return `${d} days ago`;
 }
 function getFirstIncompleteStep(pages) {
-  if (!pages?.length) return 1;
+  if (!pages?.length) return { step: 1, subStep: 1 };
   const m = Object.fromEntries(
     pages.map((p) => [p.page_name ?? p.PageName, p.status]),
   );
   const na = (name) => !m[name] || m[name] === "Not Available";
-  if (na("Basic Store Details")) return 1;
-  if (na("Store Retail Specifications")) return 2;
-  if (
-    [
-      "Sales Planning - Ref Store Code Details",
-      "Sales Planning - Sales Summary",
-      "Sales Planning - Stock Summary",
-      "Sales Planning - Discount",
-    ].some(na)
-  )
-    return 3;
-  if (
-    [
-      "Capex Expenses",
-      "Resource Expenses",
-      "Other Expenses",
-      "Summary Expenses",
-    ].some(na)
-  )
-    return 4;
-  return 5;
+
+  if (na("Basic Store Details")) return { step: 1, subStep: 1 };
+  if (na("Store Retail Specifications")) return { step: 2, subStep: 1 };
+
+  const salesPages = [
+    "Sales Planning - Ref Store Code Details",
+    "Sales Planning - Sales Summary",
+    "Sales Planning - Stock Summary",
+    "Sales Planning - Discount",
+  ];
+  const firstIncompleteSales = salesPages.findIndex(na);
+  if (firstIncompleteSales !== -1)
+    return { step: 3, subStep: firstIncompleteSales + 1 };
+
+  const expensePages = [
+    "Capex Expenses",
+    "Resource Expenses",
+    "Other Expenses",
+    "Summary Expenses",
+  ];
+  const firstIncompleteExpense = expensePages.findIndex(na);
+  if (firstIncompleteExpense !== -1)
+    return { step: 4, subStep: Math.min(firstIncompleteExpense + 1, 3) };
+
+  return { step: 5, subStep: 1 };
 }
 
 function getStats(pages) {
@@ -209,7 +213,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
             : existingStoreCode,
       };
 
-      onContinueROI(roiContext, getFirstIncompleteStep(summary));
+      onContinueROI(roiContext, firstIncomplete.step, firstIncomplete.subStep);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load ROI context. Please try again.");
@@ -294,7 +298,11 @@ export default function HistoryPage({ onBack, onContinueROI }) {
   };
 
   const stats = getStats(summary);
-  const firstIncompleteStep = summary ? getFirstIncompleteStep(summary) : 1;
+  const firstIncomplete = summary
+    ? getFirstIncompleteStep(summary)
+    : { step: 1, subStep: 1 };
+  const firstIncompleteStep = firstIncomplete.step;
+  const firstIncompleteSubStep = firstIncomplete.subStep;
   const isAllComplete = firstIncompleteStep === 5;
   const isSubmitted = selectedRoi?.status === "Submitted to RBM";
   // ── Derived filter data ─────────────────────────────────────────────────

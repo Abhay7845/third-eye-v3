@@ -11,8 +11,8 @@ function ROIMainPage() {
   const [historyReqFlag, setHistoryReqFlag] = useState(false);
   const [continueContext, setContinueContext] = useState(null);
 
-  const handleContinueROI = (roiContext, startStep) => {
-    setContinueContext({ roiContext, startStep });
+  const handleContinueROI = (roiContext, startStep, startSubStep = 1) => {
+    setContinueContext({ roiContext, startStep, startSubStep });
     setHistoryReqFlag(false);
     setNewReqFlag(true);
   };

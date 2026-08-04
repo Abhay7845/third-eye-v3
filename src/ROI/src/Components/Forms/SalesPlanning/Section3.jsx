@@ -105,8 +105,8 @@ function Stepper({ currentStep, savedSteps }) {
 }
 
 // ─── Main layout component ────────────────────────────────────────────────────
-export default function Section3({ roiContext, onNext }) {
-  const [subSteps, setSubSteps] = useState(1);
+export default function Section3({ roiContext, onNext, intialSubStep = 1 }) {
+  const [subSteps, setSubSteps] = useState(intialSubStep);
   const [savedSteps, setSavedSteps] = useState([false, false, false, false]);
   const [forwardDetail, setforwardDetail] = useState({});
   const [subpage3_2Data, setSubpage3_2Data] = useState(null);
