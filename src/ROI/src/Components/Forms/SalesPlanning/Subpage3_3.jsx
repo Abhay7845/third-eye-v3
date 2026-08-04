@@ -31,16 +31,16 @@ const initialInputs = {
 // ─── Computed / auto-populated values ────────────────────────────────────────
 const computeValues = (inputs, subpage3_2Data) => {
   // Total stock turn: TODO — weighted avg needs sales mix data from Subpage3_2
-  const totalStockTurn = Array(6);
-  const remainingStockTurn = Array(6);
-  for (let i = 0; i < 6; i++) {
-    const sum =
-      (parseFloat(inputs.stockTurnPlain[i]) || 0) +
-      (parseFloat(inputs.stockTurnStudded[i]) || 0) +
-      (parseFloat(inputs.stockTurnCoins[i]) || 0);
-    totalStockTurn[i] = +sum.toFixed(2);
-    remainingStockTurn[i] = +(100 - sum).toFixed(2);
-  }
+  // const totalStockTurn = Array(6);
+  // // const remainingStockTurn = Array(6);
+  // for (let i = 0; i < 6; i++) {
+  //   const sum =
+  //     (parseFloat(inputs.stockTurnPlain[i]) || 0) +
+  //     (parseFloat(inputs.stockTurnStudded[i]) || 0) +
+  //     (parseFloat(inputs.stockTurnCoins[i]) || 0);
+  //   totalStockTurn[i] = +sum.toFixed(2);
+  //   remainingStockTurn[i] = +(100 - sum).toFixed(2);
+  // }
 
   // Stock = (Total Sales × Share%) / Stock Turn — TODO needs Subpage3_2 data
   const stockPlain = Array(6).fill("-"); // TODO: (totalSales[i] × plainShare[i] / 100) / stockTurnPlain[i]
@@ -101,8 +101,8 @@ const computeValues = (inputs, subpage3_2Data) => {
     ).toFixed(2);
   }
   return {
-    totalStockTurn,
-    remainingStockTurn,
+    // totalStockTurn,
+    // remainingStockTurn,
     stockPlain,
     stockStudded,
     stockCoins,
@@ -235,7 +235,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
   const [showModal, setShowModal] = useState(false);
   const { markStepSaved, subpage3_2Data, forwardDetail } = useSection3Context();
   const computed = computeValues(inputs, subpage3_2Data);
-  const hasOver100StockTurn = computed.remainingStockTurn.some((v) => v < 0);
+  // const hasOver100StockTurn = computed.remainingStockTurn.some((v) => v < 0);
   const userLog = useSelector((state) => state?.user?.user);
   // ── Form completeness ──────────────────────────────────────────────────
   const isFormComplete =
@@ -277,7 +277,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
     try {
       setIsSaving(true);
       const payload = {
-        username: userLog?.username?.split("@")[0],
+        username: userLog?.name,
         roiid: forwardDetail?.roiid,
         inputs: {
           baseRate22K: inputs.baseRate22K,
@@ -528,7 +528,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                 {allInputRow("Studded", "stockTurnStudded")}
                 {allInputRow("Coins / Silver Share", "stockTurnCoins")}
                 {/* Inline warning when any year exceeds 100% */}
-                {hasOver100StockTurn && (
+                {/* {hasOver100StockTurn && (
                   <tr>
                     <td
                       colSpan={7}
@@ -541,9 +541,9 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                       — reduce LCG, MCG or HCG share
                     </td>
                   </tr>
-                )}
+                )} */}
                 <TotalRow label='Total' values={computed.totalStockTurn} />
-                <RemainingRow values={computed.remainingStockTurn} />
+                {/* <RemainingRow values={computed.remainingStockTurn} /> */}
               </tbody>
             </table>
           </div>

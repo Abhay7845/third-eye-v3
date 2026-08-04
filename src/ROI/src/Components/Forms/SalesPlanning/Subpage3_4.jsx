@@ -291,8 +291,8 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
     try {
       setIsSaving(true);
       const payload = {
-        username: userLog?.username?.split("@")[0],
         roiid: forwardDetail?.roiid,
+        username: userLog?.name,
         totalCustomerDiscount: {
           plain: {
             lcg: computed.cdLCG,

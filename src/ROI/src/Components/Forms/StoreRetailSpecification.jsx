@@ -531,7 +531,10 @@ export default function StoreRetailSpecifications({
         {noOfFloors > 0 && (
           <div className='xl:col-span-3'>
             <label className='block font-medium text-gray-800 mb-4'>
-              Floor Plate Details *
+              Floor Plate Details *{" "}
+              <small className='text-red-700'>
+                <strong>The total of foor area is equal to Retail Area</strong>
+              </small>
             </label>
             <div className='grid md:grid-cols-4 gap-5'>
               {floorOptions.map((floor) => (

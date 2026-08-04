@@ -339,7 +339,8 @@ export default function BasicStoreDetails({ onNext }) {
     const fetchHistoryIds = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${BASE_URL}/history_id`);
+        const username = userLog?.name;
+        const res = await fetch(`${BASE_URL}/history_id?username=${username}`);
         if (res.ok) {
           const response = await res.json();
           setHistoryIds(response.data ?? []);
@@ -427,7 +428,7 @@ export default function BasicStoreDetails({ onNext }) {
   };
 
   const onSubmitBasicDetails = async (data) => {
-    const username = userLog?.username?.split("@")[0];
+    const username = userLog?.name;
     try {
       const payload = {
         username: username,

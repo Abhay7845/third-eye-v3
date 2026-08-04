@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { BASE_URL } from "./Forms/data/baseUrl";
+import { useSelector } from "react-redux";
 
 // ─── Page definitions ─────────────────────────────────────────────────────────
 const PAGES = [
@@ -121,6 +122,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
   const [typeFilter, setTypeFilter] = useState("All");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const userLog = useSelector((state) => state?.user?.user);
   const [viewModal, setViewModal] = useState({
     open: false,
     pageName: "",
@@ -132,7 +134,8 @@ export default function HistoryPage({ onBack, onContinueROI }) {
     (async () => {
       try {
         setListLoading(true);
-        const res = await fetch(`${BASE_URL}/roi_id`);
+        const username = userLog?.name;
+        const res = await fetch(`${BASE_URL}/roi_id?username=${username}`);
         if (!res.ok) throw new Error("Failed to fetch ROI list");
         const json = await res.json();
         const sorted = (json.data ?? [])

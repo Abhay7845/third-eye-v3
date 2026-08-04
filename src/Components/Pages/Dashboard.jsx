@@ -41,7 +41,7 @@ const storeTypes = [
   "Standalone Store",
   "Large Format Store",
   "Airport Store",
-  "High Street Store",
+  "HighStreet Store",
 ];
 
 const categoryList = storeTypes.map((store) => ({

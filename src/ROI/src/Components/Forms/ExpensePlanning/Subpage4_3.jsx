@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useSection4Context } from "./Section4Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
-import { useSelector } from "react-redux";
 
 const YEARS = ["Yr. 1", "Yr. 2", "Yr. 3", "Yr. 4", "Yr. 5", "Yr. 6"];
 
@@ -130,7 +129,7 @@ function escalate(base, pct, years = 6) {
 export default function Subpage4_3({ handlePrevious, onNext }) {
   const { storeData, subpage4_1Data, subpage4_2Data, markStepSaved } =
     useSection4Context();
-  const userLog = useSelector((state) => state?.user?.user);
+
   // ── Rent inputs (6 years) ─────────────────────────────────────────────────
   const [revenueSharing, setRevenueSharing] = useState("No");
   const [sba, setSba] = useState(Array(6).fill(22000));
@@ -352,7 +351,6 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     setIsSaving(true);
     const payload = {
       roiid: storeData?.roiid,
-      username: userLog?.username?.split("@")[0],
       rent: {
         revenueSharing,
         sba,

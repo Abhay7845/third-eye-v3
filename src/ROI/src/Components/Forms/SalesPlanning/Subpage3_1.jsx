@@ -175,7 +175,7 @@ export default function Subpage3_1({ handleNext }) {
         ]),
       );
       const formData = {
-        username: userLog?.username?.split("@")[0],
+        username: userLog?.name,
         roiid: forwardDetail.roiid,
         ref_storecode: forwardDetail.refStoreCode,
         storeParticulars,

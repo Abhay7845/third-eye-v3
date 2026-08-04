@@ -425,7 +425,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
 
       // ── Full payload: every user input + every computed value ──────────
       const payload = {
-        username: userLog?.username?.split("@")[0],
+        username: userLog?.name,
         roiid: forwardDetail?.roiid,
         inputs: {
           totalAreaSBA: storeParticulars["Super Built Up Area"],
