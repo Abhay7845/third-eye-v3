@@ -262,7 +262,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
       .catch((err) => setCustExitStore(0));
   };
 
-  const GetPdfDecision = async () => {
+  const GetPdfDecision = async (city) => {
     // If a call is already in-flight (e.g. React StrictMode double-invoke),
     // share the same promise so both callers properly await it.
     if (pdfDecisionRef.current) {
@@ -275,7 +275,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           try {
             const response = await axiosInstance.post(
               "/api/openai/decision_reasoner/v2",
-              { city: similerStoreVal },
+              { city: city },
             );
             if (response?.status === 200) {
               const formattedData =
@@ -324,7 +324,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
         GetEnrollTargetYear(targetCity, targetPinCode),
         GetCannibilization(similerStoreVal, targetCity, targetPinCode),
         GetNewCrossChannel(targetPinCode, similerStoreVal),
-        GetPdfDecision(),
+        GetPdfDecision(similerStoreVal),
       ]);
       if (!isCancelled) {
         setLoading(false);
