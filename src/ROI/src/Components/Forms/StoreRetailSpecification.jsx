@@ -3,6 +3,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { Input, Select } from "../FormControl";
 import { toast } from "react-toastify";
 import { BASE_URL } from "./data/baseUrl";
+import { useSelector } from "react-redux";
 
 const Section = ({ title, completed, children, isExpanded, onToggle }) => (
   <div
@@ -95,7 +96,7 @@ export default function StoreRetailSpecifications({
   const [displayTypes, setDisplayTypes] = useState([]);
 
   const prevFloorPlateRef = useRef({});
-
+  const userLog = useSelector((state) => state?.user?.user);
   const selectedStoreType = useWatch({ control, name: "storeType" });
   const existingRetailArea = useWatch({ control, name: "existingRetailArea" });
   const newOverallArea = useWatch({ control, name: "newOverallArea" });
@@ -185,12 +186,6 @@ export default function StoreRetailSpecifications({
     }
   };
 
-  //  TODO:
-  /*
-    i need to take the history id retail area as uneditable for New Store only.
-    setup the default values for the section 2.
-   */
-
   const totalFloorArea = floorOptions.reduce(
     (sum, floor) => sum + Number(floorPlateData?.[floor] || 0),
     0,
@@ -270,6 +265,7 @@ export default function StoreRetailSpecifications({
   const onSubmitSpecifications = async (data) => {
     try {
       const payload = {
+        username: userLog?.username?.split("@")[0],
         roiId: roiContext?.roiId,
         tyHistoryId: roiContext?.historyId,
         storeType: data.storeType,

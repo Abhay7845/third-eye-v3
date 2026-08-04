@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSection4Context } from "./Section4Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
+import { useSelector } from "react-redux";
 // ─── Indian currency formatter ────────────────────────────────────────────────
 const fmt = (n) =>
   n === null || n === undefined || isNaN(n)
@@ -125,6 +126,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [refStore, setRefStore] = useState("");
+  const userLog = useSelector((state) => state?.user?.user);
 
   // ── Expense state (Yr. 1) — editable ─────────────────────────────────────
   const [electricity, setElectricity] = useState({ ratePerSqft: 25 });
@@ -332,6 +334,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   const handleSave = async () => {
     setIsSaving(true);
     const payload = {
+      username: userLog?.username?.split("@")[0],
       roiid: storeData?.roiid,
       salaries: {
         rows: salaryRows,

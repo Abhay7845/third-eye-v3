@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSection4Context } from "./Section4Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
+import { useSelector } from "react-redux";
 
 // ─── Capex additional items — Yes/No dropdown options ────────────────────────
 const YES_NO_ITEMS = [
@@ -154,7 +155,7 @@ export default function Subpage4_1({ handleNext }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
-
+  const userLog = useSelector((state) => state?.user?.user);
   // ── Fetch DB rates for additional capex items ────────────────────────────
   useEffect(() => {
     const fetchCapexRates = async () => {
@@ -258,6 +259,7 @@ export default function Subpage4_1({ handleNext }) {
 
     const payload = {
       roiid: storeData?.roiid,
+      username: userLog?.username?.split("@")[0],
       storeData,
       selections: payloadSelections,
       computedAmounts,

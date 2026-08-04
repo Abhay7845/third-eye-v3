@@ -427,10 +427,10 @@ export default function BasicStoreDetails({ onNext }) {
   };
 
   const onSubmitBasicDetails = async (data) => {
-    console.log("data==>", data);
+    const username = userLog?.username?.split("@")[0];
     try {
       const payload = {
-        username: data.username,
+        username: username,
         projectType: data.projectType,
         historyId: data.historyId,
         existingStoreCode: data.existingStoreCode,

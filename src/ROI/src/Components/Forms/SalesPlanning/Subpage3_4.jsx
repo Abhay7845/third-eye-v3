@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSection3Context } from "./Section3Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
+import { useSelector } from "react-redux";
 
 const YEARS = ["Yr. 1", "Yr. 2", "Yr. 3", "Yr. 4", "Yr. 5", "Yr. 6"];
 
@@ -257,7 +258,7 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
   const { markStepSaved, subpage3_2Data, forwardDetail } = useSection3Context();
   const [customerDiscount, setCustomerDiscount] = useState([]);
   const computed = computeValues(subpage3_2Data, customerDiscount);
-  console.log("Page 3_4", subpage3_2Data);
+  const userLog = useSelector((state) => state?.user?.user);
   const getCustomerDiscountData = async () => {
     try {
       setLoading(true);
@@ -290,7 +291,8 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
     try {
       setIsSaving(true);
       const payload = {
-        roiid: forwardDetail?.roiid || "16072614152",
+        username: userLog?.username?.split("@")[0],
+        roiid: forwardDetail?.roiid,
         totalCustomerDiscount: {
           plain: {
             lcg: computed.cdLCG,

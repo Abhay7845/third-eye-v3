@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSection3Context } from "./Section3Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
+import { useSelector } from "react-redux";
 
 const YEARS = ["Yr. 1", "Yr. 2", "Yr. 3", "Yr. 4", "Yr. 5", "Yr. 6"];
 
@@ -282,7 +283,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
   const { storeParticulars, markStepSaved, setSubpage3_2Data, forwardDetail } =
     useSection3Context();
   const computed = computeValues(inputs);
-
+  const userLog = useSelector((state) => state?.user?.user);
   const [validationMetrics, setValidationMetrics] = useState({
     plainShare: 0,
     studdedShare: 0,
@@ -424,7 +425,8 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
 
       // ── Full payload: every user input + every computed value ──────────
       const payload = {
-        roiid: forwardDetail?.roiid || "16072614152",
+        username: userLog?.username?.split("@")[0],
+        roiid: forwardDetail?.roiid,
         inputs: {
           totalAreaSBA: storeParticulars["Super Built Up Area"],
           totalAreaCarpet: storeParticulars["Carpet area"],
@@ -466,7 +468,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
       };
       // The data required for the calculation in Subpage3_3
       const data_forward = {
-        roiid: forwardDetail?.roiid || 16072614152,
+        roiid: forwardDetail?.roiid,
         total_sales_data: computed.totalSales,
         plainShare: inputs.plainShare,
         studdedShare: inputs.studdedShare,

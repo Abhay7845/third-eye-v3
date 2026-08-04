@@ -3,6 +3,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { useSection3Context } from "./Section3Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
+import { useSelector } from "react-redux";
 
 const particularsFields = [
   "Super Built Up Area",
@@ -133,7 +134,7 @@ export default function Subpage3_1({ handleNext }) {
       expenses: Object.fromEntries(expensesFields.map((f) => [f, ""])),
     },
   });
-
+  const userLog = useSelector((state) => state?.user?.user);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -174,6 +175,7 @@ export default function Subpage3_1({ handleNext }) {
         ]),
       );
       const formData = {
+        username: userLog?.username?.split("@")[0],
         roiid: forwardDetail.roiid,
         ref_storecode: forwardDetail.refStoreCode,
         storeParticulars,
