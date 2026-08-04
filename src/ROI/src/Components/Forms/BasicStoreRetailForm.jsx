@@ -379,6 +379,7 @@ export default function BasicStoreDetails({ onNext }) {
   }, [selectedProjectType]);
 
   const fetchAttribute = async (parameter) => {
+    console.log("BASE_URL==>", BASE_URL);
     try {
       const res = await fetch(`${BASE_URL}/attribute/${parameter}`);
       if (res.ok) {
