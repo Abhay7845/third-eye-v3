@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Input, Select } from "../FormControl";
 import { BASE_URL } from "./data/baseUrl";
+import { useSelector } from "react-redux";
 
 const Section = ({
   title,
@@ -77,6 +78,9 @@ export default function BasicStoreDetails({ onNext }) {
       partnerScore: "",
     },
   });
+
+  const userLog = useSelector((state) => state?.user?.user);
+  console.log("userLog==>", userLog);
 
   const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(false);

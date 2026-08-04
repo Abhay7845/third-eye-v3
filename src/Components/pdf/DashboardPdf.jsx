@@ -464,16 +464,16 @@ const DashboardPdf = ({
               alignItems: "center",
               marginBottom: "5px",
             }}>
-            <img src={third_eye} height={30} alt='third_eye' />
+            <img src={third_eye} style={{ height: "30px" }} alt='third_eye' />
           </div>
           <div className='pdf_top_header'>
-            <img src={logo} height={26} alt='logo' />
+            <img src={logo} style={{ height: "26px" }} alt='logo' />
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "end",
-                fontSize: "15px",
+                fontSize: "12px",
                 gap: "4px",
                 fontWeight: "bold",
               }}>
@@ -564,7 +564,7 @@ const DashboardPdf = ({
               <div className='catchment_col'>
                 <div
                   style={{
-                    fontSize: "15px",
+                    fontSize: "13px",
                     fontWeight: "600",
                     marginBottom: "5px",
                     paddingBottom: "3px",
@@ -628,7 +628,7 @@ const DashboardPdf = ({
               <div className='catchment_col'>
                 <div
                   style={{
-                    fontSize: "15px",
+                    fontSize: "13px",
                     fontWeight: "600",
                     marginBottom: "5px",
                     paddingBottom: "3px",
