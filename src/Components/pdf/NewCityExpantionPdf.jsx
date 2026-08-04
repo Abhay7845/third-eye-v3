@@ -806,6 +806,7 @@ const NewCityExpantionPdf = ({
                 margin: "5px",
                 marginBottom: "7px",
                 fontSize: "14px",
+                fontWeight: "bold",
               }}>
               Conclusion: {dicisionData?.recomendation}.
             </h5>
