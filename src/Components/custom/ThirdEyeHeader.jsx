@@ -126,6 +126,7 @@ const ThirdEyeHeader = ({ city, chl, cityTier }) => {
             flexDirection: "column",
             textAlign: "center",
             width: "100%",
+            fontSize: "14px",
           }}>
           <div style={{ color: "grey" }}>{pageTitle?.toUpperCase()}</div>
         </div>
@@ -141,11 +142,12 @@ const ThirdEyeHeader = ({ city, chl, cityTier }) => {
                 padding: "5px",
                 textAlign: "center",
                 marginRight: "6px",
+                marginTop: "1%",
               }}>
-              <div style={{ color: "gray", fontSize: "14px" }}>
+              <div style={{ color: "gray", fontSize: "12px" }}>
                 Target Catchment City
               </div>
-              <div style={{ fontSize: "12px", marginTop: "1%" }}>
+              <div style={{ fontSize: "10px" }}>
                 {city}, ({cityTier})
               </div>
             </div>

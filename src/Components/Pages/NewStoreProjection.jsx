@@ -71,6 +71,28 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   // REF DEFINE
   const screenshotRef = useRef();
   const lastPdfDecisionPinRef = useRef("");
+  const decisionCacheRef = useRef({});
+
+  const DECISION_CACHE_KEY = "newStoreProjection_pdfDecisionCache";
+
+  const readDecisionCache = () => {
+    try {
+      const raw = sessionStorage.getItem(DECISION_CACHE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const writeDecisionCache = (cacheObj) => {
+    try {
+      sessionStorage.setItem(DECISION_CACHE_KEY, JSON.stringify(cacheObj));
+    } catch {
+      // Ignore storage write failures; API flow should still work.
+    }
+  };
 
   const channel = inputsPayload?.channel;
   const targetPinCode = inputsPayload?.targetPinCode;
@@ -91,9 +113,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   const retails_category = categorizeRetails(pdfMarkers?.retail ?? []);
 
   useEffect(() => {
-    if (arpcVal) {
-      setEstimateRevenue(Number(arpcVal * estiCustBase));
-    }
+    setEstimateRevenue(Number(arpcVal * estiCustBase));
   }, [arpcVal, estiCustBase]);
 
   const projectionData = [
@@ -447,6 +467,12 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
 
             // Accept only non-empty payload. Empty response gets one retry.
             if (formattedData.length > 0) {
+              const nextCache = {
+                ...decisionCacheRef.current,
+                [pin]: formattedData,
+              };
+              decisionCacheRef.current = nextCache;
+              writeDecisionCache(nextCache);
               setPdfDecesion(formattedData);
               return response;
             }
@@ -472,10 +498,19 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
   };
 
   useEffect(() => {
+    decisionCacheRef.current = readDecisionCache();
+
     const pin = inputsPayload?.targetPinCode?.toString() || "";
     if (!pin) return;
-    if (lastPdfDecisionPinRef.current === pin) return;
 
+    const cachedDecision = decisionCacheRef.current?.[pin];
+    if (Array.isArray(cachedDecision) && cachedDecision.length > 0) {
+      lastPdfDecisionPinRef.current = pin;
+      setPdfDecesion(cachedDecision);
+      return;
+    }
+
+    if (lastPdfDecisionPinRef.current === pin) return;
     const timer = setTimeout(() => {
       lastPdfDecisionPinRef.current = pin;
       GetPdfDecision(pin);
@@ -504,7 +539,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
           <div
             style={{
               border: "1.5px solid #233044",
-              marginTop: "5px",
+              marginTop: "10px",
               marginRight: "4px",
             }}>
             <div
