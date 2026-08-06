@@ -114,6 +114,39 @@ function SkeletonCard() {
   );
 }
 
+// ─── Modal display helpers ────────────────────────────────────────────────────
+const HIDDEN_MODAL_KEYS = new Set([
+  "roiid", "roi_id", "ROIID", "status", "inserted_date", "updated_date",
+  "username", "created_date", "create_date",
+]);
+
+function fmtModalNum(value) {
+  const n = parseFloat(value);
+  if (isNaN(n) || value === "" || value === null || value === undefined) return "—";
+  return n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+}
+
+function formatModalLabel(key) {
+  return key
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatModalValue(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "—";
+    return value.map((v) => fmtModalNum(v)).join(" · ");
+  }
+  if (typeof value === "object") return null; // rendered separately
+  const n = parseFloat(value);
+  if (!isNaN(n) && String(value).trim() !== "") return fmtModalNum(value);
+  return String(value);
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function HistoryPage({ onBack, onContinueROI }) {
   const [roiList, setRoiList] = useState([]);
@@ -794,26 +827,21 @@ export default function HistoryPage({ onBack, onContinueROI }) {
       {/* ── View Page Modal ────────────────────────────────────── */}
       {viewModal.open && (
         <div className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4'>
-          <div className='bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col'>
+          <div className='bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col'>
+
             {/* Modal header */}
-            <div className='flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0'>
-              <div>
-                <h2 className='text-lg font-bold text-gray-900'>
-                  {viewModal.pageName}
-                </h2>
-                <p className='text-xs text-gray-400 mt-0.5'>
-                  ROI ID: {selectedRoi?.roiid}
-                </p>
+            <div className='flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-r from-indigo-50 to-white rounded-t-2xl'>
+              <div className='flex items-center gap-3'>
+                <span className='text-2xl'>
+                  {PAGES.find((p) => p.name === viewModal.pageName)?.icon ?? "📄"}
+                </span>
+                <div>
+                  <h2 className='text-base font-bold text-gray-900'>{viewModal.pageName}</h2>
+                  <p className='text-xs text-gray-400 mt-0.5 font-mono'>ROI: {selectedRoi?.roiid}</p>
+                </div>
               </div>
               <button
-                onClick={() =>
-                  setViewModal({
-                    open: false,
-                    pageName: "",
-                    data: null,
-                    loading: false,
-                  })
-                }
+                onClick={() => setViewModal({ open: false, pageName: "", data: null, loading: false })}
                 className='text-gray-400 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
                 ✕
               </button>
@@ -823,70 +851,39 @@ export default function HistoryPage({ onBack, onContinueROI }) {
             <div className='flex-1 overflow-y-auto p-6'>
               {viewModal.loading ? (
                 <div className='flex flex-col items-center justify-center h-40 gap-3'>
-                  <svg
-                    className='h-8 w-8 animate-spin text-indigo-500'
-                    fill='none'
-                    viewBox='0 0 24 24'>
-                    <circle
-                      className='opacity-25'
-                      cx='12'
-                      cy='12'
-                      r='10'
-                      stroke='currentColor'
-                      strokeWidth='4'
-                    />
-                    <path
-                      className='opacity-75'
-                      fill='currentColor'
-                      d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z'
-                    />
+                  <svg className='h-8 w-8 animate-spin text-indigo-500' fill='none' viewBox='0 0 24 24'>
+                    <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' />
+                    <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z' />
                   </svg>
                   <span className='text-sm text-gray-500'>Loading data…</span>
                 </div>
               ) : viewModal.data?.length > 0 ? (
                 (() => {
                   const isHeaderFormat = "Header" in (viewModal.data[0] ?? {});
+
                   if (isHeaderFormat) {
                     return (
-                      <div className='overflow-x-auto rounded-xl border border-gray-100'>
+                      <div className='overflow-x-auto rounded-xl border border-gray-200 shadow-sm'>
                         <table className='min-w-full border-collapse text-xs'>
                           <thead>
-                            <tr className='bg-indigo-700 text-white'>
-                              <th className='px-3 py-2 text-left font-semibold min-w-[200px]'>
-                                Metric
-                              </th>
-                              {["Yr1", "Yr2", "Yr3", "Yr4", "Yr5", "Yr6"].map(
-                                (y) => (
-                                  <th
-                                    key={y}
-                                    className='px-3 py-2 text-right font-semibold'>
-                                    {y}
-                                  </th>
-                                ),
-                              )}
+                            <tr className='bg-gradient-to-r from-indigo-700 to-blue-600 text-white'>
+                              <th className='px-4 py-3 text-left font-semibold min-w-[220px]'>Metric</th>
+                              {["Yr 1","Yr 2","Yr 3","Yr 4","Yr 5","Yr 6"].map((y) => (
+                                <th key={y} className='px-3 py-3 text-right font-semibold min-w-[80px]'>{y}</th>
+                              ))}
                             </tr>
                           </thead>
                           <tbody>
                             {viewModal.data.map((row, i) => (
-                              <tr
-                                key={i}
-                                className={
-                                  i % 2 === 0 ? "bg-white" : "bg-gray-50"
-                                }>
-                                <td className='px-3 py-2 font-medium text-gray-700 border-b border-gray-100'>
+                              <tr key={i} className={`transition-colors hover:bg-indigo-50/50 ${i % 2 === 0 ? "bg-white" : "bg-slate-50"}`}>
+                                <td className='px-4 py-2.5 font-medium text-gray-700 border-b border-gray-100 leading-tight'>
                                   {row.Header}
                                 </td>
-                                {["Yr1", "Yr2", "Yr3", "Yr4", "Yr5", "Yr6"].map(
-                                  (y) => (
-                                    <td
-                                      key={y}
-                                      className='px-3 py-2 text-right text-gray-600 border-b border-gray-100 tabular-nums'>
-                                      {row[y] !== null && row[y] !== undefined
-                                        ? row[y]
-                                        : "—"}
-                                    </td>
-                                  ),
-                                )}
+                                {["Yr1","Yr2","Yr3","Yr4","Yr5","Yr6"].map((y) => (
+                                  <td key={y} className='px-3 py-2.5 text-right text-gray-700 border-b border-gray-100 tabular-nums font-semibold'>
+                                    {row[y] !== null && row[y] !== undefined ? fmtModalNum(row[y]) : "—"}
+                                  </td>
+                                ))}
                               </tr>
                             ))}
                           </tbody>
@@ -894,35 +891,61 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                       </div>
                     );
                   }
+
                   return (
-                    <div className='space-y-3'>
+                    <div className='space-y-4'>
                       {viewModal.data.map((row, rowIdx) => {
                         const entries = Object.entries(row).filter(
-                          ([, v]) => v !== null && v !== undefined && v !== "",
+                          ([k, v]) => !HIDDEN_MODAL_KEYS.has(k) && v !== null && v !== undefined && v !== "",
                         );
                         if (!entries.length) return null;
                         return (
-                          <div
-                            key={rowIdx}
-                            className='bg-gray-50 rounded-xl p-4'>
+                          <div key={rowIdx}>
                             {viewModal.data.length > 1 && (
-                              <p className='text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-3'>
+                              <p className='text-[10px] text-gray-400 font-semibold uppercase tracking-widest mb-2 px-1'>
                                 Record {rowIdx + 1}
                               </p>
                             )}
-                            <div className='grid grid-cols-2 sm:grid-cols-3 gap-3'>
-                              {entries.map(([key, value]) => (
-                                <div key={key}>
-                                  <p className='text-[10px] font-semibold text-gray-400 uppercase tracking-wide'>
-                                    {key.replace(/_/g, " ")}
-                                  </p>
-                                  <p className='text-sm font-medium text-gray-800 mt-0.5 break-all'>
-                                    {typeof value === "object"
-                                      ? JSON.stringify(value)
-                                      : String(value)}
-                                  </p>
-                                </div>
-                              ))}
+                            <div className='grid grid-cols-2 gap-2.5'>
+                              {entries.map(([key, value]) => {
+                                const isObj = typeof value === "object" && value !== null && !Array.isArray(value);
+                                const isArr = Array.isArray(value);
+                                return (
+                                  <div
+                                    key={key}
+                                    className={`rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 hover:border-indigo-200 transition-colors${
+                                      isObj || isArr ? " col-span-2" : ""
+                                    }`}>
+                                    <p className='text-[10px] font-semibold text-indigo-400 uppercase tracking-wider mb-1'>
+                                      {formatModalLabel(key)}
+                                    </p>
+                                    {isObj ? (
+                                      <div className='grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5'>
+                                        {Object.entries(value)
+                                          .filter(([, v]) => v !== null && v !== undefined && v !== "")
+                                          .map(([k2, v2]) => (
+                                            <div key={k2} className='bg-white rounded-lg px-3 py-2 border border-gray-100'>
+                                              <p className='text-[9px] text-gray-400 uppercase font-semibold'>{formatModalLabel(k2)}</p>
+                                              <p className='text-sm font-semibold text-gray-800 mt-0.5 tabular-nums'>{formatModalValue(v2) ?? "—"}</p>
+                                            </div>
+                                          ))}
+                                      </div>
+                                    ) : isArr ? (
+                                      <div className='flex flex-wrap gap-1.5 mt-1'>
+                                        {value.map((v, i) => (
+                                          <span key={i} className='bg-indigo-50 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-md border border-indigo-100'>
+                                            Yr {i + 1}: {fmtModalNum(v)}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className='text-sm font-semibold text-gray-800 leading-snug tabular-nums'>
+                                        {formatModalValue(value)}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         );
@@ -933,9 +956,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
               ) : (
                 <div className='flex flex-col items-center justify-center h-40 text-gray-400'>
                   <p className='text-4xl mb-2'>📭</p>
-                  <p className='text-sm font-medium'>
-                    No data found for this page
-                  </p>
+                  <p className='text-sm font-medium'>No data found for this page</p>
                 </div>
               )}
             </div>

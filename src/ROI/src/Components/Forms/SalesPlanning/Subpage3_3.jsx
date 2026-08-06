@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSection3Context } from "./Section3Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
@@ -7,40 +7,43 @@ import { useSelector } from "react-redux";
 const YEARS = ["Yr. 1", "Yr. 2", "Yr. 3", "Yr. 4", "Yr. 5", "Yr. 6"];
 
 // ─── Initial state: all user-editable (blue) input fields ────────────────────
+
+// Scales an array proportionally to sum to exactly 100%; replaces zeros with 0.1.
+function normalizeGroup(rawVals) {
+  let vals = rawVals.map(v => { const n = parseFloat(v) || 0; return n <= 0 ? 0.1 : n; });
+  const sum = vals.reduce((s, v) => s + v, 0);
+  let scaled = vals.map(v => parseFloat(((v / sum) * 100).toFixed(2)));
+  const drift = parseFloat((100 - scaled.reduce((s, v) => s + v, 0)).toFixed(2));
+  scaled[scaled.length - 1] = parseFloat((scaled[scaled.length - 1] + drift).toFixed(2));
+  return scaled;
+}
+
 const initialInputs = {
-  // Pricing Metrics — Yr.1 = blue input; Yr.2–6 = auto copy of Yr.1
-  baseRate22K: Array(6).fill(0),
-  markupPct: Array(6).fill(0),
-
-  // Plain Group AMC% — Yr.1 = blue input; Yr.2–6 = auto copy of Yr.1
-  lcgAMC: Array(6).fill(0),
-  mcgAMC: Array(6).fill(0),
-  hcgAMC: Array(6).fill(0),
-
-  // Coins AMC% — Yr.1 = blue input; Yr.2–6 = auto copy of Yr.1
-  coinsAMC: Array(6).fill(0),
-
-  // Stock Turn — all 6 years are blue inputs (values change each year)
-  stockTurnPlain: Array(6).fill(0),
-  stockTurnStudded: Array(6).fill(0),
-  stockTurnCoins: Array(6).fill(0),
-
+  baseRate22K:      Array(6).fill(0),    // user must enter current 22K gold rate
+  markupPct:        Array(6).fill(2),    // 2% default
+  lcgAMC:           Array(6).fill(0),    // pre-filled from validation_metrics on load
+  mcgAMC:           Array(6).fill(0),
+  hcgAMC:           Array(6).fill(0),
+  coinsAMC:         Array(6).fill(0),
+  stockTurnPlain:   Array(6).fill(2),
+  stockTurnStudded: Array(6).fill(1.8),
+  stockTurnCoins:   Array(6).fill(3),
   bgCoinsStockTurn: Array(6).fill(0),
 };
 
 // ─── Computed / auto-populated values ────────────────────────────────────────
 const computeValues = (inputs, subpage3_2Data) => {
   // Total stock turn: TODO — weighted avg needs sales mix data from Subpage3_2
-  // const totalStockTurn = Array(6);
-  // // const remainingStockTurn = Array(6);
-  // for (let i = 0; i < 6; i++) {
-  //   const sum =
-  //     (parseFloat(inputs.stockTurnPlain[i]) || 0) +
-  //     (parseFloat(inputs.stockTurnStudded[i]) || 0) +
-  //     (parseFloat(inputs.stockTurnCoins[i]) || 0);
-  //   totalStockTurn[i] = +sum.toFixed(2);
-  //   remainingStockTurn[i] = +(100 - sum).toFixed(2);
-  // }
+  const totalStockTurn = Array(6);
+  // const remainingStockTurn = Array(6);
+  for (let i = 0; i < 6; i++) {
+    const sum =
+      (parseFloat(inputs.stockTurnPlain[i]) || 0) +
+      (parseFloat(inputs.stockTurnStudded[i]) || 0) +
+      (parseFloat(inputs.stockTurnCoins[i]) || 0);
+    totalStockTurn[i] = +sum.toFixed(2);
+    // remainingStockTurn[i] = +(100 - sum).toFixed(2);
+  }
 
   // Stock = (Total Sales × Share%) / Stock Turn — TODO needs Subpage3_2 data
   const stockPlain = Array(6).fill("-"); // TODO: (totalSales[i] × plainShare[i] / 100) / stockTurnPlain[i]
@@ -101,7 +104,7 @@ const computeValues = (inputs, subpage3_2Data) => {
     ).toFixed(2);
   }
   return {
-    // totalStockTurn,
+    totalStockTurn,
     // remainingStockTurn,
     stockPlain,
     stockStudded,
@@ -116,16 +119,27 @@ const computeValues = (inputs, subpage3_2Data) => {
 
 // ─── Reusable cell components ─────────────────────────────────────────────────
 
-function BlueInputCell({ value, onChange }) {
+function getRefCellClasses(value, refValue) {
+  const num = parseFloat(value);
+  const ref = parseFloat(refValue);
+  if (isNaN(num) || isNaN(ref) || num === 0)
+    return { bgColor: "bg-blue-50", textColor: "text-blue-900" };
+  if (num > ref) return { bgColor: "bg-green-100", textColor: "text-green-700" };
+  if (ref > 0 && num >= ref * 0.95)
+    return { bgColor: "bg-yellow-100", textColor: "text-yellow-700" };
+  return { bgColor: "bg-red-100", textColor: "text-red-700" };
+}
+
+function BlueInputCell({ value, onChange, bgColor = "bg-blue-50", textColor = "text-blue-900" }) {
   return (
-    <td className='border border-gray-200 p-0 bg-blue-50'>
+    <td className={`border border-gray-200 p-0 ${bgColor}`}>
       <strong>
         <input
           type='number'
           min={0}
           value={value}
           onChange={onChange}
-          className='w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:bg-blue-100 focus:ring-1 focus:ring-inset focus:ring-blue-400'
+          className={`w-full px-2 py-2 bg-transparent text-center text-sm ${textColor} focus:outline-none focus:bg-blue-100 focus:ring-1 focus:ring-inset focus:ring-blue-400`}
         />
       </strong>
     </td>
@@ -155,7 +169,7 @@ function TotalRow({ label, values }) {
   return (
     <tr className='bg-indigo-50'>
       <LabelCell label={label} bold />
-      {values.map((v, i) => (
+      {values?.map((v, i) => (
         <AutoCell key={i} value={v} />
       ))}
     </tr>
@@ -237,8 +251,101 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
   const computed = computeValues(inputs, subpage3_2Data);
   // const hasOver100StockTurn = computed.remainingStockTurn.some((v) => v < 0);
   const userLog = useSelector((state) => state?.user?.user);
+
+  const [amcMetrics, setAmcMetrics] = useState({ lcg: 0, mcg: 0, hcg: 0, coins: 0 });
+
+  useEffect(() => {
+    const region = forwardDetail?.region;
+    const fmt = forwardDetail?.storeFormat;
+    if (!region || !fmt) return;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${BASE_URL}/validation_metrics?region=${encodeURIComponent(region)}&store_format=${encodeURIComponent(fmt)}`,
+        );
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!json.success || !json.data) return;
+        const d = json.data;
+        const get = (field) => d.find((x) => x.Exclusive_Field === field)?.Region_Value ?? 0;
+        setAmcMetrics({
+          lcg: get("AMC - LCG"),
+          mcg: get("AMC - MCG"),
+          hcg: get("AMC - HCG"),
+          coins: get("AMC - Coins AMC%"),
+        });
+        // Normalize the 4 AMC% values to sum to exactly 100% before pre-filling
+        if (!isSaved) {
+          const rawAMC = [
+            get("AMC - LCG"), get("AMC - MCG"), get("AMC - HCG"), get("AMC - Coins AMC%"),
+          ];
+          if (rawAMC.some(v => v > 0)) {
+            const [normLcg, normMcg, normHcg, normCoins] = normalizeGroup(rawAMC);
+            setInputs((prev) => ({
+              ...prev,
+              lcgAMC:   prev.lcgAMC[0]   === 0 ? Array(6).fill(normLcg)   : prev.lcgAMC,
+              mcgAMC:   prev.mcgAMC[0]   === 0 ? Array(6).fill(normMcg)   : prev.mcgAMC,
+              hcgAMC:   prev.hcgAMC[0]   === 0 ? Array(6).fill(normHcg)   : prev.hcgAMC,
+              coinsAMC: prev.coinsAMC[0] === 0 ? Array(6).fill(normCoins) : prev.coinsAMC,
+            }));
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [forwardDetail?.region, forwardDetail?.storeFormat]);
+
+  // Load previously saved pricing metrics when resuming
+  useEffect(() => {
+    const roiid = forwardDetail?.roiid;
+    if (!roiid || isSaved) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/sales_planning`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ screen: 3, roiid }),
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const row = json?.data?.[0];
+        if (!row) return;
+        const inp = row.inputs ?? row;
+        setInputs((prev) => ({
+          ...prev,
+          baseRate22K:      inp.baseRate22K      ?? prev.baseRate22K,
+          markupPct:        inp.markupPct        ?? prev.markupPct,
+          lcgAMC:           inp.plainAMC?.lcg    ?? prev.lcgAMC,
+          mcgAMC:           inp.plainAMC?.mcg    ?? prev.mcgAMC,
+          hcgAMC:           inp.plainAMC?.hcg    ?? prev.hcgAMC,
+          coinsAMC:         inp.coinsAMC         ?? prev.coinsAMC,
+          stockTurnPlain:   inp.stockTurnPlain   ?? prev.stockTurnPlain,
+          stockTurnStudded: inp.stockTurnStudded ?? prev.stockTurnStudded,
+          stockTurnCoins:   inp.stockTurnCoins   ?? prev.stockTurnCoins,
+          bgCoinsStockTurn: inp.bgCoinsStockTurn ?? prev.bgCoinsStockTurn,
+        }));
+        setIsSaved(true);
+      } catch (e) {
+        console.error("Failed to load saved pricing metrics:", e);
+      }
+    })();
+  }, [forwardDetail?.roiid]);
+
+  const totalAMCPct = +(
+    (parseFloat(inputs.lcgAMC[0]) || 0) +
+    (parseFloat(inputs.mcgAMC[0]) || 0) +
+    (parseFloat(inputs.hcgAMC[0]) || 0) +
+    (parseFloat(inputs.coinsAMC[0]) || 0)
+  ).toFixed(2);
+  const amcEquals100 = Math.abs(totalAMCPct - 100) < 0.01;
+  const amcOver100 = totalAMCPct > 100.005;
+  // Same value repeated across all 6 years since Yr.1 propagates
+  const amcTotalRow = Array(6).fill(totalAMCPct);
+  const amcRemainingRow = Array(6).fill(+(100 - totalAMCPct).toFixed(2));
   // ── Form completeness ──────────────────────────────────────────────────
   const isFormComplete =
+    amcEquals100 &&
     parseFloat(inputs.baseRate22K[0]) > 0 &&
     parseFloat(inputs.lcgAMC[0]) > 0 &&
     parseFloat(inputs.mcgAMC[0]) > 0 &&
@@ -246,8 +353,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
     parseFloat(inputs.coinsAMC[0]) > 0 &&
     inputs.stockTurnPlain.every((v) => parseFloat(v) > 0) &&
     inputs.stockTurnStudded.every((v) => parseFloat(v) > 0) &&
-    inputs.stockTurnCoins.every((v) => parseFloat(v) > 0) &&
-    inputs.bgCoinsStockTurn[0] > 0;
+    inputs.stockTurnCoins.every((v) => parseFloat(v) > 0);
 
   const incompleteReasons = [];
   if (!(parseFloat(inputs.baseRate22K[0]) > 0))
@@ -262,16 +368,14 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
     incompleteReasons.push("Fill all Plain Group AMC% values");
   if (!(parseFloat(inputs.coinsAMC[0]) > 0))
     incompleteReasons.push("Enter Coins AMC%");
+  if (!amcEquals100)
+    incompleteReasons.push("AMC% (LCG + MCG + HCG + Coins) must sum to exactly 100%");
   if (
     !inputs.stockTurnPlain.every((v) => parseFloat(v) > 0) ||
     !inputs.stockTurnStudded.every((v) => parseFloat(v) > 0) ||
     !inputs.stockTurnCoins.every((v) => parseFloat(v) > 0)
   )
     incompleteReasons.push("Fill all Stock Turn values for all 6 years");
-  if (!inputs.bgCoinsStockTurn[0] > 0)
-    incompleteReasons.push(
-      "Fill Brand Guidelines Coins Stock Turn for all 6 years",
-    );
 
   const handleSave = async () => {
     try {
@@ -293,15 +397,15 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
           stockTurnCoins: inputs.stockTurnCoins,
         },
         computed: {
-          bgCoinsStockTurn: computed.bgCoinsStockTurn,
+          bgCoinsStockTurn: Array(6).fill(0),  // brand guidelines zeroed until SP is live
           totalStockTurn: computed.totalStockTurn,
           stockPlain: computed.stockPlain,
           stockStudded: computed.stockStudded,
           stockCoins: computed.stockCoins,
           totalStock: computed.totalStock,
-          bgPlainStockTurn: computed.bgPlainStockTurn,
-          bgStuddedStockTurn: computed.bgStuddedStockTurn,
-          bgTotalStockTurn: computed.bgTotalStockTurn,
+          bgPlainStockTurn: Array(6).fill(0),   // brand guidelines zeroed until SP is live
+          bgStuddedStockTurn: Array(6).fill(0), // brand guidelines zeroed until SP is live
+          bgTotalStockTurn: Array(6).fill(0),   // brand guidelines zeroed until SP is live
         },
       };
 
@@ -453,36 +557,39 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                 {/* Sub-header: Plain Group AMC% */}
                 <SubSectionRow label='Plain Group AMC%' />
 
-                {/* LCG — Yr.1 blue, Yr.2–6 auto copy */}
+                {/* LCG — Yr.1 blue with ref colour, Yr.2–6 auto copy */}
                 <tr>
-                  <LabelCell label='LCG' />
+                  <LabelCell label={`LCG - (Ref = ${amcMetrics.lcg})`} />
                   <BlueInputCell
                     value={inputs.lcgAMC[0]}
                     onChange={(e) => handleChange("lcgAMC", 0, e.target.value)}
+                    {...getRefCellClasses(inputs.lcgAMC[0], amcMetrics.lcg)}
                   />
                   {[1, 2, 3, 4, 5].map((i) => (
                     <AutoCell key={i} value={inputs.lcgAMC[0]} />
                   ))}
                 </tr>
 
-                {/* MCG — Yr.1 blue, Yr.2–6 auto copy */}
+                {/* MCG */}
                 <tr>
-                  <LabelCell label='MCG' />
+                  <LabelCell label={`MCG - (Ref = ${amcMetrics.mcg})`} />
                   <BlueInputCell
                     value={inputs.mcgAMC[0]}
                     onChange={(e) => handleChange("mcgAMC", 0, e.target.value)}
+                    {...getRefCellClasses(inputs.mcgAMC[0], amcMetrics.mcg)}
                   />
                   {[1, 2, 3, 4, 5].map((i) => (
                     <AutoCell key={i} value={inputs.mcgAMC[0]} />
                   ))}
                 </tr>
 
-                {/* HCG — Yr.1 blue, Yr.2–6 auto copy */}
+                {/* HCG */}
                 <tr>
-                  <LabelCell label='HCG' />
+                  <LabelCell label={`HCG - (Ref = ${amcMetrics.hcg})`} />
                   <BlueInputCell
                     value={inputs.hcgAMC[0]}
                     onChange={(e) => handleChange("hcgAMC", 0, e.target.value)}
+                    {...getRefCellClasses(inputs.hcgAMC[0], amcMetrics.hcg)}
                   />
                   {[1, 2, 3, 4, 5].map((i) => (
                     <AutoCell key={i} value={inputs.hcgAMC[0]} />
@@ -492,19 +599,33 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                 {/* Sub-header: Coins AMC% */}
                 <SubSectionRow label='Coins AMC%' />
 
-                {/* Coins AMC — Yr.1 blue, Yr.2–6 auto copy */}
+                {/* Coins AMC */}
                 <tr>
-                  <LabelCell label='Coins AMC%' />
+                  <LabelCell label={`Coins AMC% - (Ref = ${amcMetrics.coins})`} />
                   <BlueInputCell
                     value={inputs.coinsAMC[0]}
                     onChange={(e) =>
                       handleChange("coinsAMC", 0, e.target.value)
                     }
+                    {...getRefCellClasses(inputs.coinsAMC[0], amcMetrics.coins)}
                   />
                   {[1, 2, 3, 4, 5].map((i) => (
                     <AutoCell key={i} value={inputs.coinsAMC[0]} />
                   ))}
                 </tr>
+
+                {/* AMC% over-100 warning */}
+                {amcOver100 && (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className='bg-red-50 border border-red-300 px-3 py-2 text-red-700 text-sm font-semibold text-center'>
+                      ⚠️ AMC% total exceeds 100% — reduce LCG, MCG, HCG or Coins
+                    </td>
+                  </tr>
+                )}
+                <TotalRow label='Total AMC%' values={amcTotalRow} />
+                <RemainingRow values={amcRemainingRow} />
               </tbody>
             </table>
           </div>
@@ -527,23 +648,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                 {allInputRow("Plain", "stockTurnPlain")}
                 {allInputRow("Studded", "stockTurnStudded")}
                 {allInputRow("Coins / Silver Share", "stockTurnCoins")}
-                {/* Inline warning when any year exceeds 100% */}
-                {/* {hasOver100StockTurn && (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className='bg-red-50 border border-red-300 px-3 py-2 text-red-700 text-sm font-semibold text-center'>
-                      ⚠️ Total exceeds 100% in{" "}
-                      {computed.remainingStockTurn
-                        .map((v, i) => (v < 0 ? YEARS[i] : null))
-                        .filter(Boolean)
-                        .join(", ")}{" "}
-                      — reduce LCG, MCG or HCG share
-                    </td>
-                  </tr>
-                )} */}
                 <TotalRow label='Total' values={computed.totalStockTurn} />
-                {/* <RemainingRow values={computed.remainingStockTurn} /> */}
               </tbody>
             </table>
           </div>
@@ -557,68 +662,37 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
               <tbody>
                 <tr>
                   <LabelCell label='Plain' />
-                  {computed.stockPlain.map((v, i) => (
-                    <AutoCell key={i} value={v} />
-                  ))}
+                  {computed.stockPlain.map((v, i) => <AutoCell key={i} value={v} />)}
                 </tr>
                 <tr>
                   <LabelCell label='Studded' />
-                  {computed.stockStudded.map((v, i) => (
-                    <AutoCell key={i} value={v} />
-                  ))}
+                  {computed.stockStudded.map((v, i) => <AutoCell key={i} value={v} />)}
                 </tr>
                 <tr>
                   <LabelCell label='Coins / Silver Share' />
-                  {computed.stockCoins.map((v, i) => (
-                    <AutoCell key={i} value={v} />
-                  ))}
+                  {computed.stockCoins.map((v, i) => <AutoCell key={i} value={v} />)}
                 </tr>
                 <TotalRow label='Total' values={computed.totalStock} />
               </tbody>
             </table>
           </div>
 
-          {/* ──────────────────────────────────────────────────────
-                        SECTION 4 — Stock Turn: Brand Guidelines
-                    ────────────────────────────────────────────────────── */}
-          <div className='bg-white rounded-lg shadow-md overflow-x-auto'>
+          {/* SECTION 4 — Stock Turn: Brand Guidelines (temporarily hidden) */}
+          {/* <div className='bg-white rounded-lg shadow-md overflow-x-auto'>
             <table className='min-w-full border-collapse'>
-              <SectionHeader label='Stock Turn – Brand Guidelines' />
+              <SectionHeader label='Stock Turn \u2013 Brand Guidelines' />
               <tbody>
-                {/* Plain — all auto (from DB) */}
-                <tr>
-                  <LabelCell label='Plain' />
-                  {computed.bgPlainStockTurn.map((v, i) => (
-                    <AutoCell key={i} value={v} />
-                  ))}
-                </tr>
-
-                {/* Studded — all auto (from DB) */}
-                <tr>
-                  <LabelCell label='Studded' />
-                  {computed.bgStuddedStockTurn.map((v, i) => (
-                    <AutoCell key={i} value={v} />
-                  ))}
-                </tr>
-
-                {/* Coins — all 6 blue inputs (user-defined) */}
+                <tr><LabelCell label='Plain' />{computed.bgPlainStockTurn.map((v,i)=><AutoCell key={i} value={v}/>)}</tr>
+                <tr><LabelCell label='Studded' />{computed.bgStuddedStockTurn.map((v,i)=><AutoCell key={i} value={v}/>)}</tr>
                 <tr>
                   <LabelCell label='Coins / Silver Share' />
-                  <BlueInputCell
-                    value={inputs.bgCoinsStockTurn[0]}
-                    onChange={(e) =>
-                      handleChange("bgCoinsStockTurn", 0, e.target.value)
-                    }
-                  />
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <AutoCell key={i} value={computed.bgCoinsStockTurn[i]} />
-                  ))}
+                  <BlueInputCell value={inputs.bgCoinsStockTurn[0]} onChange={(e)=>handleChange("bgCoinsStockTurn",0,e.target.value)}/>
+                  {[1,2,3,4,5].map((i)=><AutoCell key={i} value={computed.bgCoinsStockTurn[i]}/>)}
                 </tr>
-
                 <TotalRow label='Total' values={computed.bgTotalStockTurn} />
               </tbody>
             </table>
-          </div>
+          </div> */}
         </div>
 
         {/* Navigation Buttons */}

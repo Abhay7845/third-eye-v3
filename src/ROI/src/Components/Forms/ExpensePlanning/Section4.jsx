@@ -63,9 +63,9 @@ export default function Section4({
   roiContext,
   onNext,
   onPrevious,
-  intialSubStep = 1,
+  initialSubStep = 1,
 }) {
-  const [subStep, setSubStep] = useState(intialSubStep);
+  const [subStep, setSubStep] = useState(initialSubStep);
   const [savedSteps, setSavedSteps] = useState([false, false, false]);
   const [subpage4_1Data, setSubpage4_1Data] = useState(null);
   const [subpage4_2Data, setSubpage4_2Data] = useState(null);
@@ -87,7 +87,7 @@ export default function Section4({
   const handleFetchStoreData = async () => {
     try {
       setIsFetching(true);
-      const roiid = roiContext?.roiId || "020826234332";
+      const roiid = roiContext?.roiId;
       const res = await fetch(
         `${BASE_URL}/fetchScreen?parameter=roi_store_retail_specifications&roiid=${roiid}`,
       );

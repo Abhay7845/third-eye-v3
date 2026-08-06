@@ -259,6 +259,26 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
   const [customerDiscount, setCustomerDiscount] = useState([]);
   const computed = computeValues(subpage3_2Data, customerDiscount);
   const userLog = useSelector((state) => state?.user?.user);
+
+  // Mark as saved if screen 4 data already exists when resuming
+  useEffect(() => {
+    const roiid = forwardDetail?.roiid;
+    if (!roiid || isSaved) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/sales_planning`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ screen: 4, roiid }),
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json?.data?.[0]) setIsSaved(true);
+      } catch (e) {
+        console.error("Failed to check saved discount data:", e);
+      }
+    })();
+  }, [forwardDetail?.roiid]);
   const getCustomerDiscountData = async () => {
     try {
       setLoading(true);

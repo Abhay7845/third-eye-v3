@@ -148,6 +148,31 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const [showModal, setShowModal] = useState(false);
   const [screen1Expenses, setScreen1Expenses] = useState(null);
 
+  // Load previously saved rent inputs when resuming
+  // useEffect(() => {
+  //   const roiid = storeData?.roiid;
+  //   if (!roiid || isSaved) return;
+  //   (async () => {
+  //     try {
+  //       const res = await fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=OTHER`);
+  //       if (!res.ok) return;
+  //       const json = await res.json();
+  //       const row = json?.data?.[0];
+  //       if (!row) return;
+  //       const rent = row.rent ?? row;
+  //       if (rent.revenueSharing != null) setRevenueSharing(rent.revenueSharing);
+  //       if (rent.sba)            setSba(rent.sba);
+  //       if (rent.ratePerSqft)   setRatePerSqft(rent.ratePerSqft);
+  //       if (rent.revSharePct)   setRevSharePct(rent.revSharePct);
+  //       if (rent.minGuaranteeMth) setMinGuaranteeMth(rent.minGuaranteeMth);
+  //       if (rent.securityDeposit != null) setSecurityDepositRate(rent.securityDeposit);
+  //       setIsSaved(true);
+  //     } catch (e) {
+  //       console.error("Failed to load saved rent data:", e);
+  //     }
+  //   })();
+  // }, [storeData?.roiid]);
+
   const fetchExpenseData = async () => {
     if (!storeData?.roiid) return;
     try {
