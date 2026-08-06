@@ -533,7 +533,7 @@ export default function StoreRetailSpecifications({
             <label className='block font-medium text-gray-800 mb-4'>
               Floor Plate Details *{" "}
               <small className='text-red-700'>
-                <strong>The total of foor area is equal to Retail Area</strong>
+                <strong>The total of floor area is equal to Retail Area</strong>
               </small>
             </label>
             <div className='grid md:grid-cols-4 gap-5'>
@@ -561,13 +561,13 @@ export default function StoreRetailSpecifications({
           setExpandedSections((prev) => ({ ...prev, arch: !prev.arch }))
         }>
         <Input
-          label='Frontage'
+          label='Frontage (width * height in sq.ft) *'
           name='frontage'
           type='number'
           register={register}
         />
         <Input
-          label='Ceiling Height'
+          label='Ceiling Height (in ft)*'
           name='ceilingHeight'
           type='number'
           register={register}

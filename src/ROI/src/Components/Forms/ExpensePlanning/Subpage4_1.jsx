@@ -155,13 +155,48 @@ export default function Subpage4_1({ handleNext }) {
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
+  // Load previously saved CAPEX selections when resuming
+  useEffect(() => {
+    const roiid = storeData?.roiid;
+    if (!roiid || isSaved) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=CAPEX`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const row = json?.data?.[0];
+        if (!row) return;
+        if (row.selections) {
+          const restored = {};
+          YES_NO_ITEMS.forEach(({ key }) => {
+            if (row.selections[key] !== undefined) restored[key] = row.selections[key];
+          });
+          // Restore artAndCrafts — it was stored as key = value when selected
+          const artKey = DROPDOWN_ITEMS.find(({ key }) => row.selections[key] === key);
+          if (artKey) restored.artAndCrafts = artKey.key;
+          setSelections((prev) => ({ ...prev, ...restored }));
+        }
+        setIsSaved(true);
+      } catch (e) {
+        console.error("Failed to load saved CAPEX data:", e);
+      }
+    })();
+  }, [storeData?.roiid]);
+
   // ── Fetch DB rates for additional capex items ────────────────────────────
   useEffect(() => {
     const fetchCapexRates = async () => {
       try {
         setIsLoading(true);
+        let retail_area = 0
+        if(storeData.project_type === 'New Store' || storeData?.project_type === 'Rennovation'){
+          retail_area = storeData?.new_retail_area
+        }
+        else{
+          retail_area = storeData?.existing_retail_area
+        }
         const res = await fetch(
-          `${BASE_URL}/roi_expenses?store_type=${storeData?.store_type}&floor_type=${storeData?.flooring_type}&retail_area=${storeData?.existing_retail_area}`,
+          `${BASE_URL}/roi_expenses?store_type=${storeData?.store_type}&floor_type=${storeData?.flooring_type}&retail_area=${retail_area}`,
         );
         if (res.ok) {
           const json = await res.json();
@@ -174,7 +209,8 @@ export default function Subpage4_1({ handleNext }) {
               return it;
             }
             if (it.description === "Interiors") {
-              setInteriors(it?.total_cost);
+              let interiorTotalCost = retail_area*it?.sqft + it?.total_cost
+              setInteriors(interiorTotalCost);
             }
             if (it.description === "Itexpenses") {
               setItEquipment(it?.total_cost);
@@ -327,7 +363,7 @@ export default function Subpage4_1({ handleNext }) {
           {
             label: "Carpet Area (sqft)",
             value: fmt(
-              storeData?.project_type === "Renovation"
+              (storeData?.project_type === "Renovation" || storeData?.project_type === "New Store") 
                 ? storeData?.new_retail_area
                 : storeData?.existing_retail_area,
             ),

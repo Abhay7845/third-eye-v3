@@ -6,36 +6,42 @@ import { useSelector } from "react-redux";
 
 const YEARS = ["Yr. 1", "Yr. 2", "Yr. 3", "Yr. 4", "Yr. 5", "Yr. 6"];
 
+// Scales an array of values proportionally to sum to exactly 100%; replaces zeros with a small minimum.
+function normalizeGroup(rawVals) {
+  let vals = rawVals.map(v => { const n = parseFloat(v) || 0; return n <= 0 ? 0.1 : n; });
+  const sum = vals.reduce((s, v) => s + v, 0);
+  let scaled = vals.map(v => parseFloat(((v / sum) * 100).toFixed(2)));
+  const drift = parseFloat((100 - scaled.reduce((s, v) => s + v, 0)).toFixed(2));
+  scaled[scaled.length - 1] = parseFloat((scaled[scaled.length - 1] + drift).toFixed(2));
+  return scaled;
+}
+
 // ─── Initial state: all user-editable (blue) input fields ────────────────────
 // Each array has 6 entries — index 0 = Yr.1, index 5 = Yr.6
 const initialInputs = {
-  // Sales Planning Parameters
-  walkInPerDay: Array(6).fill(0), // only index 0 (Yr.1) is a blue input; Yr.2–6 are computed
-  increaseWalkIns: Array(6).fill(0), // index 0 (Yr.1) is N/A; indices 1–5 (Yr.2–6) are blue inputs
-  conversionPct: Array(6).fill(0), // all years are blue inputs
-  avgTicketSize: Array(6).fill(0), // only index 0 (Yr.1) is a blue input; Yr.2–6 are computed
-  growthTicketSize: Array(6).fill(0), // index 0 (Yr.1) is N/A; indices 1–5 (Yr.2–6) are blue inputs
-  storeDays: Array(6).fill(0), // all years are blue inputs
+  // Sales Planning — sensible defaults so the form shows a working projection
+  walkInPerDay:     [50, 0, 0, 0, 0, 0],
+  increaseWalkIns:  [0, 8, 8, 8, 8, 8],
+  conversionPct:    Array(6).fill(85),
+  avgTicketSize:    [75000, 0, 0, 0, 0, 0],
+  growthTicketSize: [0, 8, 8, 8, 8, 8],
+  storeDays:        Array(6).fill(330),
 
-  // Sales Mix %
-  plainShare: Array(6).fill(0),
-  studdedShare: Array(6).fill(0),
-  coinsShare: Array(6).fill(0),
-
-  // Plain Mix %
-  lcg: Array(6).fill(0),
-  mcg: Array(6).fill(0),
-  hcg: Array(6).fill(0),
+  // Sales Mix % — pre-filled from validation_metrics reference on load
+  plainShare:    Array(6).fill(0),
+  studdedShare:  Array(6).fill(0),
+  coinsShare:    Array(6).fill(0),
+  lcg:           Array(6).fill(0),
+  mcg:           Array(6).fill(0),
+  hcg:           Array(6).fill(0),
   stoneShareHCG: Array(6).fill(0),
-
-  // Studded Mix %
-  gis: Array(6).fill(0),
-  regular: Array(6).fill(0),
-  colorStones: Array(6).fill(0),
-  solitaireA: Array(6).fill(0),
-  solitaireB: Array(6).fill(0),
-  solitaireC: Array(6).fill(0),
-  solitaireD: Array(6).fill(0),
+  gis:           Array(6).fill(0),
+  regular:       Array(6).fill(0),
+  colorStones:   Array(6).fill(0),
+  solitaireA:    Array(6).fill(0),
+  solitaireB:    Array(6).fill(0),
+  solitaireC:    Array(6).fill(0),
+  solitaireD:    Array(6).fill(0),
 };
 
 // ─── Computed / auto-populated values ────────────────────────────────────────
@@ -273,6 +279,14 @@ const MIX_FIELDS = new Set([
   "solitaireD",
 ]);
 
+// Hard upper limits enforced in handleChange
+const FIELD_MAX = {
+  increaseWalkIns:  100,
+  conversionPct:    100,
+  growthTicketSize: 100,
+  storeDays:        360,
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Subpage3_2({ handleNext, handlePrevious }) {
@@ -284,6 +298,55 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
     useSection3Context();
   const computed = computeValues(inputs);
   const userLog = useSelector((state) => state?.user?.user);
+
+  // Load previously saved sales data when resuming
+  useEffect(() => {
+    const roiid = forwardDetail?.roiid;
+    if (!roiid || isSaved) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/sales_planning`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ screen: 2, roiid }),
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const row = json?.data?.[0];
+        if (!row) return;
+        const inp = row.inputs ?? row;
+        const sm = inp.salesMix ?? {};
+        const pm = inp.plainMix ?? {};
+        const stm = inp.studdedMix ?? {};
+        setInputs((prev) => ({
+          ...prev,
+          walkInPerDay:     inp.walkInPerDayYr1 != null ? [inp.walkInPerDayYr1, ...Array(5).fill(0)] : prev.walkInPerDay,
+          increaseWalkIns:  inp.increaseWalkIns ? [0, ...inp.increaseWalkIns] : prev.increaseWalkIns,
+          conversionPct:    inp.conversionPct    ?? prev.conversionPct,
+          avgTicketSize:    inp.avgTicketSizeYr1 != null ? [inp.avgTicketSizeYr1, ...Array(5).fill(0)] : prev.avgTicketSize,
+          growthTicketSize: inp.growthTicketSize ? [0, ...inp.growthTicketSize] : prev.growthTicketSize,
+          storeDays:        inp.storeDays != null ? Array(6).fill(inp.storeDays) : prev.storeDays,
+          plainShare:    sm.plainShare    ?? prev.plainShare,
+          studdedShare:  sm.studdedShare  ?? prev.studdedShare,
+          coinsShare:    sm.coinsShare    ?? prev.coinsShare,
+          lcg:           pm.lcg           ?? prev.lcg,
+          mcg:           pm.mcg           ?? prev.mcg,
+          hcg:           pm.hcg           ?? prev.hcg,
+          stoneShareHCG: pm.stoneShareHCG ?? prev.stoneShareHCG,
+          gis:          stm.gis          ?? prev.gis,
+          regular:      stm.regular      ?? prev.regular,
+          colorStones:  stm.colorStones  ?? prev.colorStones,
+          solitaireA:   stm.solitaireA   ?? prev.solitaireA,
+          solitaireB:   stm.solitaireB   ?? prev.solitaireB,
+          solitaireC:   stm.solitaireC   ?? prev.solitaireC,
+          solitaireD:   stm.solitaireD   ?? prev.solitaireD,
+        }));
+        setIsSaved(true);
+      } catch (e) {
+        console.error("Failed to load saved sales data:", e);
+      }
+    })();
+  }, [forwardDetail?.roiid]);
   const [validationMetrics, setValidationMetrics] = useState({
     plainShare: 0,
     studdedShare: 0,
@@ -321,30 +384,63 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
         const d = json.data;
         const get = (field) =>
           d.find((x) => x.Exclusive_Field === field)?.Region_Value ?? 0;
-        const allLCG = d.filter((x) => x.Exclusive_Field === "LCG");
-        const allMCG = d.filter((x) => x.Exclusive_Field === "MCG");
-        const allHCG = d.filter((x) => x.Exclusive_Field === "HCG");
         setValidationMetrics({
-          plainShare: get("Plain Share"),
-          studdedShare: get("Studded Share"),
-          coinsShare: get("Coins /Silver Share"),
-          lcg: allLCG[0]?.Region_Value ?? 0,
-          mcg: allMCG[0]?.Region_Value ?? 0,
-          hcg: allHCG[0]?.Region_Value ?? 0,
-          stoneShareHCG: get("Stone share in plain (HCG only)"),
-          gis: get("GIS"),
-          regular: get("Regular"),
-          colorStones: get("Color Stones"),
-          solitaireA: get("Solitaire A(<70C)"),
+          plainShare: get("SalesShare - Plain Share"),
+          studdedShare: get("SalesShare - Studded Share"),
+          coinsShare: get("SalesShare - Coins /Silver Share"),
+          lcg: get("SalesMix - LCG"),
+          mcg: get("SalesMix - MCG"),
+          hcg: get("SalesMix - HCG"),
+          stoneShareHCG: get("SalesMix - Stone share in plain (HCG only)"),
+          gis: get("SalesMix - GIS"),
+          regular: get("SalesMix - Regular"),
+          colorStones: get("SalesMix - Color Stones"),
+          solitaireA: get("SalesMix - Solitaire A(<70C)"),
           solitaireB:
             d.find(
               (x) =>
+                x.Exclusive_Field.includes("SalesMix") &&
                 x.Exclusive_Field.includes("Solitaire") &&
                 x.Exclusive_Field.includes("B"),
             )?.Region_Value ?? 0,
-          solitaireC: get("Solitaire C(1CRT+)"),
-          solitaireD: get("Solitaire D(2CRT+)"),
+          solitaireC: get("SalesMix - Solitaire C(1CRT+)"),
+          solitaireD: get("SalesMix - Solitaire D(2CRT+)"),
         });
+        // Pre-fill mix inputs from normalized reference values when no saved data exists
+        if (!isSaved) {
+          const solitaireBVal = d.find((x) => x.Exclusive_Field.includes("SalesMix") && x.Exclusive_Field.includes("Solitaire") && x.Exclusive_Field.includes("B"))?.Region_Value ?? 0;
+
+          const [normPlain, normStudded, normCoins] = normalizeGroup([
+            get("SalesShare - Plain Share"), get("SalesShare - Studded Share"), get("SalesShare - Coins /Silver Share"),
+          ]);
+          const [normLcg, normMcg, normHcg] = normalizeGroup([
+            get("SalesMix - LCG"), get("SalesMix - MCG"), get("SalesMix - HCG"),
+          ]);
+          const [normGis, normReg, normCS, normSA, normSB, normSC, normSD, normStone] = normalizeGroup([
+            get("SalesMix - GIS"), get("SalesMix - Regular"), get("SalesMix - Color Stones"),
+            get("SalesMix - Solitaire A(<70C)"), solitaireBVal,
+            get("SalesMix - Solitaire C(1CRT+)"), get("SalesMix - Solitaire D(2CRT+)"),
+            get("SalesMix - Stone share in plain (HCG only)"),
+          ]);
+
+          setInputs((prev) => ({
+            ...prev,
+            plainShare:    prev.plainShare[0]    === 0 ? Array(6).fill(normPlain)   : prev.plainShare,
+            studdedShare:  prev.studdedShare[0]  === 0 ? Array(6).fill(normStudded) : prev.studdedShare,
+            coinsShare:    prev.coinsShare[0]    === 0 ? Array(6).fill(normCoins)   : prev.coinsShare,
+            lcg:           prev.lcg[0]           === 0 ? Array(6).fill(normLcg)     : prev.lcg,
+            mcg:           prev.mcg[0]           === 0 ? Array(6).fill(normMcg)     : prev.mcg,
+            hcg:           prev.hcg[0]           === 0 ? Array(6).fill(normHcg)     : prev.hcg,
+            gis:           prev.gis[0]           === 0 ? Array(6).fill(normGis)     : prev.gis,
+            regular:       prev.regular[0]       === 0 ? Array(6).fill(normReg)     : prev.regular,
+            colorStones:   prev.colorStones[0]   === 0 ? Array(6).fill(normCS)      : prev.colorStones,
+            solitaireA:    prev.solitaireA[0]    === 0 ? Array(6).fill(normSA)      : prev.solitaireA,
+            solitaireB:    prev.solitaireB[0]    === 0 ? Array(6).fill(normSB)      : prev.solitaireB,
+            solitaireC:    prev.solitaireC[0]    === 0 ? Array(6).fill(normSC)      : prev.solitaireC,
+            solitaireD:    prev.solitaireD[0]    === 0 ? Array(6).fill(normSD)      : prev.solitaireD,
+            stoneShareHCG: prev.stoneShareHCG[0] === 0 ? Array(6).fill(normStone)  : prev.stoneShareHCG,
+          }));
+        }
       } catch (e) {
         console.error(e);
         toast.error("Failed to load validation metrics.");
@@ -367,20 +463,17 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
     !hasOver100Plain &&
     !hasOver100Studded &&
     !isBelowL1L2Threshold &&
-    // Section 1 — Sales Planning core fields
     parseFloat(storeParticulars["Super Built Up Area"]) > 0 &&
     parseFloat(storeParticulars["Carpet area"]) > 0 &&
     parseFloat(inputs.walkInPerDay[0]) > 0 &&
-    inputs.increaseWalkIns.slice(1).every((v) => parseFloat(v) >= 0) &&
-    inputs.conversionPct.every((v) => parseFloat(v) >= 0) &&
+    inputs.increaseWalkIns.slice(1).every((v) => parseFloat(v) >= 0 && parseFloat(v) <= 100) &&
+    inputs.conversionPct.every((v) => parseFloat(v) > 0 && parseFloat(v) <= 100) &&
     parseFloat(inputs.avgTicketSize[0]) > 0 &&
-    inputs.growthTicketSize.slice(1).every((v) => parseFloat(v) > 0) &&
+    inputs.growthTicketSize.slice(1).every((v) => parseFloat(v) > 0 && parseFloat(v) <= 100) &&
     parseFloat(inputs.storeDays[0]) > 0 &&
-    // Section 2 — Sales Mix must sum to exactly 100% every year
+    parseFloat(inputs.storeDays[0]) <= 360 &&
     computed.remainingShareMix.every((v) => v === 0) &&
-    // Section 3 — Plain Mix must sum to exactly 100% every year
     computed.remainingPlainMix.every((v) => v === 0) &&
-    // Section 4 — Studded Mix must sum to exactly 100% every year
     computed.remainingStuddedMix.every((v) => v === 0);
 
   const incompleteReasons = [];
@@ -396,10 +489,18 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
     incompleteReasons.push("Fill all required fields in Sales Planning");
   if (
     !inputs.increaseWalkIns.slice(1).every((v) => parseFloat(v) >= 0) ||
-    !inputs.conversionPct.every((v) => parseFloat(v) >= 0) ||
+    !inputs.conversionPct.every((v) => parseFloat(v) > 0) ||
     !inputs.growthTicketSize.slice(1).every((v) => parseFloat(v) > 0)
   )
     incompleteReasons.push("Fill all yearly % fields in Sales Planning");
+  if (inputs.conversionPct.some((v) => parseFloat(v) > 100))
+    incompleteReasons.push("Conv. % cannot exceed 100%");
+  if (inputs.increaseWalkIns.slice(1).some((v) => parseFloat(v) > 100))
+    incompleteReasons.push("Increase in Walk-ins % cannot exceed 100%");
+  if (inputs.growthTicketSize.slice(1).some((v) => parseFloat(v) > 100))
+    incompleteReasons.push("Growth in Ticket Size % cannot exceed 100%");
+  if (parseFloat(inputs.storeDays[0]) > 360)
+    incompleteReasons.push("Store days cannot exceed 360");
   if (hasOver100)
     incompleteReasons.push("Sales Mix % exceeds 100% in one or more years");
   else if (!computed.remainingShareMix.every((v) => v === 0))
@@ -510,13 +611,20 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
   };
 
   const handleChange = (field, yearIndex, value) => {
-    setIsSaved(false); // any edit invalidates the saved state
+    setIsSaved(false);
+    // Clamp to allowed range before storing
+    let clamped = value;
+    const n = parseFloat(value);
+    if (!isNaN(n)) {
+      if (n < 0) clamped = "0";
+      else if (FIELD_MAX[field] !== undefined && n > FIELD_MAX[field])
+        clamped = String(FIELD_MAX[field]);
+    }
     setInputs((prev) => {
       const updated = [...prev[field]];
-      updated[yearIndex] = value;
-      // Propagate Yr.1 value to all other years for mix fields
+      updated[yearIndex] = clamped;
       if (MIX_FIELDS.has(field) && yearIndex === 0) {
-        for (let i = 1; i < 6; i++) updated[i] = value;
+        for (let i = 1; i < 6; i++) updated[i] = clamped;
       }
       return { ...prev, [field]: updated };
     });
