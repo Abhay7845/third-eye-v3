@@ -36,8 +36,6 @@ export default function AdminPage({ toggle_open, toggle }) {
     }
   };
 
-  console.log("loginActivity==>", loginActivity);
-
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {

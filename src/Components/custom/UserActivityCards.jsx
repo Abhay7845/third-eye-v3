@@ -4,7 +4,6 @@ import { FaCalendarAlt, FaEnvelope, FaCopy, FaCheck } from "react-icons/fa";
 
 const UserActivityCards = ({ users }) => {
   const [copiedIndex, setCopiedIndex] = useState(null);
-  console.log("users==>", users);
 
   function getCurrentAndPreviousDateData(data) {
     // Get unique dates and sort descending
