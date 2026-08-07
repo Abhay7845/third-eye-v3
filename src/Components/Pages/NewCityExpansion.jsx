@@ -1093,7 +1093,7 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
                 disabled={lockBtn}
               />
             </div>
-            <div style={{ marginTop: "19px" }}>
+            <div style={{ marginTop: "23px" }}>
               <button
                 type='submit'
                 className={lockBtn ? "apply_btn_disabled" : "apply_btn"}
@@ -1102,11 +1102,11 @@ const NewCityExpansion = ({ toggle_open, toggle }) => {
                 GENERATE
               </button>
             </div>
-            <div style={{ marginTop: "19px" }}>
+            <div style={{ marginTop: "23px" }}>
               <Tippy content='Reset'>
                 <button
                   type='submit'
-                  style={{ padding: "5px", cursor: "pointer" }}
+                  className='reset_btn'
                   onClick={HandelResetFiled}>
                   <FiRefreshCcw />
                 </button>

@@ -132,7 +132,9 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
     if (!roiid || isSaved) return;
     (async () => {
       try {
-        const res = await fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=RESOURCE`);
+        const res = await fetch(
+          `${BASE_URL}/expense_details/${roiid}?expense_type=RESOURCE`,
+        );
         if (!res.ok) return;
         const json = await res.json();
         const row = json?.data?.[0];
@@ -141,7 +143,8 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
         if (row.electricity?.ratePerSqft != null)
           setElectricity({ ratePerSqft: row.electricity.ratePerSqft });
         if (row.otherExpenses) setOtherExpenses(row.otherExpenses);
-        if (row.securityHousekeeping?.rows) setSecHousekeeping(row.securityHousekeeping.rows);
+        if (row.securityHousekeeping?.rows)
+          setSecHousekeeping(row.securityHousekeeping.rows);
         setIsSaved(true);
       } catch (e) {
         console.error("Failed to load saved resource data:", e);
@@ -153,7 +156,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   const [electricity, setElectricity] = useState({ ratePerSqft: 25 });
   const [otherExpenses, setOtherExpenses] = useState({
     registrationCharges: 500000,
-    relocCost: 10000000,  // 1 Cr default
+    relocCost: 10000000, // 1 Cr default
   });
   const [secHousekeeping, setSecHousekeeping] = useState([
     { role: "Security", nos: 2, monthly: 20000 },
@@ -214,7 +217,6 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
               r.resource_roles !== "House Keeping",
           )
           .map((r) => r.resource_roles);
-        console.log(roles);
         setResourceRoles(roles);
 
         // Fetch levels for all roles
@@ -288,7 +290,6 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
         // Auto-fill monthly fixed with the ref monthly salary so user sees a starting value
         updated[role].monthly = annualRef > 0 ? Math.round(annualRef / 12) : 0;
       }
-      console.log(updated[role]);
       return updated;
     });
   };

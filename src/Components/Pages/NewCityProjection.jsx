@@ -48,6 +48,31 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   // const pdlList = formatAssessmentData(pdf_data?.assessment);
   const [pdfDecesion, setPdfDecesion] = useState([]);
   const pdfDecisionRef = useRef(null);
+  const pdfDecisionCacheRef = useRef({});
+
+  const PDF_DECISION_CITY_CACHE_KEY = "newCityProjection_pdfDecisionCache";
+
+  const readPdfDecisionCache = () => {
+    try {
+      const raw = sessionStorage.getItem(PDF_DECISION_CITY_CACHE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const writePdfDecisionCache = (cacheObj) => {
+    try {
+      sessionStorage.setItem(
+        PDF_DECISION_CITY_CACHE_KEY,
+        JSON.stringify(cacheObj),
+      );
+    } catch {
+      // Ignore storage failures; fetch flow should continue.
+    }
+  };
 
   const targetCity = inputsPayload?.targetCity;
   const targetPinCode = inputsPayload?.targetPinCode;
@@ -262,7 +287,20 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
       .catch((err) => setCustExitStore(0));
   };
 
-  const GetPdfDecision = async () => {
+  const GetPdfDecision = async (city) => {
+    const cityKey = city?.toString()?.trim();
+    if (!cityKey) {
+      setPdfDecesion([]);
+      return null;
+    }
+
+    // Return cached decision for same city without calling API again.
+    const cachedDecision = pdfDecisionCacheRef.current?.[cityKey];
+    if (Array.isArray(cachedDecision) && cachedDecision.length > 0) {
+      setPdfDecesion(cachedDecision);
+      return cachedDecision;
+    }
+
     // If a call is already in-flight (e.g. React StrictMode double-invoke),
     // share the same promise so both callers properly await it.
     if (pdfDecisionRef.current) {
@@ -275,13 +313,19 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
           try {
             const response = await axiosInstance.post(
               "/api/openai/decision_reasoner/v2",
-              { city: similerStoreVal },
+              { city: city },
             );
             if (response?.status === 200) {
               const formattedData =
                 formatAssessmentData(response?.data?.assessment) || [];
 
               if (formattedData.length > 0) {
+                const nextCache = {
+                  ...pdfDecisionCacheRef.current,
+                  [cityKey]: formattedData,
+                };
+                pdfDecisionCacheRef.current = nextCache;
+                writePdfDecisionCache(nextCache);
                 setPdfDecesion(formattedData);
                 return response;
               }
@@ -310,6 +354,10 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
   };
 
   useEffect(() => {
+    pdfDecisionCacheRef.current = readPdfDecisionCache();
+  }, []);
+
+  useEffect(() => {
     if (!(targetPinCode && similerStoreVal && targetCity)) return;
 
     let isCancelled = false;
@@ -324,7 +372,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
         GetEnrollTargetYear(targetCity, targetPinCode),
         GetCannibilization(similerStoreVal, targetCity, targetPinCode),
         GetNewCrossChannel(targetPinCode, similerStoreVal),
-        GetPdfDecision(),
+        GetPdfDecision(similerStoreVal),
       ]);
       if (!isCancelled) {
         setLoading(false);
@@ -446,7 +494,7 @@ const NewCityProjection = ({ toggle_open, toggle }) => {
         <div
           style={{
             border: "1.5px solid #233044",
-            marginTop: "5px",
+            marginTop: "10px",
           }}>
           <div
             style={{

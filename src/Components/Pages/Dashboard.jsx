@@ -1242,7 +1242,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
               disabled={lockBtn}
             />
           </div>
-          <div style={{ marginTop: "19px" }}>
+          <div style={{ marginTop: "23px" }}>
             <button
               type='submit'
               className={lockBtn ? "apply_btn_disabled" : "apply_btn"}
@@ -1252,11 +1252,11 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             </button>
           </div>
 
-          <div style={{ marginTop: "19px" }}>
+          <div style={{ marginTop: "23px" }}>
             <Tippy content='Reset'>
               <button
                 type='submit'
-                style={{ padding: "5px", cursor: "pointer" }}
+                className='reset_btn'
                 onClick={HandelResetFiled}>
                 <FiRefreshCcw />
               </button>
@@ -1321,7 +1321,7 @@ const Dashboard = ({ userLog, newStore, setSlideOut, dicisionData }) => {
             margin: "5px",
           }}>
           <button
-            className={projBtnDesabled ? " apply_btn_disabled" : "CButton"}
+            className={projBtnDesabled ? "apply_btn_disabled" : "CButton"}
             style={{ marginBottom: "2px" }}
             onClick={() => {
               dispatch(setNewStoreInputs(inputsPayload));

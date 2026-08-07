@@ -10,24 +10,31 @@ const YEARS = ["Yr. 1", "Yr. 2", "Yr. 3", "Yr. 4", "Yr. 5", "Yr. 6"];
 
 // Scales an array proportionally to sum to exactly 100%; replaces zeros with 0.1.
 function normalizeGroup(rawVals) {
-  let vals = rawVals.map(v => { const n = parseFloat(v) || 0; return n <= 0 ? 0.1 : n; });
+  let vals = rawVals.map((v) => {
+    const n = parseFloat(v) || 0;
+    return n <= 0 ? 0.1 : n;
+  });
   const sum = vals.reduce((s, v) => s + v, 0);
-  let scaled = vals.map(v => parseFloat(((v / sum) * 100).toFixed(2)));
-  const drift = parseFloat((100 - scaled.reduce((s, v) => s + v, 0)).toFixed(2));
-  scaled[scaled.length - 1] = parseFloat((scaled[scaled.length - 1] + drift).toFixed(2));
+  let scaled = vals.map((v) => parseFloat(((v / sum) * 100).toFixed(2)));
+  const drift = parseFloat(
+    (100 - scaled.reduce((s, v) => s + v, 0)).toFixed(2),
+  );
+  scaled[scaled.length - 1] = parseFloat(
+    (scaled[scaled.length - 1] + drift).toFixed(2),
+  );
   return scaled;
 }
 
 const initialInputs = {
-  baseRate22K:      Array(6).fill(0),    // user must enter current 22K gold rate
-  markupPct:        Array(6).fill(2),    // 2% default
-  lcgAMC:           Array(6).fill(0),    // pre-filled from validation_metrics on load
-  mcgAMC:           Array(6).fill(0),
-  hcgAMC:           Array(6).fill(0),
-  coinsAMC:         Array(6).fill(0),
-  stockTurnPlain:   Array(6).fill(2),
+  baseRate22K: Array(6).fill(0), // user must enter current 22K gold rate
+  markupPct: Array(6).fill(2), // 2% default
+  lcgAMC: Array(6).fill(0), // pre-filled from validation_metrics on load
+  mcgAMC: Array(6).fill(0),
+  hcgAMC: Array(6).fill(0),
+  coinsAMC: Array(6).fill(0),
+  stockTurnPlain: Array(6).fill(2),
   stockTurnStudded: Array(6).fill(1.8),
-  stockTurnCoins:   Array(6).fill(3),
+  stockTurnCoins: Array(6).fill(3),
   bgCoinsStockTurn: Array(6).fill(0),
 };
 
@@ -124,13 +131,19 @@ function getRefCellClasses(value, refValue) {
   const ref = parseFloat(refValue);
   if (isNaN(num) || isNaN(ref) || num === 0)
     return { bgColor: "bg-blue-50", textColor: "text-blue-900" };
-  if (num > ref) return { bgColor: "bg-green-100", textColor: "text-green-700" };
+  if (num > ref)
+    return { bgColor: "bg-green-100", textColor: "text-green-700" };
   if (ref > 0 && num >= ref * 0.95)
     return { bgColor: "bg-yellow-100", textColor: "text-yellow-700" };
   return { bgColor: "bg-red-100", textColor: "text-red-700" };
 }
 
-function BlueInputCell({ value, onChange, bgColor = "bg-blue-50", textColor = "text-blue-900" }) {
+function BlueInputCell({
+  value,
+  onChange,
+  bgColor = "bg-blue-50",
+  textColor = "text-blue-900",
+}) {
   return (
     <td className={`border border-gray-200 p-0 ${bgColor}`}>
       <strong>
@@ -252,7 +265,12 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
   // const hasOver100StockTurn = computed.remainingStockTurn.some((v) => v < 0);
   const userLog = useSelector((state) => state?.user?.user);
 
-  const [amcMetrics, setAmcMetrics] = useState({ lcg: 0, mcg: 0, hcg: 0, coins: 0 });
+  const [amcMetrics, setAmcMetrics] = useState({
+    lcg: 0,
+    mcg: 0,
+    hcg: 0,
+    coins: 0,
+  });
 
   useEffect(() => {
     const region = forwardDetail?.region;
@@ -261,13 +279,16 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
     (async () => {
       try {
         const res = await fetch(
-          `${BASE_URL}/validation_metrics?region=${encodeURIComponent(region)}&store_format=${encodeURIComponent(fmt)}`,
+          `${BASE_URL}/validation_metrics?region=${encodeURIComponent(
+            region,
+          )}&store_format=${encodeURIComponent(fmt)}`,
         );
         if (!res.ok) return;
         const json = await res.json();
         if (!json.success || !json.data) return;
         const d = json.data;
-        const get = (field) => d.find((x) => x.Exclusive_Field === field)?.Region_Value ?? 0;
+        const get = (field) =>
+          d.find((x) => x.Exclusive_Field === field)?.Region_Value ?? 0;
         setAmcMetrics({
           lcg: get("AMC - LCG"),
           mcg: get("AMC - MCG"),
@@ -277,16 +298,26 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
         // Normalize the 4 AMC% values to sum to exactly 100% before pre-filling
         if (!isSaved) {
           const rawAMC = [
-            get("AMC - LCG"), get("AMC - MCG"), get("AMC - HCG"), get("AMC - Coins AMC%"),
+            get("AMC - LCG"),
+            get("AMC - MCG"),
+            get("AMC - HCG"),
+            get("AMC - Coins AMC%"),
           ];
-          if (rawAMC.some(v => v > 0)) {
-            const [normLcg, normMcg, normHcg, normCoins] = normalizeGroup(rawAMC);
+          if (rawAMC.some((v) => v > 0)) {
+            const [normLcg, normMcg, normHcg, normCoins] =
+              normalizeGroup(rawAMC);
             setInputs((prev) => ({
               ...prev,
-              lcgAMC:   prev.lcgAMC[0]   === 0 ? Array(6).fill(normLcg)   : prev.lcgAMC,
-              mcgAMC:   prev.mcgAMC[0]   === 0 ? Array(6).fill(normMcg)   : prev.mcgAMC,
-              hcgAMC:   prev.hcgAMC[0]   === 0 ? Array(6).fill(normHcg)   : prev.hcgAMC,
-              coinsAMC: prev.coinsAMC[0] === 0 ? Array(6).fill(normCoins) : prev.coinsAMC,
+              lcgAMC:
+                prev.lcgAMC[0] === 0 ? Array(6).fill(normLcg) : prev.lcgAMC,
+              mcgAMC:
+                prev.mcgAMC[0] === 0 ? Array(6).fill(normMcg) : prev.mcgAMC,
+              hcgAMC:
+                prev.hcgAMC[0] === 0 ? Array(6).fill(normHcg) : prev.hcgAMC,
+              coinsAMC:
+                prev.coinsAMC[0] === 0
+                  ? Array(6).fill(normCoins)
+                  : prev.coinsAMC,
             }));
           }
         }
@@ -314,15 +345,15 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
         const inp = row.inputs ?? row;
         setInputs((prev) => ({
           ...prev,
-          baseRate22K:      inp.baseRate22K      ?? prev.baseRate22K,
-          markupPct:        inp.markupPct        ?? prev.markupPct,
-          lcgAMC:           inp.plainAMC?.lcg    ?? prev.lcgAMC,
-          mcgAMC:           inp.plainAMC?.mcg    ?? prev.mcgAMC,
-          hcgAMC:           inp.plainAMC?.hcg    ?? prev.hcgAMC,
-          coinsAMC:         inp.coinsAMC         ?? prev.coinsAMC,
-          stockTurnPlain:   inp.stockTurnPlain   ?? prev.stockTurnPlain,
+          baseRate22K: inp.baseRate22K ?? prev.baseRate22K,
+          markupPct: inp.markupPct ?? prev.markupPct,
+          lcgAMC: inp.plainAMC?.lcg ?? prev.lcgAMC,
+          mcgAMC: inp.plainAMC?.mcg ?? prev.mcgAMC,
+          hcgAMC: inp.plainAMC?.hcg ?? prev.hcgAMC,
+          coinsAMC: inp.coinsAMC ?? prev.coinsAMC,
+          stockTurnPlain: inp.stockTurnPlain ?? prev.stockTurnPlain,
           stockTurnStudded: inp.stockTurnStudded ?? prev.stockTurnStudded,
-          stockTurnCoins:   inp.stockTurnCoins   ?? prev.stockTurnCoins,
+          stockTurnCoins: inp.stockTurnCoins ?? prev.stockTurnCoins,
           bgCoinsStockTurn: inp.bgCoinsStockTurn ?? prev.bgCoinsStockTurn,
         }));
         setIsSaved(true);
@@ -369,7 +400,9 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
   if (!(parseFloat(inputs.coinsAMC[0]) > 0))
     incompleteReasons.push("Enter Coins AMC%");
   if (!amcEquals100)
-    incompleteReasons.push("AMC% (LCG + MCG + HCG + Coins) must sum to exactly 100%");
+    incompleteReasons.push(
+      "AMC% (LCG + MCG + HCG + Coins) must sum to exactly 100%",
+    );
   if (
     !inputs.stockTurnPlain.every((v) => parseFloat(v) > 0) ||
     !inputs.stockTurnStudded.every((v) => parseFloat(v) > 0) ||
@@ -397,15 +430,15 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
           stockTurnCoins: inputs.stockTurnCoins,
         },
         computed: {
-          bgCoinsStockTurn: Array(6).fill(0),  // brand guidelines zeroed until SP is live
+          bgCoinsStockTurn: Array(6).fill(0), // brand guidelines zeroed until SP is live
           totalStockTurn: computed.totalStockTurn,
           stockPlain: computed.stockPlain,
           stockStudded: computed.stockStudded,
           stockCoins: computed.stockCoins,
           totalStock: computed.totalStock,
-          bgPlainStockTurn: Array(6).fill(0),   // brand guidelines zeroed until SP is live
+          bgPlainStockTurn: Array(6).fill(0), // brand guidelines zeroed until SP is live
           bgStuddedStockTurn: Array(6).fill(0), // brand guidelines zeroed until SP is live
-          bgTotalStockTurn: Array(6).fill(0),   // brand guidelines zeroed until SP is live
+          bgTotalStockTurn: Array(6).fill(0), // brand guidelines zeroed until SP is live
         },
       };
 
@@ -488,7 +521,6 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
   //       });
 
   //       const data = await response.json();
-  //       console.log(data);
   //     } catch (err) {
   //       console.error(err);
   //     }
@@ -601,7 +633,9 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
 
                 {/* Coins AMC */}
                 <tr>
-                  <LabelCell label={`Coins AMC% - (Ref = ${amcMetrics.coins})`} />
+                  <LabelCell
+                    label={`Coins AMC% - (Ref = ${amcMetrics.coins})`}
+                  />
                   <BlueInputCell
                     value={inputs.coinsAMC[0]}
                     onChange={(e) =>
@@ -662,15 +696,21 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
               <tbody>
                 <tr>
                   <LabelCell label='Plain' />
-                  {computed.stockPlain.map((v, i) => <AutoCell key={i} value={v} />)}
+                  {computed.stockPlain.map((v, i) => (
+                    <AutoCell key={i} value={v} />
+                  ))}
                 </tr>
                 <tr>
                   <LabelCell label='Studded' />
-                  {computed.stockStudded.map((v, i) => <AutoCell key={i} value={v} />)}
+                  {computed.stockStudded.map((v, i) => (
+                    <AutoCell key={i} value={v} />
+                  ))}
                 </tr>
                 <tr>
                   <LabelCell label='Coins / Silver Share' />
-                  {computed.stockCoins.map((v, i) => <AutoCell key={i} value={v} />)}
+                  {computed.stockCoins.map((v, i) => (
+                    <AutoCell key={i} value={v} />
+                  ))}
                 </tr>
                 <TotalRow label='Total' values={computed.totalStock} />
               </tbody>

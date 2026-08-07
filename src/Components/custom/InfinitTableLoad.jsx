@@ -11,6 +11,9 @@ const InfinitTableLoad = ({ data, header }) => {
   const startIndex = (currentPage - 1) * pageSize;
   const currentData = data.slice(startIndex, startIndex + pageSize);
 
+  const hostname = window.location?.origin;
+  const isUat = hostname.split("-")[0]?.trim();
+
   return (
     <div
       style={{
@@ -57,9 +60,10 @@ const InfinitTableLoad = ({ data, header }) => {
             currentData.map((item, i) => {
               const pdfFileName = item?.historyId?.trim().replace(/\s+/g, "_");
               // UAT PDF URL
-              const pdf_url = `https://d6oojw29okpcs.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
+              const uat_pdf_url = `https://d6oojw29okpcs.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
               // PROD PDF URL
-              // const pdf_url = `https://d1i4tarane3v3g.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
+              const prod_pdf_url = `https://d1i4tarane3v3g.cloudfront.net/ThirdEye/${pdfFileName}.pdf`;
+              const pdf_url = isUat === "uat" ? uat_pdf_url : prod_pdf_url;
               return (
                 <Tr key={i}>
                   <Td style={{ width: "6%" }}>{i + 1}</Td>

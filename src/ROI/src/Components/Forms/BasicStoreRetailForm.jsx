@@ -80,7 +80,6 @@ export default function BasicStoreDetails({ onNext }) {
   });
 
   const userLog = useSelector((state) => state?.user?.user);
-  console.log("userLog==>", userLog);
 
   const [isSaved, setIsSaved] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -380,7 +379,6 @@ export default function BasicStoreDetails({ onNext }) {
   }, [selectedProjectType]);
 
   const fetchAttribute = async (parameter) => {
-    console.log("BASE_URL==>", BASE_URL);
     try {
       const res = await fetch(`${BASE_URL}/attribute/${parameter}`);
       if (res.ok) {
