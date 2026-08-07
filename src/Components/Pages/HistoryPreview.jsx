@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../custom/Sidebar";
 import ThirdEyeHeader from "../custom/ThirdEyeHeader";
 import { useDispatch, useSelector } from "react-redux";
+import { FiRefreshCcw } from "react-icons/fi";
 import { Select, DatePicker } from "antd";
 import InfinitTableLoad from "../custom/InfinitTableLoad";
 import { axiosInstance } from "../../HostManger/API/Authorization";
@@ -274,8 +275,8 @@ const HistoryPreview = ({ toggle_open, toggle }) => {
                 <button className='CButton' onClick={handelFilter}>
                   Next
                 </button>
-                <button style={{ cursor: "pointer" }} onClick={ResetValues}>
-                  Reset
+                <button className='reset_btn' onClick={ResetValues}>
+                  <FiRefreshCcw />
                 </button>
               </div>
             )}
