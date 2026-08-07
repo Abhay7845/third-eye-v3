@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useSection3Context } from "./Section3Context";
 import { toast } from "react-toastify";
@@ -120,6 +120,24 @@ const fmt = (n) =>
     ? "—"
     : Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
+// Sensible monthly defaults for a premium jewelry boutique (Tanishq-scale)
+const EXPENSE_DEFAULTS = {
+  "Rent":                              "200000",
+  "Staff Salaries":                    "120000",
+  "Security & Housekeeping":           "25000",
+  "Electricity":                       "18000",
+  "Repairs & Maintenance":             "5000",
+  "Insurance":                         "15000",
+  "BTL":                               "12000",
+  "Travel & Conveyance":               "5000",
+  "Telephone/Internet":                "3000",
+  "Credit Card Commission":            "10000",
+  "GST (primarily rental)":            "36000",
+  "Store - Printing/Pantry etc":       "4000",
+  "Consumables":                       "4000",
+  "Other - Staff welfare/Uniforms etc":"6000",
+};
+
 export default function Subpage3_1({ handleNext }) {
   // ── Store particulars come from the outer Section3 context ────────────
   const { storeParticulars, forwardDetail, markStepSaved } =
@@ -128,16 +146,48 @@ export default function Subpage3_1({ handleNext }) {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
   } = useForm({
     defaultValues: {
-      expenses: Object.fromEntries(expensesFields.map((f) => [f, ""])),
+      expenses: Object.fromEntries(
+        expensesFields.map((f) => [f, EXPENSE_DEFAULTS[f] ?? ""])
+      ),
     },
   });
   const userLog = useSelector((state) => state?.user?.user);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
+
+  // Load previously saved expenses when resuming
+  useEffect(() => {
+    const roiid = forwardDetail?.roiid;
+    if (!roiid || isSaved) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/sales_planning`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ screen: 1, roiid }),
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const row = json?.data?.[0];
+        if (!row) return;
+        const saved = row.expenses ?? row;
+        expensesFields.forEach((field) => {
+          const entry = saved[field];
+          const val = entry?.monthly ?? entry ?? "";
+          if (val !== "" && val !== undefined)
+            setValue(`expenses.${field}`, String(val));
+        });
+        setIsSaved(true);
+      } catch (e) {
+        console.error("Failed to load saved expenses:", e);
+      }
+    })();
+  }, [forwardDetail?.roiid]);
 
   const userExpenses = useWatch({ control, name: "expenses" });
 

@@ -110,6 +110,7 @@ function ROIMainPage() {
             <MultiStepROIForm
               initialRoiContext={continueContext?.roiContext ?? null}
               initialStep={continueContext?.startStep ?? 1}
+              initialSubStep={continueContext?.startSubStep ?? 1}
               onExit={handleBack}
             />
           </div>

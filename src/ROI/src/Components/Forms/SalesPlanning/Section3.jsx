@@ -105,8 +105,8 @@ function Stepper({ currentStep, savedSteps }) {
 }
 
 // ─── Main layout component ────────────────────────────────────────────────────
-export default function Section3({ roiContext, onNext, intialSubStep = 1 }) {
-  const [subSteps, setSubSteps] = useState(intialSubStep);
+export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
+  const [subSteps, setSubSteps] = useState(initialSubStep);
   const [savedSteps, setSavedSteps] = useState([false, false, false, false]);
   const [forwardDetail, setforwardDetail] = useState({});
   const [subpage3_2Data, setSubpage3_2Data] = useState(null);
@@ -240,6 +240,62 @@ export default function Section3({ roiContext, onNext, intialSubStep = 1 }) {
   useEffect(() => {
     handleFetchRefStoreDetail();
   }, []);
+
+  // Restore subpage3_2Data + mark which steps were already saved when resuming
+  useEffect(() => {
+    const roiid = roiContext?.roiId;
+    if (!roiid) return;
+    (async () => {
+      try {
+        const fetchScreen = (screen) =>
+          fetch(`${BASE_URL}/sales_planning`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ screen, roiid }),
+          });
+
+        const [r1, r2, r3, r4] = await Promise.all([
+          fetchScreen(1), fetchScreen(2), fetchScreen(3), fetchScreen(4),
+        ]);
+
+        if (r1.ok) {
+          const j1 = await r1.json();
+          if (j1?.data?.[0]) markStepSaved(0);
+        }
+        if (r2.ok) {
+          const j2 = await r2.json();
+          const row2 = j2?.data?.[0];
+          if (row2) {
+            markStepSaved(1);
+            // Restore context data so Subpage3_3/4 computed values work
+            const inp = row2.inputs ?? row2;
+            setSubpage3_2Data({
+              roiid,
+              total_sales_data: row2.computed?.totalSales ?? Array(6).fill(0),
+              plainShare:    inp.salesMix?.plainShare    ?? Array(6).fill(0),
+              studdedShare:  inp.salesMix?.studdedShare  ?? Array(6).fill(0),
+              coinsShare:    inp.salesMix?.coinsShare    ?? Array(6).fill(0),
+              lcg:           inp.plainMix?.lcg           ?? Array(6).fill(0),
+              mcg:           inp.plainMix?.mcg           ?? Array(6).fill(0),
+              hcg:           inp.plainMix?.hcg           ?? Array(6).fill(0),
+              stoneShareHCG: inp.plainMix?.stoneShareHCG ?? Array(6).fill(0),
+              gis:           inp.studdedMix?.gis          ?? Array(6).fill(0),
+              regular:       inp.studdedMix?.regular      ?? Array(6).fill(0),
+              colorStones:   inp.studdedMix?.colorStones  ?? Array(6).fill(0),
+              solitaireA:    inp.studdedMix?.solitaireA   ?? Array(6).fill(0),
+              solitaireB:    inp.studdedMix?.solitaireB   ?? Array(6).fill(0),
+              solitaireC:    inp.studdedMix?.solitaireC   ?? Array(6).fill(0),
+              solitaireD:    inp.studdedMix?.solitaireD   ?? Array(6).fill(0),
+            });
+          }
+        }
+        if (r3.ok) { const j3 = await r3.json(); if (j3?.data?.[0]) markStepSaved(2); }
+        if (r4.ok) { const j4 = await r4.json(); if (j4?.data?.[0]) markStepSaved(3); }
+      } catch (e) {
+        console.error("Failed to restore saved sales planning steps:", e);
+      }
+    })();
+  }, [roiContext?.roiId]);
 
   useEffect(() => {
     if (subSteps === 5) {
