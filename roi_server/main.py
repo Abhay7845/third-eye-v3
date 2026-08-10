@@ -15,20 +15,43 @@ from TOTFunctions import _compute_and_save_tot
 
 app = FastAPI()
 
-origins = [
-    "http://localhost:3000",  # React
-    "http://localhost:5173",  # Vite
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-]
+app = FastAPI(
+    title="ROI",
+    root_path="/roi/api",  # This will prefix all paths when behind a reverse proxy
+)
 
+# origins = [
+#     "http://localhost:3000",  # React
+#     "http://localhost:5173",  # Vite
+#     "http://127.0.0.1:3000",
+#     "http://127.0.0.1:5173",
+# ]
+
+
+# CORS settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "http://localhost:5173",
+        "https://localhost:5173",
+        "https://tanishqdigitalmerch.titan.in",
+        "https://uat-tanishqdigitalmerch.titan.in",
+        "https://tanishqmerchtools.titan.in",
+        "https://digital.titan.in",
+    ],
+    allow_origin_regex=r"http://localhost:3\d{3}",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=origins,
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 _logger = logging.getLogger(__name__)
 
