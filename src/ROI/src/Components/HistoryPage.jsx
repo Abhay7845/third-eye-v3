@@ -172,14 +172,21 @@ export default function HistoryPage({ onBack, onContinueROI }) {
       try {
         setListLoading(true);
         const username = userLog?.name;
-        const res = await fetch(`${BASE_URL}/roi_id?username=${username}`);
+        const res = await fetch(`${BASE_URL}/roi_id_summary?username=${username}`);
         if (!res.ok) throw new Error("Failed to fetch ROI list");
         const json = await res.json();
-        const sorted = (json.data ?? [])
-          .slice()
-          .sort((a, b) =>
-            (b.inserted_date ?? "").localeCompare(a.inserted_date ?? ""),
-          );
+        // Multiple rows per roiid (one per history entry) — keep latest per roiid
+        const latest = new Map();
+        for (const row of json.data ?? []) {
+          const id = row.roiid ?? row.roi_id ?? row.ROIID ?? "";
+          const existing = latest.get(id);
+          const rowDate = new Date(row.last_updated_date || row.inserted_date || 0);
+          const existDate = existing ? new Date(existing.last_updated_date || existing.inserted_date || 0) : new Date(0);
+          if (!existing || rowDate > existDate) latest.set(id, row);
+        }
+        const sorted = [...latest.values()].sort((a, b) =>
+          (b.inserted_date ?? "").localeCompare(a.inserted_date ?? "")
+        );
         setRoiList(sorted);
       } catch (err) {
         toast.error(err.message || "Failed to load ROI requests");
@@ -337,7 +344,9 @@ export default function HistoryPage({ onBack, onContinueROI }) {
   const firstIncompleteStep = firstIncomplete.step;
   const firstIncompleteSubStep = firstIncomplete.subStep;
   const isAllComplete = firstIncompleteStep === 5;
-  const isSubmitted = selectedRoi?.status === "Submitted to RBM";
+  const isSubmitted = selectedRoi?.status === "Submitted to RBM" || selectedRoi?.status === "Submitted_toRBM";
+  // ABM can edit & resubmit when any approver has sent clarification back
+  const isClarificationPending = (selectedRoi?.status ?? "").startsWith("SK_by");
   // ── Derived filter data ─────────────────────────────────────────────────
   const projectTypes = [
     "All",
@@ -785,21 +794,34 @@ export default function HistoryPage({ onBack, onContinueROI }) {
               ) : (
                 <div
                   className={`rounded-2xl border p-6 flex items-center justify-between gap-4 ${
-                    isAllComplete
+                    isClarificationPending
+                      ? "bg-amber-50 border-amber-300"
+                      : isAllComplete
                       ? "bg-green-50 border-green-200"
                       : "bg-indigo-50 border-indigo-200"
                   }`}>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <p className='font-bold text-gray-800'>
-                      {isAllComplete
+                      {isClarificationPending
+                        ? `💬 Clarification Requested by ${(selectedRoi?.status ?? "").replace("SK_by", "")}`
+                        : isAllComplete
                         ? "🎉 All sections complete"
                         : `📍 Continue from Step ${firstIncompleteStep}`}
                     </p>
                     <p className='text-xs text-gray-500 mt-1'>
-                      {isAllComplete
+                      {isClarificationPending
+                        ? "Review the remark below and make necessary changes before resubmitting."
+                        : isAllComplete
                         ? "Review all filled data and proceed to submit."
                         : "Saved fields are editable — Project Type, History ID & Ref Store are locked."}
                     </p>
+                    {/* Show remark from approval history when clarification is pending */}
+                    {isClarificationPending && selectedRoi?.remarks && (
+                      <div className="mt-3 bg-white rounded-xl border border-amber-200 px-4 py-3">
+                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Remark from Approver</p>
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{selectedRoi.remarks}</p>
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={handleContinue}
@@ -807,12 +829,16 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     className={`flex-shrink-0 px-6 py-3 rounded-xl font-semibold text-sm shadow transition ${
                       continuing
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : isClarificationPending
+                        ? "bg-amber-500 hover:bg-amber-600 text-white"
                         : isAllComplete
                         ? "bg-green-600 hover:bg-green-700 text-white"
                         : "bg-indigo-600 hover:bg-indigo-700 text-white"
                     }`}>
                     {continuing
                       ? "Loading…"
+                      : isClarificationPending
+                      ? "✏️ Edit & Resubmit"
                       : isAllComplete
                       ? "Review & Submit"
                       : "Continue ROI →"}

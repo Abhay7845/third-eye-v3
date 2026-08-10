@@ -1,15 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MultiStepROIForm from "./MultiStepROIForm";
 import HistoryPage from "./HistoryPage";
+import RBMDashboard from "./RBMDashboard";
 import ThirdEyeHeader from "../../../Components/custom/ThirdEyeHeader";
 import { useSelector } from "react-redux";
 import roi_banner from "../assets/ROI_Banner.png";
+import { BASE_URL } from "./Forms/data/baseUrl";
 
 function ROIMainPage() {
   const userLog = useSelector((state) => state?.user?.user);
+  const [userRole, setUserRole] = useState(null); // null = loading
   const [newReqFlag, setNewReqFlag] = useState(false);
   const [historyReqFlag, setHistoryReqFlag] = useState(false);
   const [continueContext, setContinueContext] = useState(null);
+
+  // Fetch role once the user is available
+  useEffect(() => {
+    const email = userLog?.email;
+    if (!email) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/user_role?email=${encodeURIComponent(email)}`);
+        if (!res.ok) { setUserRole("ABM"); return; }
+        const json = await res.json();
+        // API returns array; first entry is the logged-in user's role
+        const role = (json.data?.[0]?.Role ?? "ABM");
+        setUserRole(role);
+      } catch {
+        setUserRole("ABM"); // fallback to ABM on error
+      }
+    })();
+  }, [userLog?.name]);
 
   const handleContinueROI = (roiContext, startStep, startSubStep = 1) => {
     setContinueContext({ roiContext, startStep, startSubStep });
@@ -26,9 +47,20 @@ function ROIMainPage() {
   return (
     <div className='flex flex-col h-screen overflow-hidden'>
       <ThirdEyeHeader chl={userLog?.channel} />
-      <div className='flex-1 overflow-auto relative'>
-        {!newReqFlag && !historyReqFlag ? (
-          /* full-area background image with dark overlay for readability */
+
+      {/* Non-ABM roles (RBM, Commercial, Retail, …) get the approver dashboard */}
+      {userRole !== null && userRole !== "ABM" ? (
+        <RBMDashboard userRole={userRole} />
+      ) : (
+        <div className='flex-1 overflow-auto relative'>
+
+          {/* Role loading spinner */}
+          {userRole === null ? (
+            <div className='flex items-center justify-center h-full'>
+              <div className='animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full' />
+            </div>
+          /* ABM / default flow */
+          ) : !newReqFlag && !historyReqFlag ? (
           <div
             className='flex items-center justify-center h-full p-4'
             style={{
@@ -105,26 +137,27 @@ function ROIMainPage() {
               </div>
             </div>
           </div>
-        ) : newReqFlag ? (
-          <div className='w-full max-w-7xl mx-auto p-4'>
-            <MultiStepROIForm
-              initialRoiContext={continueContext?.roiContext ?? null}
-              initialStep={continueContext?.startStep ?? 1}
-              initialSubStep={continueContext?.startSubStep ?? 1}
-              onExit={handleBack}
-            />
-          </div>
-        ) : (
-          historyReqFlag && (
-            <div className='h-full'>
-              <HistoryPage
-                onBack={handleBack}
-                onContinueROI={handleContinueROI}
+          ) : newReqFlag ? (
+            <div className='w-full max-w-7xl mx-auto p-4'>
+              <MultiStepROIForm
+                initialRoiContext={continueContext?.roiContext ?? null}
+                initialStep={continueContext?.startStep ?? 1}
+                initialSubStep={continueContext?.startSubStep ?? 1}
+                onExit={handleBack}
               />
             </div>
-          )
-        )}
-      </div>
+          ) : (
+            historyReqFlag && (
+              <div className='h-full'>
+                <HistoryPage
+                  onBack={handleBack}
+                  onContinueROI={handleContinueROI}
+                />
+              </div>
+            )
+          )}
+        </div>
+      )}
     </div>
   );
 }
