@@ -11,7 +11,7 @@ const DashboardMain = ({ toggle_open, toggle }) => {
   const newStoreInputs = useSelector(
     (state) => state?.newStoreInputs?.newStoreInputs,
   );
-
+  console.log("userLog==>", userLog);
   const dicisionData = useSelector(
     (state) => state?.newStoreInputs?.newStoreDecisiontext,
   );

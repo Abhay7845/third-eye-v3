@@ -235,7 +235,7 @@ const NewStoreProjection = ({ toggle_open, toggle }) => {
 
   const GetInsertUserInfo = () => {
     const newStrPylaod = {
-      userName: userLog?.name || "geust",
+      userName: userLog?.name,
       channel: channel,
       targetCatchment: targetPinCode?.toString(),
       similarStore: similerStoreVal,
