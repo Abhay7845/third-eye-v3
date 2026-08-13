@@ -20,28 +20,28 @@ function normalizeGroup(rawVals) {
 // Each array has 6 entries — index 0 = Yr.1, index 5 = Yr.6
 const initialInputs = {
   // Sales Planning — sensible defaults so the form shows a working projection
-  walkInPerDay:     [50, 0, 0, 0, 0, 0],
-  increaseWalkIns:  [0, 8, 8, 8, 8, 8],
-  conversionPct:    Array(6).fill(85),
-  avgTicketSize:    [75000, 0, 0, 0, 0, 0],
+  walkInPerDay: [50, 0, 0, 0, 0, 0],
+  increaseWalkIns: [0, 8, 8, 8, 8, 8],
+  conversionPct: Array(6).fill(85),
+  avgTicketSize: [75000, 0, 0, 0, 0, 0],
   growthTicketSize: [0, 8, 8, 8, 8, 8],
-  storeDays:        Array(6).fill(330),
+  storeDays: Array(6).fill(330),
 
   // Sales Mix % — pre-filled from validation_metrics reference on load
-  plainShare:    Array(6).fill(0),
-  studdedShare:  Array(6).fill(0),
-  coinsShare:    Array(6).fill(0),
-  lcg:           Array(6).fill(0),
-  mcg:           Array(6).fill(0),
-  hcg:           Array(6).fill(0),
+  plainShare: Array(6).fill(0),
+  studdedShare: Array(6).fill(0),
+  coinsShare: Array(6).fill(0),
+  lcg: Array(6).fill(0),
+  mcg: Array(6).fill(0),
+  hcg: Array(6).fill(0),
   stoneShareHCG: Array(6).fill(0),
-  gis:           Array(6).fill(0),
-  regular:       Array(6).fill(0),
-  colorStones:   Array(6).fill(0),
-  solitaireA:    Array(6).fill(0),
-  solitaireB:    Array(6).fill(0),
-  solitaireC:    Array(6).fill(0),
-  solitaireD:    Array(6).fill(0),
+  gis: Array(6).fill(0),
+  regular: Array(6).fill(0),
+  colorStones: Array(6).fill(0),
+  solitaireA: Array(6).fill(0),
+  solitaireB: Array(6).fill(0),
+  solitaireC: Array(6).fill(0),
+  solitaireD: Array(6).fill(0),
 };
 
 // ─── Computed / auto-populated values ────────────────────────────────────────
@@ -76,7 +76,7 @@ const computeValues = (inputs) => {
       (buyersPerDay[i] *
         avgTicketSize[i] *
         (parseFloat(inputs.storeDays[0]) || 0)) /
-        100000,
+      100000,
     );
   }
 
@@ -119,8 +119,8 @@ const computeValues = (inputs) => {
       (parseFloat(inputs.solitaireA[i]) || 0) +
       (parseFloat(inputs.solitaireB[i]) || 0) +
       (parseFloat(inputs.solitaireC[i]) || 0) +
-      (parseFloat(inputs.solitaireD[i]) || 0) +
-      (parseFloat(inputs.stoneShareHCG[i]) || 0);
+      (parseFloat(inputs.solitaireD[i]) || 0);
+    // stoneShareHCG is informational only — excluded from the 100% validation
     totalStuddedMix[i] = +sum.toFixed(2);
     remainingStuddedMix[i] = +(100 - sum).toFixed(2);
   }
@@ -190,9 +190,8 @@ function NACell() {
 function LabelCell({ label, bold = false }) {
   return (
     <td
-      className={`border border-gray-200 px-3 py-2 text-sm text-gray-800 bg-white${
-        bold ? " font-semibold" : ""
-      }`}>
+      className={`border border-gray-200 px-3 py-2 text-sm text-gray-800 bg-white${bold ? " font-semibold" : ""
+        }`}>
       <strong>{label}</strong>
     </td>
   );
@@ -200,7 +199,7 @@ function LabelCell({ label, bold = false }) {
 
 function TotalRow({ label, values }) {
   return (
-    <tr className='bg-indigo-50'>
+    <tr className='bg-indigo-100'>
       <LabelCell label={label} bold />
       {values.map((v, i) => (
         <AutoCell key={i} value={v} />
@@ -222,13 +221,13 @@ function RemainingRow({ values }) {
         const cellCls = isOver
           ? "bg-red-50 text-red-600"
           : isDone
-          ? "bg-green-50 text-green-600"
-          : "bg-amber-50 text-amber-600";
+            ? "bg-green-50 text-green-600"
+            : "bg-amber-50 text-amber-600";
         const tip = isOver
           ? `Over by ${Math.abs(num)}% — reduce one of the shares`
           : isDone
-          ? "Fully allocated"
-          : `${num}% still to be allocated`;
+            ? "Fully allocated"
+            : `${num}% still to be allocated`;
         return (
           <td
             key={i}
@@ -281,10 +280,10 @@ const MIX_FIELDS = new Set([
 
 // Hard upper limits enforced in handleChange
 const FIELD_MAX = {
-  increaseWalkIns:  100,
-  conversionPct:    100,
+  increaseWalkIns: 100,
+  conversionPct: 100,
   growthTicketSize: 100,
-  storeDays:        360,
+  storeDays: 360,
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -320,26 +319,26 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
         const stm = inp.studdedMix ?? {};
         setInputs((prev) => ({
           ...prev,
-          walkInPerDay:     inp.walkInPerDayYr1 != null ? [inp.walkInPerDayYr1, ...Array(5).fill(0)] : prev.walkInPerDay,
-          increaseWalkIns:  inp.increaseWalkIns ? [0, ...inp.increaseWalkIns] : prev.increaseWalkIns,
-          conversionPct:    inp.conversionPct    ?? prev.conversionPct,
-          avgTicketSize:    inp.avgTicketSizeYr1 != null ? [inp.avgTicketSizeYr1, ...Array(5).fill(0)] : prev.avgTicketSize,
+          walkInPerDay: inp.walkInPerDayYr1 != null ? [inp.walkInPerDayYr1, ...Array(5).fill(0)] : prev.walkInPerDay,
+          increaseWalkIns: inp.increaseWalkIns ? [0, ...inp.increaseWalkIns] : prev.increaseWalkIns,
+          conversionPct: inp.conversionPct ?? prev.conversionPct,
+          avgTicketSize: inp.avgTicketSizeYr1 != null ? [inp.avgTicketSizeYr1, ...Array(5).fill(0)] : prev.avgTicketSize,
           growthTicketSize: inp.growthTicketSize ? [0, ...inp.growthTicketSize] : prev.growthTicketSize,
-          storeDays:        inp.storeDays != null ? Array(6).fill(inp.storeDays) : prev.storeDays,
-          plainShare:    sm.plainShare    ?? prev.plainShare,
-          studdedShare:  sm.studdedShare  ?? prev.studdedShare,
-          coinsShare:    sm.coinsShare    ?? prev.coinsShare,
-          lcg:           pm.lcg           ?? prev.lcg,
-          mcg:           pm.mcg           ?? prev.mcg,
-          hcg:           pm.hcg           ?? prev.hcg,
+          storeDays: inp.storeDays != null ? Array(6).fill(inp.storeDays) : prev.storeDays,
+          plainShare: sm.plainShare ?? prev.plainShare,
+          studdedShare: sm.studdedShare ?? prev.studdedShare,
+          coinsShare: sm.coinsShare ?? prev.coinsShare,
+          lcg: pm.lcg ?? prev.lcg,
+          mcg: pm.mcg ?? prev.mcg,
+          hcg: pm.hcg ?? prev.hcg,
           stoneShareHCG: pm.stoneShareHCG ?? prev.stoneShareHCG,
-          gis:          stm.gis          ?? prev.gis,
-          regular:      stm.regular      ?? prev.regular,
-          colorStones:  stm.colorStones  ?? prev.colorStones,
-          solitaireA:   stm.solitaireA   ?? prev.solitaireA,
-          solitaireB:   stm.solitaireB   ?? prev.solitaireB,
-          solitaireC:   stm.solitaireC   ?? prev.solitaireC,
-          solitaireD:   stm.solitaireD   ?? prev.solitaireD,
+          gis: stm.gis ?? prev.gis,
+          regular: stm.regular ?? prev.regular,
+          colorStones: stm.colorStones ?? prev.colorStones,
+          solitaireA: stm.solitaireA ?? prev.solitaireA,
+          solitaireB: stm.solitaireB ?? prev.solitaireB,
+          solitaireC: stm.solitaireC ?? prev.solitaireC,
+          solitaireD: stm.solitaireD ?? prev.solitaireD,
         }));
         setIsSaved(true);
       } catch (e) {
@@ -425,20 +424,20 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
 
           setInputs((prev) => ({
             ...prev,
-            plainShare:    prev.plainShare[0]    === 0 ? Array(6).fill(normPlain)   : prev.plainShare,
-            studdedShare:  prev.studdedShare[0]  === 0 ? Array(6).fill(normStudded) : prev.studdedShare,
-            coinsShare:    prev.coinsShare[0]    === 0 ? Array(6).fill(normCoins)   : prev.coinsShare,
-            lcg:           prev.lcg[0]           === 0 ? Array(6).fill(normLcg)     : prev.lcg,
-            mcg:           prev.mcg[0]           === 0 ? Array(6).fill(normMcg)     : prev.mcg,
-            hcg:           prev.hcg[0]           === 0 ? Array(6).fill(normHcg)     : prev.hcg,
-            gis:           prev.gis[0]           === 0 ? Array(6).fill(normGis)     : prev.gis,
-            regular:       prev.regular[0]       === 0 ? Array(6).fill(normReg)     : prev.regular,
-            colorStones:   prev.colorStones[0]   === 0 ? Array(6).fill(normCS)      : prev.colorStones,
-            solitaireA:    prev.solitaireA[0]    === 0 ? Array(6).fill(normSA)      : prev.solitaireA,
-            solitaireB:    prev.solitaireB[0]    === 0 ? Array(6).fill(normSB)      : prev.solitaireB,
-            solitaireC:    prev.solitaireC[0]    === 0 ? Array(6).fill(normSC)      : prev.solitaireC,
-            solitaireD:    prev.solitaireD[0]    === 0 ? Array(6).fill(normSD)      : prev.solitaireD,
-            stoneShareHCG: prev.stoneShareHCG[0] === 0 ? Array(6).fill(normStone)  : prev.stoneShareHCG,
+            plainShare: prev.plainShare[0] === 0 ? Array(6).fill(normPlain) : prev.plainShare,
+            studdedShare: prev.studdedShare[0] === 0 ? Array(6).fill(normStudded) : prev.studdedShare,
+            coinsShare: prev.coinsShare[0] === 0 ? Array(6).fill(normCoins) : prev.coinsShare,
+            lcg: prev.lcg[0] === 0 ? Array(6).fill(normLcg) : prev.lcg,
+            mcg: prev.mcg[0] === 0 ? Array(6).fill(normMcg) : prev.mcg,
+            hcg: prev.hcg[0] === 0 ? Array(6).fill(normHcg) : prev.hcg,
+            gis: prev.gis[0] === 0 ? Array(6).fill(normGis) : prev.gis,
+            regular: prev.regular[0] === 0 ? Array(6).fill(normReg) : prev.regular,
+            colorStones: prev.colorStones[0] === 0 ? Array(6).fill(normCS) : prev.colorStones,
+            solitaireA: prev.solitaireA[0] === 0 ? Array(6).fill(normSA) : prev.solitaireA,
+            solitaireB: prev.solitaireB[0] === 0 ? Array(6).fill(normSB) : prev.solitaireB,
+            solitaireC: prev.solitaireC[0] === 0 ? Array(6).fill(normSC) : prev.solitaireC,
+            solitaireD: prev.solitaireD[0] === 0 ? Array(6).fill(normSD) : prev.solitaireD,
+            stoneShareHCG: prev.stoneShareHCG[0] === 0 ? Array(6).fill(normStone) : prev.stoneShareHCG,
           }));
         }
       } catch (e) {
@@ -721,6 +720,20 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
                   ))}
                 </tr>
 
+                {/* Walk-in per day: Yr.1 = blue input, Yr.2–6 = auto */}
+                <tr>
+                  <LabelCell label='Walk-in per day' />
+                  <BlueInputCell
+                    value={inputs.walkInPerDay[0]}
+                    onChange={(e) =>
+                      handleChange("walkInPerDay", 0, e.target.value)
+                    }
+                  />
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <AutoCell key={i} value={computed.walkInPerDay[i]} />
+                  ))}
+                </tr>
+
                 {/* Increase in Walk-ins: Yr.1 = N/A, Yr.2–6 = blue inputs */}
                 <tr>
                   <LabelCell label='Increase in Walk-ins % per day' />
@@ -736,19 +749,6 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
                   ))}
                 </tr>
 
-                {/* Walk-in per day: Yr.1 = blue input, Yr.2–6 = auto */}
-                <tr>
-                  <LabelCell label='Walk-in per day' />
-                  <BlueInputCell
-                    value={inputs.walkInPerDay[0]}
-                    onChange={(e) =>
-                      handleChange("walkInPerDay", 0, e.target.value)
-                    }
-                  />
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <AutoCell key={i} value={computed.walkInPerDay[i]} />
-                  ))}
-                </tr>
 
                 {/* Conv.% — all blue inputs */}
                 {allInputRow("Conv. %", "conversionPct")}
@@ -758,6 +758,20 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
                   <LabelCell label='Buyers per day' />
                   {computed.buyersPerDay.map((v, i) => (
                     <AutoCell key={i} value={v} />
+                  ))}
+                </tr>
+
+                {/* Average Ticket Size: Yr.1 = blue input, Yr.2–6 = auto */}
+                <tr>
+                  <LabelCell label='Average Ticket Size (Rs)' />
+                  <BlueInputCell
+                    value={inputs.avgTicketSize[0]}
+                    onChange={(e) =>
+                      handleChange("avgTicketSize", 0, e.target.value)
+                    }
+                  />
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <AutoCell key={i} value={computed.avgTicketSize[i]} />
                   ))}
                 </tr>
 
@@ -776,19 +790,6 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
                   ))}
                 </tr>
 
-                {/* Average Ticket Size: Yr.1 = blue input, Yr.2–6 = auto */}
-                <tr>
-                  <LabelCell label='Average Ticket Size (Rs)' />
-                  <BlueInputCell
-                    value={inputs.avgTicketSize[0]}
-                    onChange={(e) =>
-                      handleChange("avgTicketSize", 0, e.target.value)
-                    }
-                  />
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <AutoCell key={i} value={computed.avgTicketSize[i]} />
-                  ))}
-                </tr>
 
                 {/* No. of store days — all blue inputs */}
                 <tr>
@@ -805,7 +806,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
                 </tr>
 
                 {/* Total Sales — all auto */}
-                <TotalRow label='Total Sales' values={computed.totalSales} />
+                <TotalRow label='Total Sales (in Lakhs.)' values={computed.totalSales} />
 
                 {/* L1 / L2.5 minimum threshold warning */}
                 {isBelowL1L2Threshold && (
@@ -831,12 +832,6 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
             </table>
           </div>
 
-          <p className='text-xs text-gray-500 italic px-1'>
-            Red indicates significantly less than comparable metrics for the
-            Region and Green indicates significantly higher. Please fill the
-            pricing metrics accurately basis the boutique / cluster / region
-            current numbers.
-          </p>
 
           {/* ──────────────────────────────────────────────────────────
                         SECTION 2 — Sales Mix %
@@ -881,11 +876,11 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
             </table>
           </div>
 
-          <p className='text-xs text-gray-500 italic px-1'>
-            Red indicates significantly less than comparable metrics for the
-            Region and Green indicates significantly higher. Please fill the
-            pricing metrics accurately basis the boutique / cluster / region
-            current numbers.
+          <p className='text-[13px] text-black bg-indigo-100 italic px-2'>
+            <strong>Red indicates significantly less than comparable metrics for the
+              Region and Green indicates significantly higher. Please fill the
+              pricing metrics accurately basis the boutique / cluster / region
+              current numbers.</strong>
           </p>
 
           {/* ──────────────────────────────────────────────────────────
@@ -930,9 +925,22 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
                   values={computed.totalPlainMix}
                 />
                 <RemainingRow values={computed.remainingPlainMix} />
+                {/* Stone Share shown for reference only — not counted in any 100% rule */}
+                {refInputRow(
+                  `Stone Share in Plain (HCG only) - (Ref = ${validationMetrics.stoneShareHCG})`,
+                  "stoneShareHCG",
+                  validationMetrics.stoneShareHCG,
+                )}
               </tbody>
             </table>
           </div>
+
+          <p className='text-[13px] text-black bg-indigo-100 italic px-2'>
+            <strong>Red indicates significantly less than comparable metrics for the
+              Region and Green indicates significantly higher. Please fill the
+              pricing metrics accurately basis the boutique / cluster / region
+              current numbers.</strong>
+          </p>
 
           {/* ──────────────────────────────────────────────────────────
                         SECTION 4 — Studded Sales Mix %
@@ -976,11 +984,6 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
                   "solitaireD",
                   validationMetrics.solitaireD,
                 )}
-                {refInputRow(
-                  `Stone Share in Plain (HCG only) - (Ref = ${validationMetrics.stoneShareHCG})`,
-                  "stoneShareHCG",
-                  validationMetrics.stoneShareHCG,
-                )}
                 {/* Inline warning when any year exceeds 100% */}
                 {hasOver100Studded && (
                   <tr>
@@ -1004,6 +1007,12 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
               </tbody>
             </table>
           </div>
+          <p className='text-[13px] text-black bg-indigo-100 italic px-2'>
+            <strong>Red indicates significantly less than comparable metrics for the
+              Region and Green indicates significantly higher. Please fill the
+              pricing metrics accurately basis the boutique / cluster / region
+              current numbers.</strong>
+          </p>
         </div>
 
         {/* Navigation Buttons */}
@@ -1030,11 +1039,10 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
                 onClick={handleSave}
                 disabled={isSaving || !isFormComplete}
                 title={!isFormComplete ? incompleteReasons.join(" | ") : ""}
-                className={`font-semibold px-8 py-2 rounded-lg shadow transition ${
-                  isSaving || !isFormComplete
-                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    : "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                }`}>
+                className={`font-semibold px-8 py-2 rounded-lg shadow transition ${isSaving || !isFormComplete
+                  ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                  : "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                  }`}>
                 {isSaving ? "Saving..." : "Save"}
               </button>
             ) : (

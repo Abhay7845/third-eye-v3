@@ -125,7 +125,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [refStore, setRefStore] = useState("");
-
+  console.log(storeData)
   // Mark as saved if resource data already exists when resuming
   useEffect(() => {
     const roiid = storeData?.roiid;
@@ -193,7 +193,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
 
     const json = await res.json();
 
-    const storeCode = json.data?.[0]?.exsisting_store_code;
+    const storeCode = storeData?.project_type === 'New Store' ? storeData?.refStoreCode :json.data?.[0]?.exsisting_store_code;
 
     return await fetchHeadCount(storeCode);
   };
@@ -303,7 +303,9 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   };
 
   // ── Derived totals ────────────────────────────────────────────────────────
-  const carpetArea = parseFloat(storeData?.existing_retail_area ?? 0);
+  const carpetArea = (storeData?.project_type === "Renovation" || storeData?.project_type === "New Store") 
+                ? parseFloat(storeData?.new_retail_area)
+                : parseFloat(storeData?.existing_retail_area)
 
   const totalMonthlyFixed = Object.values(salaryRows).reduce(
     (s, r) => s + (parseFloat(r.monthly) || 0),

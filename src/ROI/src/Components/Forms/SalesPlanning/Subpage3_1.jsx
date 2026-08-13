@@ -260,7 +260,7 @@ export default function Subpage3_1({ handleNext }) {
         {/* Header */}
         <div className='mb-6'>
           <h2 className='text-3xl font-bold text-gray-800 mb-1'>
-            Store Details
+            Store Details 
           </h2>
           <p className='text-gray-500 text-sm'>
             View store particulars and enter key monthly expenses
@@ -272,7 +272,7 @@ export default function Subpage3_1({ handleNext }) {
           <div className='bg-white rounded-xl shadow-lg overflow-hidden h-full flex flex-col'>
             <div className='px-5 py-4 border-b border-gray-100'>
               <h3 className='text-base font-bold text-gray-800'>
-                📊 Store Particulars
+                📊 Store Particulars [The fields value are based on RefStore]
               </h3>
               <p className='text-xs text-gray-400 mt-0.5'>
                 Reference data — read only
@@ -314,7 +314,7 @@ export default function Subpage3_1({ handleNext }) {
             <div className='px-5 py-4 border-b border-gray-100 flex items-start justify-between'>
               <div>
                 <h3 className='text-base font-bold text-gray-800'>
-                  💰 Key Expenses
+                  💰 Key Expenses [The Value of Expenses are on the basis of Ref store, you can edit accordingly]
                 </h3>
                 <p className='text-xs text-gray-400 mt-0.5'>
                   Enter monthly values — annual is auto-calculated

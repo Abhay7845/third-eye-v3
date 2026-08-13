@@ -420,6 +420,77 @@ function ActionModal({ action, roiid, userRole, onConfirm, onCancel, loading }) 
     </div>
   );
 }
+// ─── New Store PDF Modal ──────────────────────────────────────────────────────────────────
+function NewStorePDFModal({ historyId, onClose }) {
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [errMsg, setErrMsg]   = useState(null);
+
+  useEffect(() => {
+    if (!historyId) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/history/${encodeURIComponent(historyId)}`);
+        if (!res.ok) throw new Error("Failed to fetch history details.");
+        const json = await res.json();
+        const d = json.data?.[0] ?? {};
+        // Scan all string values for a URL that looks like a PDF / document
+        const url = d.pdf_url ?? d.document_url ?? d.pdf_link ?? d.file_url ??
+          Object.values(d).find(v =>
+            typeof v === "string" && v.startsWith("http") &&
+            (v.includes(".pdf") || v.includes("blob") || v.includes("drive") || v.includes("/document"))
+          ) ?? null;
+        if (!url) setErrMsg("No PDF document is linked to this History ID.");
+        setPdfUrl(url);
+      } catch (e) {
+        setErrMsg(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [historyId]);
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-700 to-indigo-600 px-6 py-4 shrink-0 flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-bold text-lg">📄 New Store Document</h3>
+            <p className="text-blue-200 text-xs mt-0.5">History ID: {historyId}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {pdfUrl && (
+              <a href={pdfUrl} target="_blank" rel="noopener noreferrer"
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold rounded-lg transition">
+                ↗ Open in new tab
+              </a>
+            )}
+            <button onClick={onClose}
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 text-white text-xl font-bold transition">
+              ×
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center h-full gap-3">
+              <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+              <p className="text-slate-400 text-sm">Loading document…</p>
+            </div>
+          ) : errMsg ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
+              <span className="text-4xl">📭</span>
+              <p className="text-sm">{errMsg}</p>
+            </div>
+          ) : (
+            <iframe src={pdfUrl} className="w-full h-full" title="New Store Document" />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── TOT Section (Commercial role only) ────────────────────────────────────────────────────────────
 const TOT_TABS = [
   { key: "Plain_TOT_Final", label: "Plain Final" },
@@ -580,6 +651,8 @@ export default function RBMDashboard({ userRole = "RBM" }) {
   const [confirmAction, setConfirmAction] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [showTotModal, setShowTotModal] = useState(false);
+  const [roiHistoryId, setRoiHistoryId] = useState(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   // ── Fetch ROI list ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -618,12 +691,21 @@ export default function RBMDashboard({ userRole = "RBM" }) {
     setSelectedRoi({ ...roi, roiid });
     setPageStatuses([]);
     setExpandedPage(null);
+    setRoiHistoryId(null);
     setPagesLoading(true);
     try {
       const summaryRes = await fetch(`${BASE_URL}/summary/${roiid}`);
       if (summaryRes.ok) {
         const json = await summaryRes.json();
         setPageStatuses(json.data ?? []);
+      }
+      // Fetch history_id for New Store PDF button
+      if ((roi.project_type ?? "") === "New Store") {
+        const basicRes = await fetch(`${BASE_URL}/fetchScreen?parameter=roi_basic_store_details&roiid=${roiid}`);
+        if (basicRes.ok) {
+          const bj = await basicRes.json();
+          setRoiHistoryId(bj.data?.[0]?.ty_history_id ?? null);
+        }
       }
     } catch (err) {
       toast.error("Failed to load ROI details");
@@ -853,7 +935,17 @@ export default function RBMDashboard({ userRole = "RBM" }) {
                       {selectedRoi.inserted_date && <span>📅 {new Date(selectedRoi.inserted_date).toLocaleDateString("en-IN")}</span>}
                     </div>
                   </div>
-                  <StatusBadge status={roiStatus} size="md" />
+                  <div className="flex flex-col items-end gap-2">
+                    <StatusBadge status={roiStatus} size="md" />
+                    {/* PDF button shown to all roles for New Store projects */}
+                    {selectedRoi.project_type === "New Store" && roiHistoryId && (
+                      <button
+                        onClick={() => setShowPdfModal(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold rounded-lg transition">
+                        📄 View New Store PDF
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -963,6 +1055,13 @@ export default function RBMDashboard({ userRole = "RBM" }) {
           data={pageModal.data}
           loading={pageModal.loading}
           onClose={() => setPageModal({ open: false, pageName: "", data: [], loading: false })}
+        />
+      )}
+
+      {showPdfModal && (
+        <NewStorePDFModal
+          historyId={roiHistoryId}
+          onClose={() => setShowPdfModal(false)}
         />
       )}
 

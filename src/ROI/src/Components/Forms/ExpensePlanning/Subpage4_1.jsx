@@ -17,7 +17,7 @@ const YES_NO_ITEMS = [
     label: "EHV zone addition (Furniture & Interior)",
   },
   {
-    key: "DxC (Equipment and Interiors)",
+    key: "DXC Equipment",
     label: "DxC (Equipment and Interiors)",
   },
   { key: "LED Screen", label: "LED Screen" },
@@ -59,51 +59,51 @@ function ReadOnlyRow({ label, value, note }) {
 }
 
 function YesNoRow({
-  label,
-  fieldKey,
-  value,
-  onChange,
-  computedValue,
-  disabled,
+  label, fieldKey, value, onChange, computedValue, disabled,
+  userValue, onUserValueChange,
 }) {
   return (
     <tr className='hover:bg-gray-50'>
       <td className='border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 bg-white'>
         {label}
       </td>
-      <td className='border border-gray-200 px-4 py-3 bg-blue-50'>
+      <td className='border border-gray-200 px-4 py-3 bg-blue-50 space-y-1.5'>
         <select
           value={value}
           onChange={(e) => onChange(fieldKey, e.target.value)}
           disabled={disabled}
           className={`w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-            disabled
-              ? "bg-gray-100 cursor-not-allowed text-gray-500"
-              : "bg-white"
+            disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'
           }`}>
           <option value=''>Select</option>
           <option value='No'>No</option>
           <option value='Yes'>Yes</option>
+          <option value='By User'>By User</option>
         </select>
+        {/* User-defined amount input shown only when 'By User' is selected */}
+        {value === 'By User' && (
+          <input
+            type='number' min={0}
+            value={userValue ?? ''}
+            onChange={(e) => onUserValueChange(fieldKey, e.target.value)}
+            disabled={disabled}
+            placeholder='₹ Enter amount'
+            className='w-full px-2 py-1.5 border border-violet-300 rounded text-sm bg-violet-50 text-violet-900 focus:outline-none focus:ring-2 focus:ring-violet-400'
+          />
+        )}
       </td>
       <td className='border border-gray-200 px-4 py-3 text-sm font-bold text-right text-gray-800 bg-amber-50'>
-        {value === "Yes" ? `₹ ${fmt(computedValue)}` : "—"}
+        {value === 'Yes' ? `₹ ${fmt(computedValue)}` : value === 'By User' ? `₹ ${fmt(userValue || 0)}` : '—'}
       </td>
       <td className='border border-gray-200 px-4 py-3 text-xs text-gray-400 italic bg-white'>
-        If Yes: DB rate/sqft × carpet area
+        {value === 'By User' ? 'User-defined amount' : 'If Yes: DB rate/sqft × carpet area'}
       </td>
     </tr>
   );
 }
 
 function DropdownRow({
-  label,
-  fieldKey,
-  value,
-  onChange,
-  options,
-  computedValue,
-  disabled,
+  label, fieldKey, value, onChange, options, computedValue, disabled,
 }) {
   return (
     <tr className='hover:bg-gray-50'>
@@ -116,20 +116,16 @@ function DropdownRow({
           onChange={(e) => onChange(fieldKey, e.target.value)}
           disabled={disabled}
           className={`w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-            disabled
-              ? "bg-gray-100 cursor-not-allowed text-gray-500"
-              : "bg-white"
+            disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'
           }`}>
           <option value=''>Select</option>
-          {options.map((o, index) => (
-            <option key={o.description} value={o.description}>
-              {o.description}
-            </option>
+          {options.map((o) => (
+            <option key={o.description} value={o.description}>{o.description}</option>
           ))}
         </select>
       </td>
       <td className='border border-gray-200 px-4 py-3 text-sm font-bold text-right text-gray-800 bg-amber-50'>
-        {value && value !== "" ? `₹ ${fmt(computedValue)}` : "—"}
+        {value && value !== '' ? `₹ ${fmt(computedValue)}` : '—'}
       </td>
       <td className='border border-gray-200 px-4 py-3 text-xs text-gray-400 italic bg-white'>
         DB rate/sqft × carpet area
@@ -154,6 +150,17 @@ export default function Subpage4_1({ handleNext }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
+
+  // Stores user-entered amounts when selection is 'By User'
+  const [userEnteredAmounts, setUserEnteredAmounts] = useState(() =>
+    Object.fromEntries([
+      ...YES_NO_ITEMS.map(({ key }) => [key, ""]),
+      ["artAndCrafts", ""],
+    ])
+  );
+
+  // Single additional cost field entered before the Total Capex row
+  const [sectionAdditionalCost, setSectionAdditionalCost] = useState("");
 
   // Load previously saved CAPEX selections when resuming
   useEffect(() => {
@@ -234,9 +241,24 @@ export default function Subpage4_1({ handleNext }) {
     setSelections((prev) => ({ ...prev, [key]: val }));
   };
 
-  // ── Compute capex amounts ─────────────────────────────────────────────────
-  const carpetArea = parseFloat(storeData?.existing_retail_area ?? 0);
+  const handleUserValueChange = (key, val) => {
+    setUserEnteredAmounts((prev) => ({ ...prev, [key]: val }));
+  };
 
+  // Effective amount per item: DB rate (Yes), user-entered (By User), or 0 (No)
+  const getEffectiveAmount = (key) => {
+    const sel = selections[key];
+    return sel === "Yes" ? (computedAmounts[key] ?? 0)
+         : sel === "By User" ? parseFloat(userEnteredAmounts[key]) || 0
+         : 0;
+  };
+
+  // ── Compute capex amounts ─────────────────────────────────────────────────
+  const carpetArea = (storeData?.project_type === "Renovation" || storeData?.project_type === "New Store") 
+                ? parseFloat(storeData?.new_retail_area)
+                : parseFloat(storeData?.existing_retail_area)
+            
+  
   const computedAmounts = {};
 
   YES_NO_ITEMS.forEach(({ key }) => {
@@ -248,6 +270,8 @@ export default function Subpage4_1({ handleNext }) {
       computedAmounts[key] = 0;
       return;
     }
+
+    computedAmounts[key] = Number(rateData.total_cost) > 0 ?? Number(rateData.total_cost)
 
     computedAmounts[key] =
       Number(rateData.sqft) > 0
@@ -267,19 +291,22 @@ export default function Subpage4_1({ handleNext }) {
     : 0;
 
   const additionalCapex =
-    YES_NO_ITEMS.reduce((sum, { key }) => {
-      return selections[key] === "Yes"
-        ? sum + (computedAmounts[key] ?? 0)
-        : sum;
-    }, 0) + (selections.artAndCrafts ? computedAmounts.artAndCrafts || 0 : 0);
+    YES_NO_ITEMS.reduce((sum, { key }) => sum + getEffectiveAmount(key), 0) +
+    (selections.artAndCrafts ? computedAmounts.artAndCrafts || 0 : 0) +
+    (parseFloat(sectionAdditionalCost) || 0);
 
   const totalCapex = interiors + itEquipment + additionalCapex;
   const ratePerSqft = carpetArea > 0 ? totalCapex / carpetArea : 0;
-
+  console.log(carpetArea,'ratepersqft',ratePerSqft)
   const isFormComplete = [
     ...YES_NO_ITEMS.map(({ key }) => key),
     "artAndCrafts",
-  ].every((key) => selections[key] !== "");
+  ].every((key) => {
+    if (selections[key] === "") return false;
+    if (selections[key] === "By User" && !(parseFloat(userEnteredAmounts[key]) > 0)) return false;
+    return true;
+  });
+
   const handleSave = async () => {
     setIsSaving(true);
 
@@ -303,6 +330,8 @@ export default function Subpage4_1({ handleNext }) {
       totalCapex,
       ratePerSqft,
     };
+
+    console.log(payload)
 
     try {
       const res = await fetch(`${BASE_URL}/expense_planning_page1`, {
@@ -426,6 +455,8 @@ export default function Subpage4_1({ handleNext }) {
                 onChange={handleChange}
                 computedValue={computedAmounts[key]}
                 disabled={isSaved}
+                userValue={userEnteredAmounts[key]}
+                onUserValueChange={handleUserValueChange}
               />
             ))}
 
@@ -446,6 +477,31 @@ export default function Subpage4_1({ handleNext }) {
               value={itEquipment}
               note='From DB'
             />
+
+            {/* Additional Cost — editable section before Total Capex */}
+            <tr className='bg-indigo-50'>
+              <td className='border border-indigo-200 px-4 py-3 text-sm font-semibold text-indigo-800'>
+                Additional Cost
+              </td>
+              <td className='border border-indigo-200 px-4 py-3 bg-indigo-100'>
+                <input
+                  type='number' min={0}
+                  value={sectionAdditionalCost}
+                  onChange={(e) => setSectionAdditionalCost(e.target.value)}
+                  disabled={isSaved}
+                  placeholder='₹ Enter amount'
+                  className={`w-full px-2 py-1.5 border border-indigo-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
+                    isSaved ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'
+                  }`}
+                />
+              </td>
+              <td className='border border-indigo-200 px-4 py-3 text-sm font-bold text-right text-indigo-800 bg-amber-50'>
+                {sectionAdditionalCost ? `₹ ${fmt(parseFloat(sectionAdditionalCost) || 0)}` : '—'}
+              </td>
+              <td className='border border-indigo-200 px-4 py-3 text-xs text-gray-400 italic bg-white'>
+                Any other additional capex not covered above
+              </td>
+            </tr>
 
             {/* Total Capex */}
             <tr className='bg-amber-100 font-bold'>

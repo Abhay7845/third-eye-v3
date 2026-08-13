@@ -78,9 +78,9 @@ function parseApiRows(rows) {
   const rentR = by["Rent"];
   const rent5 = rentR
     ? [rentR.Yr1, rentR.Yr2, rentR.Yr3, rentR.Yr4, rentR.Yr5].reduce(
-        (s, v) => s + (v ?? 0),
-        0,
-      )
+      (s, v) => s + (v ?? 0),
+      0,
+    )
     : 0;
   const rev5 = grossYrs.slice(0, 5).reduce((s, v) => s + v, 0);
   const rentRev5 = rev5 > 0 ? r2((rent5 / rev5) * 100) : null;
@@ -240,11 +240,9 @@ function Num({ v, bold = false, highlight = false }) {
   const isNeg = typeof v === "number" && v < 0;
   return (
     <td
-      className={`border border-gray-200 px-3 py-2 text-right text-xs tabular-nums whitespace-nowrap ${
-        highlight ? "bg-amber-50" : "bg-white"
-      } ${bold ? "font-bold" : ""} ${
-        isNeg ? "text-red-600" : "text-gray-800"
-      }`}>
+      className={`border border-gray-200 px-3 py-2 text-right text-xs tabular-nums whitespace-nowrap ${highlight ? "bg-amber-50" : "bg-white"
+        } ${bold ? "font-bold" : ""} ${isNeg ? "text-red-600" : "text-gray-800"
+        }`}>
       {text}
     </td>
   );
@@ -253,15 +251,13 @@ function Num({ v, bold = false, highlight = false }) {
 function Label({ children, indent = false, bold = false, muted = false }) {
   return (
     <td
-      className={`border border-gray-200 px-3 py-2 text-xs min-w-[230px] sticky left-0 z-10 bg-white ${
-        indent ? "pl-6" : ""
-      } ${
-        bold
+      className={`border border-gray-200 px-3 py-2 text-xs min-w-[230px] sticky left-0 z-10 bg-white ${indent ? "pl-6" : ""
+        } ${bold
           ? "font-bold text-gray-900"
           : muted
-          ? "text-gray-500"
-          : "text-gray-700"
-      }`}>
+            ? "text-gray-500"
+            : "text-gray-700"
+        }`}>
       {children}
     </td>
   );
@@ -297,9 +293,8 @@ function TotalRow({ label, values, color = "amber" }) {
         return (
           <td
             key={i}
-            className={`border px-3 py-2 text-xs text-right tabular-nums whitespace-nowrap ${cls} ${
-              isNeg ? "text-red-700" : ""
-            }`}>
+            className={`border px-3 py-2 text-xs text-right tabular-nums whitespace-nowrap ${cls} ${isNeg ? "text-red-700" : ""
+              }`}>
             {fmt(v)}
           </td>
         );
@@ -329,7 +324,7 @@ function KpiCard({ label, value, sub, color = "indigo" }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function SummaryPage5({ roiContext, onPrevious }) {
+export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
   const [expExpanded, setExpExpanded] = useState(true);
   const [invExpanded, setInvExpanded] = useState(false);
   const [cashExpanded, setCashExpanded] = useState(false);
@@ -338,6 +333,78 @@ export default function SummaryPage5({ roiContext, onPrevious }) {
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
+  const [showPdf, setShowPdf] = useState(false);
+
+  const isNewStore = roiContext?.projectType === "New Store";
+  const historyId = roiContext?.historyId;
+
+  // ─── Inline PDF modal (only for New Store) ──────────────────────────────
+  function NewStorePDFModal({ onClose }) {
+    const [pdfUrl, setPdfUrl] = useState(null);
+    const [pdLoading, setPdLoading] = useState(true);
+    const [pdErr, setPdErr] = useState(null);
+    useEffect(() => {
+      if (!historyId) return;
+      (async () => {
+        try {
+          const res = await fetch(`https://d6oojw29okpcs.cloudfront.net/ThirdEye//history/${encodeURIComponent(historyId).replace(' ','_')}`);
+          if (!res.ok) throw new Error("Failed to fetch history details.");
+          const json = await res.json();
+          const d = json.data?.[0] ?? {};
+          const url = d.pdf_url ?? d.document_url ?? d.pdf_link ?? d.file_url ??
+            Object.values(d).find(v =>
+              typeof v === "string" && v.startsWith("http") &&
+              (v.includes(".pdf") || v.includes("blob") || v.includes("drive") || v.includes("/document"))
+            ) ?? null;
+          if (!url) setPdErr("No PDF document is linked to this History ID.");
+          setPdfUrl(url);
+        } catch (e) {
+          setPdErr(e.message);
+        } finally {
+          setPdLoading(false);
+        }
+      })();
+    }, []);
+    return (
+      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-700 to-indigo-600 px-6 py-4 shrink-0 flex items-center justify-between">
+            <div>
+              <h3 className="text-white font-bold text-lg">📄 New Store Document</h3>
+              <p className="text-blue-200 text-xs mt-0.5">History ID: {historyId}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {pdfUrl && (
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer"
+                  className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold rounded-lg transition">
+                  ↗ Open in new tab
+                </a>
+              )}
+              <button onClick={onClose}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 text-white text-xl font-bold transition">
+                ×
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            {pdLoading ? (
+              <div className="flex items-center justify-center h-full gap-3">
+                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+                <p className="text-slate-400 text-sm">Loading document…</p>
+              </div>
+            ) : pdErr ? (
+              <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
+                <span className="text-4xl">📭</span>
+                <p className="text-sm">{pdErr}</p>
+              </div>
+            ) : (
+              <iframe src={pdfUrl} className="w-full h-full" title="New Store Document" />
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -431,6 +498,11 @@ export default function SummaryPage5({ roiContext, onPrevious }) {
             </p>
           </div>
         )}
+        <button
+          onClick={onHome}
+          className='mt-8 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm shadow-lg transition'>
+          ← Back to Main Page
+        </button>
       </div>
     );
   }
@@ -791,9 +863,8 @@ export default function SummaryPage5({ roiContext, onPrevious }) {
                 {label}
               </p>
               <p
-                className={`text-lg font-extrabold mt-1 ${
-                  value === "—" ? "text-gray-300" : "text-gray-900"
-                }`}>
+                className={`text-lg font-extrabold mt-1 ${value === "—" ? "text-gray-300" : "text-gray-900"
+                  }`}>
                 {value}
               </p>
             </div>
@@ -802,31 +873,34 @@ export default function SummaryPage5({ roiContext, onPrevious }) {
       </div>
 
       {/* ── Action bar ────────────────────────────────────────────────────── */}
-      <div className='bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-5 flex items-center justify-between gap-4'>
-        <button
-          type='button'
-          onClick={onPrevious}
-          className='px-6 py-3 bg-white text-gray-600 border border-gray-300 rounded-xl font-semibold text-sm hover:bg-gray-50 transition'>
-          ← Previous
-        </button>
-
-        <div className='flex items-center gap-3'>
+      <div className='bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-5 flex items-center justify-end gap-4'>
+              <div className='flex items-center gap-3'>
           <p className='text-xs text-gray-400 hidden sm:block'>
             All sections are complete. Submit your ROI request for approval.
           </p>
+          {/* PDF button for New Store — shown only on the Summary page */}
+          {/* {isNewStore && historyId && (
+            <button
+              type='button'
+              onClick={() => setShowPdf(true)}
+              className='px-5 py-3 rounded-xl font-bold text-sm shadow-lg transition bg-blue-600 hover:bg-blue-700 text-white'>
+              📄 View New Store PDF
+            </button>
+          )} */}
           <button
             type='button'
             onClick={handleSubmit}
             disabled={submitting}
-            className={`px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition ${
-              submitting
+            className={`px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition ${submitting
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-green-600 hover:bg-green-700 text-white"
-            }`}>
+              }`}>
             {submitting ? "Submitting…" : "Submit for Approval ✓"}
           </button>
         </div>
       </div>
+      {/* PDF modal */}
+      {showPdf && <NewStorePDFModal onClose={() => setShowPdf(false)} />}
     </div>
   );
 }

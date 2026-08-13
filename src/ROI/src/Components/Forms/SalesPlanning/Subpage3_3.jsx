@@ -57,32 +57,32 @@ const computeValues = (inputs, subpage3_2Data) => {
   const stockStudded = Array(6).fill("-"); // TODO: (totalSales[i] × studdedShare[i] / 100) / stockTurnStudded[i]
   const stockCoins = Array(6).fill("-"); // TODO: (totalSales[i] × coinsShare[i] / 100) / stockTurnCoins[i]
   const totalStock = Array(6).fill("-"); // TODO: stockPlain + stockStudded + stockCoins
-
+  console.log(subpage3_2Data)
   if (subpage3_2Data) {
     for (let i = 0; i <= 5; i++) {
-      stockPlain[i] = (
-        subpage3_2Data.total_sales_data[i] *
-        subpage3_2Data.plainShare[i] *
+      stockPlain[i] = Math.round(
+        (subpage3_2Data.total_sales_data[i] *
+        subpage3_2Data.plainShare[i]) /
         inputs.stockTurnPlain[i]
-      ).toFixed(2);
+      );
 
-      stockStudded[i] = (
-        subpage3_2Data.total_sales_data[i] *
-        subpage3_2Data.studdedShare[i] *
+      stockStudded[i] = Math.round(
+        (subpage3_2Data.total_sales_data[i] *
+        subpage3_2Data.studdedShare[i]) /
         inputs.stockTurnStudded[i]
-      ).toFixed(2);
+      );
 
-      stockCoins[i] = (
-        subpage3_2Data.total_sales_data[i] *
-        subpage3_2Data.coinsShare[i] *
+      stockCoins[i] = Math.round(
+        (subpage3_2Data.total_sales_data[i] *
+        subpage3_2Data.coinsShare[i] )/
         inputs.stockTurnCoins[i]
-      ).toFixed(2);
+      );
 
       totalStock[i] = (
         Number(stockPlain[i]) +
         Number(stockStudded[i]) +
         Number(stockCoins[i])
-      ).toFixed(0);
+      );
     }
   }
 
@@ -295,7 +295,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
           hcg: get("AMC - HCG"),
           coins: get("AMC - Coins AMC%"),
         });
-        // Normalize the 4 AMC% values to sum to exactly 100% before pre-filling
+        // Pre-fill AMC fields with raw reference values — no normalisation
         if (!isSaved) {
           const rawAMC = [
             get("AMC - LCG"),
@@ -304,20 +304,12 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
             get("AMC - Coins AMC%"),
           ];
           if (rawAMC.some((v) => v > 0)) {
-            const [normLcg, normMcg, normHcg, normCoins] =
-              normalizeGroup(rawAMC);
             setInputs((prev) => ({
               ...prev,
-              lcgAMC:
-                prev.lcgAMC[0] === 0 ? Array(6).fill(normLcg) : prev.lcgAMC,
-              mcgAMC:
-                prev.mcgAMC[0] === 0 ? Array(6).fill(normMcg) : prev.mcgAMC,
-              hcgAMC:
-                prev.hcgAMC[0] === 0 ? Array(6).fill(normHcg) : prev.hcgAMC,
-              coinsAMC:
-                prev.coinsAMC[0] === 0
-                  ? Array(6).fill(normCoins)
-                  : prev.coinsAMC,
+              lcgAMC:   prev.lcgAMC[0]   === 0 ? Array(6).fill(rawAMC[0]) : prev.lcgAMC,
+              mcgAMC:   prev.mcgAMC[0]   === 0 ? Array(6).fill(rawAMC[1]) : prev.mcgAMC,
+              hcgAMC:   prev.hcgAMC[0]   === 0 ? Array(6).fill(rawAMC[2]) : prev.hcgAMC,
+              coinsAMC: prev.coinsAMC[0] === 0 ? Array(6).fill(rawAMC[3]) : prev.coinsAMC,
             }));
           }
         }
@@ -369,14 +361,9 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
     (parseFloat(inputs.hcgAMC[0]) || 0) +
     (parseFloat(inputs.coinsAMC[0]) || 0)
   ).toFixed(2);
-  const amcEquals100 = Math.abs(totalAMCPct - 100) < 0.01;
-  const amcOver100 = totalAMCPct > 100.005;
-  // Same value repeated across all 6 years since Yr.1 propagates
   const amcTotalRow = Array(6).fill(totalAMCPct);
-  const amcRemainingRow = Array(6).fill(+(100 - totalAMCPct).toFixed(2));
   // ── Form completeness ──────────────────────────────────────────────────
   const isFormComplete =
-    amcEquals100 &&
     parseFloat(inputs.baseRate22K[0]) > 0 &&
     parseFloat(inputs.lcgAMC[0]) > 0 &&
     parseFloat(inputs.mcgAMC[0]) > 0 &&
@@ -399,10 +386,6 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
     incompleteReasons.push("Fill all Plain Group AMC% values");
   if (!(parseFloat(inputs.coinsAMC[0]) > 0))
     incompleteReasons.push("Enter Coins AMC%");
-  if (!amcEquals100)
-    incompleteReasons.push(
-      "AMC% (LCG + MCG + HCG + Coins) must sum to exactly 100%",
-    );
   if (
     !inputs.stockTurnPlain.every((v) => parseFloat(v) > 0) ||
     !inputs.stockTurnStudded.every((v) => parseFloat(v) > 0) ||
@@ -560,7 +543,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
               <tbody>
                 {/* Base Rate — Yr.1 blue, Yr.2–6 auto copy */}
                 <tr>
-                  <LabelCell label='Base Rate – 22K (in Rs)' />
+                  <LabelCell label='Retail Gold Rate – 22K (in Rs)' />
                   <BlueInputCell
                     value={inputs.baseRate22K[0]}
                     onChange={(e) =>
@@ -573,7 +556,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                 </tr>
 
                 {/* Mark-up % — Yr.1 blue, Yr.2–6 auto copy */}
-                <tr>
+                {/* <tr>
                   <LabelCell label='Mark-up %' />
                   <BlueInputCell
                     value={inputs.markupPct[0]}
@@ -584,7 +567,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                   {[1, 2, 3, 4, 5].map((i) => (
                     <AutoCell key={i} value={inputs.markupPct[0]} />
                   ))}
-                </tr>
+                </tr> */}
 
                 {/* Sub-header: Plain Group AMC% */}
                 <SubSectionRow label='Plain Group AMC%' />
@@ -648,29 +631,19 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                   ))}
                 </tr>
 
-                {/* AMC% over-100 warning */}
-                {amcOver100 && (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className='bg-red-50 border border-red-300 px-3 py-2 text-red-700 text-sm font-semibold text-center'>
-                      ⚠️ AMC% total exceeds 100% — reduce LCG, MCG, HCG or Coins
-                    </td>
-                  </tr>
-                )}
+                {/* AMC Total row */}
                 <TotalRow label='Total AMC%' values={amcTotalRow} />
-                <RemainingRow values={amcRemainingRow} />
               </tbody>
             </table>
           </div>
 
           {/* Info note */}
-          <div className='bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 rounded text-xs text-yellow-800'>
+          {/* <div className='bg-yellow-50 border-l-4 border-yellow-400 px-4 py-3 rounded text-xs text-yellow-800'>
             For L1 / L2 / L4 inventory values are calculated on brand guidelines
             and will not change basis the below stock turns. For L3 / L2.5
             Formats please modify the same if required considering Inventory
             requirements and partner's ROI.
-          </div>
+          </div> */}
 
           {/* ──────────────────────────────────────────────────────
                         SECTION 2 — Stock Turn

@@ -92,11 +92,11 @@ function getFirstIncompleteStep(pages) {
   return { step: 5, subStep: 1 };
 }
 
+const isPageFilled = (status) => !!status && status !== "Not Available";
+
 function getStats(pages) {
   if (!pages?.length) return { done: 0, total: 10, pct: 0 };
-  const done = pages.filter(
-    (p) => p.status === "Pending" || p.status === "Submitted to RBM",
-  ).length;
+  const done = pages.filter((p) => isPageFilled(p.status)).length;
   return {
     done,
     total: pages.length,
@@ -172,7 +172,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
       try {
         setListLoading(true);
         const username = userLog?.name;
-        const res = await fetch(`${BASE_URL}/roi_id_summary?username=${username}`);
+        const res = await fetch(`${BASE_URL}/roi_id?username=${username}`);
         if (!res.ok) throw new Error("Failed to fetch ROI list");
         const json = await res.json();
         // Multiple rows per roiid (one per history entry) — keep latest per roiid
@@ -315,6 +315,9 @@ export default function HistoryPage({ onBack, onContinueROI }) {
             `${BASE_URL}/expense_details/${roiid}?expense_type=SUMMARY`,
           );
           break;
+        case "Final Summary":
+          res = await fetch(`${BASE_URL}/summary_screen_5/${roiid}`);
+          break;
         default:
           res = null;
       }
@@ -344,9 +347,16 @@ export default function HistoryPage({ onBack, onContinueROI }) {
   const firstIncompleteStep = firstIncomplete.step;
   const firstIncompleteSubStep = firstIncomplete.subStep;
   const isAllComplete = firstIncompleteStep === 5;
-  const isSubmitted = selectedRoi?.status === "Submitted to RBM" || selectedRoi?.status === "Submitted_toRBM";
+  // View-only: any status that means the ROI is with an approver
+  const roiStatus = selectedRoi?.status ?? "";
+  const isSubmitted =
+    roiStatus === "Submitted to RBM" ||
+    roiStatus === "Submitted_toRBM" ||
+    roiStatus.startsWith("Approved_by") ||
+    roiStatus.startsWith("Rejected_by") ||
+    roiStatus === "BPM_Requestraised";
   // ABM can edit & resubmit when any approver has sent clarification back
-  const isClarificationPending = (selectedRoi?.status ?? "").startsWith("SK_by");
+  const isClarificationPending = roiStatus.startsWith("SK_by");
   // ── Derived filter data ─────────────────────────────────────────────────
   const projectTypes = [
     "All",
@@ -685,7 +695,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
               {/* ── Section groups ────────────────────────────────────── */}
               {groupedPages.map(({ group, pages }) => {
                 const groupDone = pages.filter(
-                  (p) => p.status === "Pending",
+                  (p) => isPageFilled(p.status),
                 ).length;
                 const allDone = groupDone === pages.length;
                 const noneDone = groupDone === 0;
@@ -723,11 +733,10 @@ export default function HistoryPage({ onBack, onContinueROI }) {
 
                     <div className='divide-y divide-gray-50'>
                       {pages.map((page) => {
-                        const done =
-                          page.status === "Pending" ||
-                          page.status === "Submitted to RBM";
+                        const done = isPageFilled(page.status);
                         const pageSubmitted =
-                          page.status === "Submitted to RBM";
+                          page.status === "Submitted to RBM" ||
+                          page.status === "Submitted_toRBM";
                         return (
                           <div
                             key={page.name}
@@ -779,17 +788,29 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 );
               })}
 
-              {/* ── Continue / Submitted action card ──────────────────── */}
+              {/* ── Continue / View-only / Clarification action card ── */}
               {isSubmitted ? (
-                <div className='rounded-2xl border border-green-200 bg-green-50 p-6 flex items-center gap-4'>
-                  <span className='text-3xl flex-shrink-0'>✅</span>
-                  <div>
-                    <p className='font-bold text-green-800'>Submitted to RBM</p>
-                    <p className='text-xs text-green-600 mt-1'>
-                      This ROI has been submitted for approval. All sections are
-                      view-only.
+                <div className='rounded-2xl border border-blue-200 bg-blue-50 p-6 flex items-center gap-4'>
+                  <span className='text-3xl flex-shrink-0'>🔒</span>
+                  <div className='flex-1'>
+                    <p className='font-bold text-blue-800'>
+                      {roiStatus === "BPM_Requestraised"
+                        ? "BPM Request Raised"
+                        : roiStatus.startsWith("Rejected_by")
+                        ? `Rejected by ${roiStatus.replace("Rejected_by", "")}`
+                        : roiStatus.startsWith("Approved_by")
+                        ? `Approved by ${roiStatus.replace("Approved_by", "")} — Awaiting next approver`
+                        : "Submitted for Approval"}
+                    </p>
+                    <p className='text-xs text-blue-600 mt-1'>
+                      This ROI is with the approver. You can view each section below but cannot make changes.
                     </p>
                   </div>
+                  <button
+                    onClick={() => handleViewPage("Final Summary")}
+                    className='flex-shrink-0 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm shadow transition'>
+                    📊 View Final Summary
+                  </button>
                 </div>
               ) : (
                 <div
@@ -885,7 +906,62 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 </div>
               ) : viewModal.data?.length > 0 ? (
                 (() => {
-                  const isHeaderFormat = "Header" in (viewModal.data[0] ?? {});
+                  const first = viewModal.data[0] ?? {};
+                  const isParticularsFormat = "Particulars" in first;
+                  const isHeaderFormat = "Header" in first && !isParticularsFormat;
+
+                  if (isParticularsFormat) {
+                    const infoRows = viewModal.data.filter(
+                      (r) => r.Yr1 === null && r.Yr2 === null && r.Yr3 === null &&
+                             r.Yr4 === null && r.Yr5 === null && r.Yr6 === null,
+                    );
+                    const dataRows = viewModal.data.filter(
+                      (r) => r.Yr1 !== null || r.Yr2 !== null || r.Yr3 !== null ||
+                             r.Yr4 !== null || r.Yr5 !== null || r.Yr6 !== null,
+                    );
+                    return (
+                      <div className='space-y-4'>
+                        {infoRows.length > 0 && (
+                          <div className='grid grid-cols-2 gap-2'>
+                            {infoRows.map((row, i) => (
+                              <div key={i} className='bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 px-4 py-3'>
+                                <p className='text-[10px] font-semibold text-indigo-400 uppercase tracking-wider mb-1'>{row.Particulars}</p>
+                                <p className='text-sm font-bold text-gray-800'>{row.Header || "—"}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {dataRows.length > 0 && (
+                          <div className='overflow-x-auto rounded-xl border border-gray-200 shadow-sm'>
+                            <table className='min-w-full border-collapse text-xs'>
+                              <thead>
+                                <tr className='bg-gradient-to-r from-indigo-700 to-blue-600 text-white'>
+                                  <th className='px-4 py-3 text-left font-semibold min-w-[220px]'>Particulars</th>
+                                  {["Yr 1","Yr 2","Yr 3","Yr 4","Yr 5","Yr 6"].map((y) => (
+                                    <th key={y} className='px-3 py-3 text-right font-semibold min-w-[80px]'>{y}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {dataRows.map((row, i) => (
+                                  <tr key={i} className={`transition-colors hover:bg-indigo-50/50 ${i % 2 === 0 ? "bg-white" : "bg-slate-50"}`}>
+                                    <td className='px-4 py-2.5 font-medium text-gray-700 border-b border-gray-100 leading-tight'>
+                                      {row.Particulars}
+                                    </td>
+                                    {["Yr1","Yr2","Yr3","Yr4","Yr5","Yr6"].map((y) => (
+                                      <td key={y} className='px-3 py-2.5 text-right text-gray-700 border-b border-gray-100 tabular-nums font-semibold'>
+                                        {row[y] !== null && row[y] !== undefined ? fmtModalNum(row[y]) : "—"}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
 
                   if (isHeaderFormat) {
                     return (
