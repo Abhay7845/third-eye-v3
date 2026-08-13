@@ -17,7 +17,7 @@ export default function DailySummaryTable({ dailySummary }) {
   }, [page, dailySummary]);
 
   return (
-    <div className='user_table_card'>
+    <div className='user_table_card daily_summary_table_card'>
       <div className='table_scroll'>
         <table className='user_table'>
           <thead>

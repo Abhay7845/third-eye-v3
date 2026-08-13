@@ -40,6 +40,10 @@
     font-size:13px;
 }
 
+.daily_summary_table_card .user_table{
+    font-size:12px;
+}
+
 .user_table thead{
     position:sticky;
     top:0;
