@@ -13,12 +13,31 @@
     overflow:auto;
 }
 
+.table_scroll_x{
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+}
+
+.no_scrollbar{
+    -ms-overflow-style:none;
+    scrollbar-width:none;
+}
+
+.no_scrollbar::-webkit-scrollbar{
+    display:none;
+}
+
 /* Table */
 
 .user_table{
     width:100%;
     border-collapse:collapse;
     min-width:1000px;
+}
+
+.user_summary_table_card .user_table{
+    font-size:13px;
 }
 
 .user_table thead{
@@ -35,6 +54,22 @@
     text-align:left;
     border-bottom:1px solid #eee;
     white-space:nowrap;
+}
+
+.user_table th{
+    padding:9px 16px;
+    line-height:1.15;
+    font-weight:600;
+}
+
+.user_table tbody::before{
+    content:"";
+    display:block;
+    height:6px;
+}
+
+.user_table tbody td{
+    vertical-align:middle;
 }
 
 .user_table tbody tr:hover{
@@ -92,7 +127,7 @@
 }
 
 .pagination button{
-    padding:8px 18px;
+    padding:4px 10px;
     border:none;
     background:#233044;
     color:white;

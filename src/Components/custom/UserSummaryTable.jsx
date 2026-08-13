@@ -34,8 +34,8 @@ export default function UserSummaryTable({ userSummary }) {
   }, [page, sortedUsers]);
 
   return (
-    <div className='user_table_card'>
-      <div className='table_scroll'>
+    <div className='user_table_card user_summary_table_card'>
+      <div className='table_scroll table_scroll_x no_scrollbar'>
         <table className='user_table'>
           <thead>
             <tr>
