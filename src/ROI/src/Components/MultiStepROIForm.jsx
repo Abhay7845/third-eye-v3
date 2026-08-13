@@ -104,6 +104,7 @@ export default function MultiStepROIForm({
                 roiContext={roiContext}
                 onNext={() => setActiveForm(5)}
                 onPrevious={() => setActiveForm(3)}
+                onHome={onExit}
               />
             )}
           </div>

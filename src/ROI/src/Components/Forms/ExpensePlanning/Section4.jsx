@@ -93,10 +93,20 @@ export default function Section4({
       );
       if (res.ok) {
         const json = await res.json();
-        setStoreData({
+        console.log(json.data[0])
+        if(roiContext?.projectType !== 'New Store'){
+          setStoreData({
           ...json.data[0],
           project_type: roiContext?.projectType,
         });
+        }
+        else{
+          setStoreData({
+          ...json.data[0],
+          project_type: roiContext?.projectType,
+          refStoreCode:roiContext?.refStoreCode
+        });
+        }
         setIsFetched(true);
       } else {
         toast.error(
