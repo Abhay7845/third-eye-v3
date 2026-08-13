@@ -3,7 +3,13 @@ import "../Styles/AdminDashboard.css";
 import UserActivityCards from "./UserActivityCards";
 import { IoIosList } from "react-icons/io";
 
-const AdminDashboard = ({ data, setOpenSumTbl, setOpenDailySumTbl }) => {
+const AdminDashboard = ({
+  data,
+  setOpenSumTbl,
+  setOpenDailySumTbl,
+  storeCount,
+  cityCount,
+}) => {
   if (!data) return null;
   const totalReLogins = data.userSummary.reduce(
     (sum, user) => sum + user.reLoginCount,
@@ -40,8 +46,12 @@ const AdminDashboard = ({ data, setOpenSumTbl, setOpenDailySumTbl }) => {
           </p>
         </div>
         <div className='header-badges'>
-          <div className='header-badge city-badge'>Store Report: 0</div>
-          <div className='header-badge store-badge'>City Report: 0</div>
+          <div className='header-badge city-badge'>
+            Store Report: {storeCount}
+          </div>
+          <div className='header-badge store-badge'>
+            City Report: {cityCount}
+          </div>
           <div className='header-badge events-badge'>
             {data.events.length} Events
           </div>
