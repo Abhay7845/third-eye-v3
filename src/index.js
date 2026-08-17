@@ -17,7 +17,10 @@ import { BrowserRouter } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-const GoogleKey = process.env.REACT_APP_GOOGLE_KEY;
+
+const prod_key = process.env.REACT_APP_GOOGLE_KEY_PROD;
+const uat_key = process.env.REACT_APP_GOOGLE_KEY_UAT;
+const GoogleKey = process.env.NODE_ENV === "development" ? uat_key : prod_key;
 
 const renderApp = () => {
   root.render(
