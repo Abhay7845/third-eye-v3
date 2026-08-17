@@ -189,7 +189,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
         );
         setRoiList(sorted);
       } catch (err) {
-        toast.error(err.message || "Failed to load ROI requests");
+        toast.error(err.message || "No ROI ID history found under your Login");
       } finally {
         setListLoading(false);
       }

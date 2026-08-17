@@ -127,9 +127,10 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const { storeData, subpage4_1Data, subpage4_2Data, markStepSaved } = useSection4Context();
   // ── Rent inputs (6 years) ─────────────────────────────────────────────────
   const [revenueSharing, setRevenueSharing] = useState("No");
-  const selected_sba = (storeData?.project_type === "Renovation" || storeData?.project_type === "New Store")
+  const selected_sba = (storeData?.project_type === "Renovation" || storeData?.project_type === "New Store" || storeData?.project_type === "Relocation")
     ? parseFloat(storeData?.new_over_all_area_SBA)
     : parseFloat(storeData?.existing_over_all_area_SBA)
+  console.log(storeData)
   const [sba, setSba] = useState(Array(6).fill(selected_sba));
   const [ratePerSqft, setRatePerSqft] = useState(Array(6).fill(subpage4_2Data?.salaries?.sqftPerEmp));
   const [revSharePct, setRevSharePct] = useState([
