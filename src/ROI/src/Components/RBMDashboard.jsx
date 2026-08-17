@@ -677,7 +677,7 @@ export default function RBMDashboard({ userRole = "RBM" }) {
         );
         setRoiList(sorted);
       } catch (err) {
-        toast.error(err.message || "Failed to load ROI list");
+        toast.error(err.message || "No ROI ID history found under your Login");
       } finally {
         setListLoading(false);
       }

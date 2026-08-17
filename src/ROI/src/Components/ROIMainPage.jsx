@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import MultiStepROIForm from "./MultiStepROIForm";
 import HistoryPage from "./HistoryPage";
 import RBMDashboard from "./RBMDashboard";
@@ -6,8 +7,10 @@ import ThirdEyeHeader from "../../../Components/custom/ThirdEyeHeader";
 import { useSelector } from "react-redux";
 import roi_banner from "../assets/ROI_Banner.png";
 import { BASE_URL } from "./Forms/data/baseUrl";
+import { routes } from "../../../routes";
 
 function ROIMainPage() {
+  const navigate = useNavigate();
   const userLog = useSelector((state) => state?.user?.user);
   const [userRole, setUserRole] = useState(null); // null = loading
   const [newReqFlag, setNewReqFlag] = useState(false);
@@ -135,6 +138,13 @@ function ROIMainPage() {
                   ↺ History
                 </button>
               </div>
+
+              <button
+                onClick={() => navigate(routes.NEW_STORE)}
+                className='mt-4 w-full text-sm font-medium py-2 rounded-xl transition-all duration-200 hover:bg-blue-800 hover:text-white'
+                style={{ color: "rgb(250, 221, 0)" }}>
+                ← Back to ThirdEye
+              </button>
             </div>
           </div>
           ) : newReqFlag ? (
