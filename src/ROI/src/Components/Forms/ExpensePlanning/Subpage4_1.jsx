@@ -59,8 +59,14 @@ function ReadOnlyRow({ label, value, note }) {
 }
 
 function YesNoRow({
-  label, fieldKey, value, onChange, computedValue, disabled,
-  userValue, onUserValueChange,
+  label,
+  fieldKey,
+  value,
+  onChange,
+  computedValue,
+  disabled,
+  userValue,
+  onUserValueChange,
 }) {
   return (
     <tr className='hover:bg-gray-50'>
@@ -73,7 +79,9 @@ function YesNoRow({
           onChange={(e) => onChange(fieldKey, e.target.value)}
           disabled={disabled}
           className={`w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-            disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'
+            disabled
+              ? "bg-gray-100 cursor-not-allowed text-gray-500"
+              : "bg-white"
           }`}>
           <option value=''>Select</option>
           <option value='No'>No</option>
@@ -81,10 +89,11 @@ function YesNoRow({
           <option value='By User'>By User</option>
         </select>
         {/* User-defined amount input shown only when 'By User' is selected */}
-        {value === 'By User' && (
+        {value === "By User" && (
           <input
-            type='number' min={0}
-            value={userValue ?? ''}
+            type='number'
+            min={0}
+            value={userValue ?? ""}
             onChange={(e) => onUserValueChange(fieldKey, e.target.value)}
             disabled={disabled}
             placeholder='₹ Enter amount'
@@ -93,17 +102,29 @@ function YesNoRow({
         )}
       </td>
       <td className='border border-gray-200 px-4 py-3 text-sm font-bold text-right text-gray-800 bg-amber-50'>
-        {value === 'Yes' ? `₹ ${fmt(computedValue)}` : value === 'By User' ? `₹ ${fmt(userValue || 0)}` : '—'}
+        {value === "Yes"
+          ? `₹ ${fmt(computedValue)}`
+          : value === "By User"
+          ? `₹ ${fmt(userValue || 0)}`
+          : "—"}
       </td>
       <td className='border border-gray-200 px-4 py-3 text-xs text-gray-400 italic bg-white'>
-        {value === 'By User' ? 'User-defined amount' : 'If Yes: DB rate/sqft × carpet area'}
+        {value === "By User"
+          ? "User-defined amount"
+          : "If Yes: DB rate/sqft × carpet area"}
       </td>
     </tr>
   );
 }
 
 function DropdownRow({
-  label, fieldKey, value, onChange, options, computedValue, disabled,
+  label,
+  fieldKey,
+  value,
+  onChange,
+  options,
+  computedValue,
+  disabled,
 }) {
   return (
     <tr className='hover:bg-gray-50'>
@@ -116,16 +137,20 @@ function DropdownRow({
           onChange={(e) => onChange(fieldKey, e.target.value)}
           disabled={disabled}
           className={`w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-            disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'
+            disabled
+              ? "bg-gray-100 cursor-not-allowed text-gray-500"
+              : "bg-white"
           }`}>
           <option value=''>Select</option>
           {options.map((o) => (
-            <option key={o.description} value={o.description}>{o.description}</option>
+            <option key={o.description} value={o.description}>
+              {o.description}
+            </option>
           ))}
         </select>
       </td>
       <td className='border border-gray-200 px-4 py-3 text-sm font-bold text-right text-gray-800 bg-amber-50'>
-        {value && value !== '' ? `₹ ${fmt(computedValue)}` : '—'}
+        {value && value !== "" ? `₹ ${fmt(computedValue)}` : "—"}
       </td>
       <td className='border border-gray-200 px-4 py-3 text-xs text-gray-400 italic bg-white'>
         DB rate/sqft × carpet area
@@ -156,7 +181,7 @@ export default function Subpage4_1({ handleNext }) {
     Object.fromEntries([
       ...YES_NO_ITEMS.map(({ key }) => [key, ""]),
       ["artAndCrafts", ""],
-    ])
+    ]),
   );
 
   // Single additional cost field entered before the Total Capex row
@@ -168,7 +193,9 @@ export default function Subpage4_1({ handleNext }) {
     if (!roiid || isSaved) return;
     (async () => {
       try {
-        const res = await fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=CAPEX`);
+        const res = await fetch(
+          `${BASE_URL}/expense_details/${roiid}?expense_type=CAPEX`,
+        );
         if (!res.ok) return;
         const json = await res.json();
         const row = json?.data?.[0];
@@ -176,10 +203,13 @@ export default function Subpage4_1({ handleNext }) {
         if (row.selections) {
           const restored = {};
           YES_NO_ITEMS.forEach(({ key }) => {
-            if (row.selections[key] !== undefined) restored[key] = row.selections[key];
+            if (row.selections[key] !== undefined)
+              restored[key] = row.selections[key];
           });
           // Restore artAndCrafts — it was stored as key = value when selected
-          const artKey = DROPDOWN_ITEMS.find(({ key }) => row.selections[key] === key);
+          const artKey = DROPDOWN_ITEMS.find(
+            ({ key }) => row.selections[key] === key,
+          );
           if (artKey) restored.artAndCrafts = artKey.key;
           setSelections((prev) => ({ ...prev, ...restored }));
         }
@@ -195,12 +225,14 @@ export default function Subpage4_1({ handleNext }) {
     const fetchCapexRates = async () => {
       try {
         setIsLoading(true);
-        let retail_area = 0
-        if(storeData.project_type === 'New Store' || storeData?.project_type === 'Rennovation'){
-          retail_area = storeData?.new_retail_area
-        }
-        else{
-          retail_area = storeData?.existing_retail_area
+        let retail_area = 0;
+        if (
+          storeData.project_type === "New Store" ||
+          storeData?.project_type === "Rennovation"
+        ) {
+          retail_area = storeData?.new_retail_area;
+        } else {
+          retail_area = storeData?.existing_retail_area;
         }
         const res = await fetch(
           `${BASE_URL}/roi_expenses?store_type=${storeData?.store_type}&floor_type=${storeData?.flooring_type}&retail_area=${retail_area}`,
@@ -216,7 +248,7 @@ export default function Subpage4_1({ handleNext }) {
               return it;
             }
             if (it.description === "Interiors") {
-              let interiorTotalCost = retail_area*it?.sqft + it?.total_cost
+              let interiorTotalCost = retail_area * it?.sqft + it?.total_cost;
               setInteriors(interiorTotalCost);
             }
             if (it.description === "Itexpenses") {
@@ -248,17 +280,20 @@ export default function Subpage4_1({ handleNext }) {
   // Effective amount per item: DB rate (Yes), user-entered (By User), or 0 (No)
   const getEffectiveAmount = (key) => {
     const sel = selections[key];
-    return sel === "Yes" ? (computedAmounts[key] ?? 0)
-         : sel === "By User" ? parseFloat(userEnteredAmounts[key]) || 0
-         : 0;
+    return sel === "Yes"
+      ? computedAmounts[key] ?? 0
+      : sel === "By User"
+      ? parseFloat(userEnteredAmounts[key]) || 0
+      : 0;
   };
 
   // ── Compute capex amounts ─────────────────────────────────────────────────
-  const carpetArea = (storeData?.project_type === "Renovation" || storeData?.project_type === "New Store") 
-                ? parseFloat(storeData?.new_retail_area)
-                : parseFloat(storeData?.existing_retail_area)
-            
-  
+  const carpetArea =
+    storeData?.project_type === "Renovation" ||
+    storeData?.project_type === "New Store"
+      ? parseFloat(storeData?.new_retail_area)
+      : parseFloat(storeData?.existing_retail_area);
+
   const computedAmounts = {};
 
   YES_NO_ITEMS.forEach(({ key }) => {
@@ -271,7 +306,8 @@ export default function Subpage4_1({ handleNext }) {
       return;
     }
 
-    computedAmounts[key] = Number(rateData.total_cost) > 0 ?? Number(rateData.total_cost)
+    computedAmounts[key] =
+      Number(rateData.total_cost) > 0 ?? Number(rateData.total_cost);
 
     computedAmounts[key] =
       Number(rateData.sqft) > 0
@@ -297,13 +333,16 @@ export default function Subpage4_1({ handleNext }) {
 
   const totalCapex = interiors + itEquipment + additionalCapex;
   const ratePerSqft = carpetArea > 0 ? totalCapex / carpetArea : 0;
-  console.log(carpetArea,'ratepersqft',ratePerSqft)
   const isFormComplete = [
     ...YES_NO_ITEMS.map(({ key }) => key),
     "artAndCrafts",
   ].every((key) => {
     if (selections[key] === "") return false;
-    if (selections[key] === "By User" && !(parseFloat(userEnteredAmounts[key]) > 0)) return false;
+    if (
+      selections[key] === "By User" &&
+      !(parseFloat(userEnteredAmounts[key]) > 0)
+    )
+      return false;
     return true;
   });
 
@@ -330,8 +369,6 @@ export default function Subpage4_1({ handleNext }) {
       totalCapex,
       ratePerSqft,
     };
-
-    console.log(payload)
 
     try {
       const res = await fetch(`${BASE_URL}/expense_planning_page1`, {
@@ -392,7 +429,8 @@ export default function Subpage4_1({ handleNext }) {
           {
             label: "Carpet Area (sqft)",
             value: fmt(
-              (storeData?.project_type === "Renovation" || storeData?.project_type === "New Store") 
+              storeData?.project_type === "Renovation" ||
+                storeData?.project_type === "New Store"
                 ? storeData?.new_retail_area
                 : storeData?.existing_retail_area,
             ),
@@ -485,18 +523,23 @@ export default function Subpage4_1({ handleNext }) {
               </td>
               <td className='border border-indigo-200 px-4 py-3 bg-indigo-100'>
                 <input
-                  type='number' min={0}
+                  type='number'
+                  min={0}
                   value={sectionAdditionalCost}
                   onChange={(e) => setSectionAdditionalCost(e.target.value)}
                   disabled={isSaved}
                   placeholder='₹ Enter amount'
                   className={`w-full px-2 py-1.5 border border-indigo-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
-                    isSaved ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'bg-white'
+                    isSaved
+                      ? "bg-gray-100 cursor-not-allowed text-gray-500"
+                      : "bg-white"
                   }`}
                 />
               </td>
               <td className='border border-indigo-200 px-4 py-3 text-sm font-bold text-right text-indigo-800 bg-amber-50'>
-                {sectionAdditionalCost ? `₹ ${fmt(parseFloat(sectionAdditionalCost) || 0)}` : '—'}
+                {sectionAdditionalCost
+                  ? `₹ ${fmt(parseFloat(sectionAdditionalCost) || 0)}`
+                  : "—"}
               </td>
               <td className='border border-indigo-200 px-4 py-3 text-xs text-gray-400 italic bg-white'>
                 Any other additional capex not covered above

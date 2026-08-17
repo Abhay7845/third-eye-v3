@@ -57,32 +57,25 @@ const computeValues = (inputs, subpage3_2Data) => {
   const stockStudded = Array(6).fill("-"); // TODO: (totalSales[i] × studdedShare[i] / 100) / stockTurnStudded[i]
   const stockCoins = Array(6).fill("-"); // TODO: (totalSales[i] × coinsShare[i] / 100) / stockTurnCoins[i]
   const totalStock = Array(6).fill("-"); // TODO: stockPlain + stockStudded + stockCoins
-  console.log(subpage3_2Data)
   if (subpage3_2Data) {
     for (let i = 0; i <= 5; i++) {
       stockPlain[i] = Math.round(
-        (subpage3_2Data.total_sales_data[i] *
-        subpage3_2Data.plainShare[i]) /
-        inputs.stockTurnPlain[i]
+        (subpage3_2Data.total_sales_data[i] * subpage3_2Data.plainShare[i]) /
+          inputs.stockTurnPlain[i],
       );
 
       stockStudded[i] = Math.round(
-        (subpage3_2Data.total_sales_data[i] *
-        subpage3_2Data.studdedShare[i]) /
-        inputs.stockTurnStudded[i]
+        (subpage3_2Data.total_sales_data[i] * subpage3_2Data.studdedShare[i]) /
+          inputs.stockTurnStudded[i],
       );
 
       stockCoins[i] = Math.round(
-        (subpage3_2Data.total_sales_data[i] *
-        subpage3_2Data.coinsShare[i] )/
-        inputs.stockTurnCoins[i]
+        (subpage3_2Data.total_sales_data[i] * subpage3_2Data.coinsShare[i]) /
+          inputs.stockTurnCoins[i],
       );
 
-      totalStock[i] = (
-        Number(stockPlain[i]) +
-        Number(stockStudded[i]) +
-        Number(stockCoins[i])
-      );
+      totalStock[i] =
+        Number(stockPlain[i]) + Number(stockStudded[i]) + Number(stockCoins[i]);
     }
   }
 
@@ -306,10 +299,16 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
           if (rawAMC.some((v) => v > 0)) {
             setInputs((prev) => ({
               ...prev,
-              lcgAMC:   prev.lcgAMC[0]   === 0 ? Array(6).fill(rawAMC[0]) : prev.lcgAMC,
-              mcgAMC:   prev.mcgAMC[0]   === 0 ? Array(6).fill(rawAMC[1]) : prev.mcgAMC,
-              hcgAMC:   prev.hcgAMC[0]   === 0 ? Array(6).fill(rawAMC[2]) : prev.hcgAMC,
-              coinsAMC: prev.coinsAMC[0] === 0 ? Array(6).fill(rawAMC[3]) : prev.coinsAMC,
+              lcgAMC:
+                prev.lcgAMC[0] === 0 ? Array(6).fill(rawAMC[0]) : prev.lcgAMC,
+              mcgAMC:
+                prev.mcgAMC[0] === 0 ? Array(6).fill(rawAMC[1]) : prev.mcgAMC,
+              hcgAMC:
+                prev.hcgAMC[0] === 0 ? Array(6).fill(rawAMC[2]) : prev.hcgAMC,
+              coinsAMC:
+                prev.coinsAMC[0] === 0
+                  ? Array(6).fill(rawAMC[3])
+                  : prev.coinsAMC,
             }));
           }
         }

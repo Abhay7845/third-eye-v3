@@ -135,7 +135,7 @@ html, body, #root { height: 100%; margin: 0; }
 }
 .google_btn:active:not(:disabled) { transform: translateY(0); }
 .google_btn:disabled {
-  opacity: 0.40;
+  opacity: 0.72;
   cursor: not-allowed;
   pointer-events: all;
 }
@@ -145,14 +145,15 @@ html, body, #root { height: 100%; margin: 0; }
 }
 
 /* Spinner */
-.loader {
+.google_btn .loader {
   width: 15px;
   height: 15px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top: 2px solid var(--white);
+  border: 2px solid rgba(35,48,68,0.22);
+  border-top-color: var(--brand);
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
   flex-shrink: 0;
+  display: inline-block;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
