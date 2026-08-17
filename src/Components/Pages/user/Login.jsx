@@ -108,9 +108,6 @@ export default function Login() {
       .catch((err) => setLoading(false));
   };
 
-  // const url = isDevMode ? "/api/dummy/userinfo" : "/api/userinfo";
-  const url = "/api/userinfo";
-
   const clearApplicationCache = async () => {
     localStorage.clear();
     sessionStorage.clear();
@@ -160,7 +157,7 @@ export default function Login() {
         }
       }
 
-      const response = await axiosInstance.get(url, {
+      const response = await axiosInstance.get("/api/userinfo", {
         withCredentials: true,
         headers: {
           Accept: "application/json",
@@ -169,7 +166,11 @@ export default function Login() {
       if (response?.data?.username) {
         startAuthSession();
         sessionStorage.removeItem("sso_redirect_in_progress");
-        GetUserLogin(response.data);
+        const data = {
+          ...response.data,
+          name: response.data.name.replace(/\s+/g, ""),
+        };
+        GetUserLogin(data);
       }
     } catch (err) {
       const status = err?.response?.status;

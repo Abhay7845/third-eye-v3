@@ -16,10 +16,12 @@ export default function AdminPage({ toggle_open, toggle }) {
   const [loading, setLoading] = useState(false);
   const userLog = useSelector((state) => state?.user?.user);
   const [loginActivity, setLoginActivity] = useState(null);
+  const [cityCount, setCityCount] = useState(0);
+  const [storeCount, setStoreCount] = useState(0);
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
   const [showShadow, setShowShadow] = useState(false);
-
+  console.log("cityCount==>", cityCount);
   const getLoginActivityData = async () => {
     try {
       setLoading(true);
@@ -35,6 +37,29 @@ export default function AdminPage({ toggle_open, toggle }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      setLoading(true);
+      try {
+        const cityResponse = await axiosInstance.get("/api/new/city/rpt/count");
+        const storeResponse = await axiosInstance.get(
+          "api/new/store/rpt/count",
+        );
+        if (cityResponse?.response?.code === "1000") {
+          setCityCount(cityResponse?.data?.value || 0);
+        }
+        if (storeResponse?.response?.code === "1000") {
+          setStoreCount(storeResponse?.data?.value || 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch report counts:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCounts();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -93,6 +118,8 @@ export default function AdminPage({ toggle_open, toggle }) {
           data={loginActivity}
           setOpenSumTbl={setOpenSumTbl}
           setOpenDailySumTbl={setOpenDailySumTbl}
+          cityCount={cityCount}
+          storeCount={storeCount}
         />
       </div>
       <UserSummaryTblModal
