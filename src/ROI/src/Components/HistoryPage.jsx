@@ -116,13 +116,21 @@ function SkeletonCard() {
 
 // ─── Modal display helpers ────────────────────────────────────────────────────
 const HIDDEN_MODAL_KEYS = new Set([
-  "roiid", "roi_id", "ROIID", "status", "inserted_date", "updated_date",
-  "username", "created_date", "create_date",
+  "roiid",
+  "roi_id",
+  "ROIID",
+  "status",
+  "inserted_date",
+  "updated_date",
+  "username",
+  "created_date",
+  "create_date",
 ]);
 
 function fmtModalNum(value) {
   const n = parseFloat(value);
-  if (isNaN(n) || value === "" || value === null || value === undefined) return "—";
+  if (isNaN(n) || value === "" || value === null || value === undefined)
+    return "—";
   return n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 }
 
@@ -180,12 +188,18 @@ export default function HistoryPage({ onBack, onContinueROI }) {
         for (const row of json.data ?? []) {
           const id = row.roiid ?? row.roi_id ?? row.ROIID ?? "";
           const existing = latest.get(id);
-          const rowDate = new Date(row.last_updated_date || row.inserted_date || 0);
-          const existDate = existing ? new Date(existing.last_updated_date || existing.inserted_date || 0) : new Date(0);
+          const rowDate = new Date(
+            row.last_updated_date || row.inserted_date || 0,
+          );
+          const existDate = existing
+            ? new Date(
+                existing.last_updated_date || existing.inserted_date || 0,
+              )
+            : new Date(0);
           if (!existing || rowDate > existDate) latest.set(id, row);
         }
         const sorted = [...latest.values()].sort((a, b) =>
-          (b.inserted_date ?? "").localeCompare(a.inserted_date ?? "")
+          (b.inserted_date ?? "").localeCompare(a.inserted_date ?? ""),
         );
         setRoiList(sorted);
       } catch (err) {
@@ -694,8 +708,8 @@ export default function HistoryPage({ onBack, onContinueROI }) {
 
               {/* ── Section groups ────────────────────────────────────── */}
               {groupedPages.map(({ group, pages }) => {
-                const groupDone = pages.filter(
-                  (p) => isPageFilled(p.status),
+                const groupDone = pages.filter((p) =>
+                  isPageFilled(p.status),
                 ).length;
                 const allDone = groupDone === pages.length;
                 const noneDone = groupDone === 0;
@@ -799,11 +813,15 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                         : roiStatus.startsWith("Rejected_by")
                         ? `Rejected by ${roiStatus.replace("Rejected_by", "")}`
                         : roiStatus.startsWith("Approved_by")
-                        ? `Approved by ${roiStatus.replace("Approved_by", "")} — Awaiting next approver`
+                        ? `Approved by ${roiStatus.replace(
+                            "Approved_by",
+                            "",
+                          )} — Awaiting next approver`
                         : "Submitted for Approval"}
                     </p>
                     <p className='text-xs text-blue-600 mt-1'>
-                      This ROI is with the approver. You can view each section below but cannot make changes.
+                      This ROI is with the approver. You can view each section
+                      below but cannot make changes.
                     </p>
                   </div>
                   <button
@@ -821,10 +839,12 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                       ? "bg-green-50 border-green-200"
                       : "bg-indigo-50 border-indigo-200"
                   }`}>
-                  <div className="flex-1 min-w-0">
+                  <div className='flex-1 min-w-0'>
                     <p className='font-bold text-gray-800'>
                       {isClarificationPending
-                        ? `💬 Clarification Requested by ${(selectedRoi?.status ?? "").replace("SK_by", "")}`
+                        ? `💬 Clarification Requested by ${(
+                            selectedRoi?.status ?? ""
+                          ).replace("SK_by", "")}`
                         : isAllComplete
                         ? "🎉 All sections complete"
                         : `📍 Continue from Step ${firstIncompleteStep}`}
@@ -838,9 +858,13 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     </p>
                     {/* Show remark from approval history when clarification is pending */}
                     {isClarificationPending && selectedRoi?.remarks && (
-                      <div className="mt-3 bg-white rounded-xl border border-amber-200 px-4 py-3">
-                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Remark from Approver</p>
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{selectedRoi.remarks}</p>
+                      <div className='mt-3 bg-white rounded-xl border border-amber-200 px-4 py-3'>
+                        <p className='text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1'>
+                          Remark from Approver
+                        </p>
+                        <p className='text-sm text-gray-800 whitespace-pre-wrap'>
+                          {selectedRoi.remarks}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -875,20 +899,31 @@ export default function HistoryPage({ onBack, onContinueROI }) {
       {viewModal.open && (
         <div className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4'>
           <div className='bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col'>
-
             {/* Modal header */}
             <div className='flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-r from-indigo-50 to-white rounded-t-2xl'>
               <div className='flex items-center gap-3'>
                 <span className='text-2xl'>
-                  {PAGES.find((p) => p.name === viewModal.pageName)?.icon ?? "📄"}
+                  {PAGES.find((p) => p.name === viewModal.pageName)?.icon ??
+                    "📄"}
                 </span>
                 <div>
-                  <h2 className='text-base font-bold text-gray-900'>{viewModal.pageName}</h2>
-                  <p className='text-xs text-gray-400 mt-0.5 font-mono'>ROI: {selectedRoi?.roiid}</p>
+                  <h2 className='text-base font-bold text-gray-900'>
+                    {viewModal.pageName}
+                  </h2>
+                  <p className='text-xs text-gray-400 mt-0.5 font-mono'>
+                    ROI: {selectedRoi?.roiid}
+                  </p>
                 </div>
               </div>
               <button
-                onClick={() => setViewModal({ open: false, pageName: "", data: null, loading: false })}
+                onClick={() =>
+                  setViewModal({
+                    open: false,
+                    pageName: "",
+                    data: null,
+                    loading: false,
+                  })
+                }
                 className='text-gray-400 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
                 ✕
               </button>
@@ -898,9 +933,23 @@ export default function HistoryPage({ onBack, onContinueROI }) {
             <div className='flex-1 overflow-y-auto p-6'>
               {viewModal.loading ? (
                 <div className='flex flex-col items-center justify-center h-40 gap-3'>
-                  <svg className='h-8 w-8 animate-spin text-indigo-500' fill='none' viewBox='0 0 24 24'>
-                    <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' />
-                    <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z' />
+                  <svg
+                    className='h-8 w-8 animate-spin text-indigo-500'
+                    fill='none'
+                    viewBox='0 0 24 24'>
+                    <circle
+                      className='opacity-25'
+                      cx='12'
+                      cy='12'
+                      r='10'
+                      stroke='currentColor'
+                      strokeWidth='4'
+                    />
+                    <path
+                      className='opacity-75'
+                      fill='currentColor'
+                      d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z'
+                    />
                   </svg>
                   <span className='text-sm text-gray-500'>Loading data…</span>
                 </div>
@@ -908,25 +957,42 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 (() => {
                   const first = viewModal.data[0] ?? {};
                   const isParticularsFormat = "Particulars" in first;
-                  const isHeaderFormat = "Header" in first && !isParticularsFormat;
+                  const isHeaderFormat =
+                    "Header" in first && !isParticularsFormat;
 
                   if (isParticularsFormat) {
                     const infoRows = viewModal.data.filter(
-                      (r) => r.Yr1 === null && r.Yr2 === null && r.Yr3 === null &&
-                             r.Yr4 === null && r.Yr5 === null && r.Yr6 === null,
+                      (r) =>
+                        r.Yr1 === null &&
+                        r.Yr2 === null &&
+                        r.Yr3 === null &&
+                        r.Yr4 === null &&
+                        r.Yr5 === null &&
+                        r.Yr6 === null,
                     );
                     const dataRows = viewModal.data.filter(
-                      (r) => r.Yr1 !== null || r.Yr2 !== null || r.Yr3 !== null ||
-                             r.Yr4 !== null || r.Yr5 !== null || r.Yr6 !== null,
+                      (r) =>
+                        r.Yr1 !== null ||
+                        r.Yr2 !== null ||
+                        r.Yr3 !== null ||
+                        r.Yr4 !== null ||
+                        r.Yr5 !== null ||
+                        r.Yr6 !== null,
                     );
                     return (
                       <div className='space-y-4'>
                         {infoRows.length > 0 && (
                           <div className='grid grid-cols-2 gap-2'>
                             {infoRows.map((row, i) => (
-                              <div key={i} className='bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 px-4 py-3'>
-                                <p className='text-[10px] font-semibold text-indigo-400 uppercase tracking-wider mb-1'>{row.Particulars}</p>
-                                <p className='text-sm font-bold text-gray-800'>{row.Header || "—"}</p>
+                              <div
+                                key={i}
+                                className='bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 px-4 py-3'>
+                                <p className='text-[10px] font-semibold text-indigo-400 uppercase tracking-wider mb-1'>
+                                  {row.Particulars}
+                                </p>
+                                <p className='text-sm font-bold text-gray-800'>
+                                  {row.Header || "—"}
+                                </p>
                               </div>
                             ))}
                           </div>
@@ -936,21 +1002,49 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                             <table className='min-w-full border-collapse text-xs'>
                               <thead>
                                 <tr className='bg-gradient-to-r from-indigo-700 to-blue-600 text-white'>
-                                  <th className='px-4 py-3 text-left font-semibold min-w-[220px]'>Particulars</th>
-                                  {["Yr 1","Yr 2","Yr 3","Yr 4","Yr 5","Yr 6"].map((y) => (
-                                    <th key={y} className='px-3 py-3 text-right font-semibold min-w-[80px]'>{y}</th>
+                                  <th className='px-4 py-3 text-left font-semibold min-w-[220px]'>
+                                    Particulars
+                                  </th>
+                                  {[
+                                    "Yr 1",
+                                    "Yr 2",
+                                    "Yr 3",
+                                    "Yr 4",
+                                    "Yr 5",
+                                    "Yr 6",
+                                  ].map((y) => (
+                                    <th
+                                      key={y}
+                                      className='px-3 py-3 text-right font-semibold min-w-[80px]'>
+                                      {y}
+                                    </th>
                                   ))}
                                 </tr>
                               </thead>
                               <tbody>
                                 {dataRows.map((row, i) => (
-                                  <tr key={i} className={`transition-colors hover:bg-indigo-50/50 ${i % 2 === 0 ? "bg-white" : "bg-slate-50"}`}>
+                                  <tr
+                                    key={i}
+                                    className={`transition-colors hover:bg-indigo-50/50 ${
+                                      i % 2 === 0 ? "bg-white" : "bg-slate-50"
+                                    }`}>
                                     <td className='px-4 py-2.5 font-medium text-gray-700 border-b border-gray-100 leading-tight'>
                                       {row.Particulars}
                                     </td>
-                                    {["Yr1","Yr2","Yr3","Yr4","Yr5","Yr6"].map((y) => (
-                                      <td key={y} className='px-3 py-2.5 text-right text-gray-700 border-b border-gray-100 tabular-nums font-semibold'>
-                                        {row[y] !== null && row[y] !== undefined ? fmtModalNum(row[y]) : "—"}
+                                    {[
+                                      "Yr1",
+                                      "Yr2",
+                                      "Yr3",
+                                      "Yr4",
+                                      "Yr5",
+                                      "Yr6",
+                                    ].map((y) => (
+                                      <td
+                                        key={y}
+                                        className='px-3 py-2.5 text-right text-gray-700 border-b border-gray-100 tabular-nums font-semibold'>
+                                        {row[y] !== null && row[y] !== undefined
+                                          ? fmtModalNum(row[y])
+                                          : "—"}
                                       </td>
                                     ))}
                                   </tr>
@@ -969,23 +1063,46 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                         <table className='min-w-full border-collapse text-xs'>
                           <thead>
                             <tr className='bg-gradient-to-r from-indigo-700 to-blue-600 text-white'>
-                              <th className='px-4 py-3 text-left font-semibold min-w-[220px]'>Metric</th>
-                              {["Yr 1","Yr 2","Yr 3","Yr 4","Yr 5","Yr 6"].map((y) => (
-                                <th key={y} className='px-3 py-3 text-right font-semibold min-w-[80px]'>{y}</th>
+                              <th className='px-4 py-3 text-left font-semibold min-w-[220px]'>
+                                Metric
+                              </th>
+                              {[
+                                "Yr 1",
+                                "Yr 2",
+                                "Yr 3",
+                                "Yr 4",
+                                "Yr 5",
+                                "Yr 6",
+                              ].map((y) => (
+                                <th
+                                  key={y}
+                                  className='px-3 py-3 text-right font-semibold min-w-[80px]'>
+                                  {y}
+                                </th>
                               ))}
                             </tr>
                           </thead>
                           <tbody>
                             {viewModal.data.map((row, i) => (
-                              <tr key={i} className={`transition-colors hover:bg-indigo-50/50 ${i % 2 === 0 ? "bg-white" : "bg-slate-50"}`}>
+                              <tr
+                                key={i}
+                                className={`transition-colors hover:bg-indigo-50/50 ${
+                                  i % 2 === 0 ? "bg-white" : "bg-slate-50"
+                                }`}>
                                 <td className='px-4 py-2.5 font-medium text-gray-700 border-b border-gray-100 leading-tight'>
                                   {row.Header}
                                 </td>
-                                {["Yr1","Yr2","Yr3","Yr4","Yr5","Yr6"].map((y) => (
-                                  <td key={y} className='px-3 py-2.5 text-right text-gray-700 border-b border-gray-100 tabular-nums font-semibold'>
-                                    {row[y] !== null && row[y] !== undefined ? fmtModalNum(row[y]) : "—"}
-                                  </td>
-                                ))}
+                                {["Yr1", "Yr2", "Yr3", "Yr4", "Yr5", "Yr6"].map(
+                                  (y) => (
+                                    <td
+                                      key={y}
+                                      className='px-3 py-2.5 text-right text-gray-700 border-b border-gray-100 tabular-nums font-semibold'>
+                                      {row[y] !== null && row[y] !== undefined
+                                        ? fmtModalNum(row[y])
+                                        : "—"}
+                                    </td>
+                                  ),
+                                )}
                               </tr>
                             ))}
                           </tbody>
@@ -998,7 +1115,11 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     <div className='space-y-4'>
                       {viewModal.data.map((row, rowIdx) => {
                         const entries = Object.entries(row).filter(
-                          ([k, v]) => !HIDDEN_MODAL_KEYS.has(k) && v !== null && v !== undefined && v !== "",
+                          ([k, v]) =>
+                            !HIDDEN_MODAL_KEYS.has(k) &&
+                            v !== null &&
+                            v !== undefined &&
+                            v !== "",
                         );
                         if (!entries.length) return null;
                         return (
@@ -1010,7 +1131,10 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                             )}
                             <div className='grid grid-cols-2 gap-2.5'>
                               {entries.map(([key, value]) => {
-                                const isObj = typeof value === "object" && value !== null && !Array.isArray(value);
+                                const isObj =
+                                  typeof value === "object" &&
+                                  value !== null &&
+                                  !Array.isArray(value);
                                 const isArr = Array.isArray(value);
                                 return (
                                   <div
@@ -1024,18 +1148,31 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                                     {isObj ? (
                                       <div className='grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5'>
                                         {Object.entries(value)
-                                          .filter(([, v]) => v !== null && v !== undefined && v !== "")
+                                          .filter(
+                                            ([, v]) =>
+                                              v !== null &&
+                                              v !== undefined &&
+                                              v !== "",
+                                          )
                                           .map(([k2, v2]) => (
-                                            <div key={k2} className='bg-white rounded-lg px-3 py-2 border border-gray-100'>
-                                              <p className='text-[9px] text-gray-400 uppercase font-semibold'>{formatModalLabel(k2)}</p>
-                                              <p className='text-sm font-semibold text-gray-800 mt-0.5 tabular-nums'>{formatModalValue(v2) ?? "—"}</p>
+                                            <div
+                                              key={k2}
+                                              className='bg-white rounded-lg px-3 py-2 border border-gray-100'>
+                                              <p className='text-[9px] text-gray-400 uppercase font-semibold'>
+                                                {formatModalLabel(k2)}
+                                              </p>
+                                              <p className='text-sm font-semibold text-gray-800 mt-0.5 tabular-nums'>
+                                                {formatModalValue(v2) ?? "—"}
+                                              </p>
                                             </div>
                                           ))}
                                       </div>
                                     ) : isArr ? (
                                       <div className='flex flex-wrap gap-1.5 mt-1'>
                                         {value.map((v, i) => (
-                                          <span key={i} className='bg-indigo-50 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-md border border-indigo-100'>
+                                          <span
+                                            key={i}
+                                            className='bg-indigo-50 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-md border border-indigo-100'>
                                             Yr {i + 1}: {fmtModalNum(v)}
                                           </span>
                                         ))}
@@ -1058,7 +1195,9 @@ export default function HistoryPage({ onBack, onContinueROI }) {
               ) : (
                 <div className='flex flex-col items-center justify-center h-40 text-gray-400'>
                   <p className='text-4xl mb-2'>📭</p>
-                  <p className='text-sm font-medium'>No data found for this page</p>
+                  <p className='text-sm font-medium'>
+                    No data found for this page
+                  </p>
                 </div>
               )}
             </div>
