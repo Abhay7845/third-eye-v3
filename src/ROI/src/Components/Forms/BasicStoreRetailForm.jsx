@@ -893,7 +893,7 @@ export default function BasicStoreDetails({ onNext }) {
 
       {/* ── FOOTER BUTTONS ───────────────────────────────────────────────────── */}
       {franchiseCompleted && !isSaved && (
-        <div className='flex gap-3 justify-end px-8 py-6 bg-gray-50 rounded-lg border border-gray-200 mt-8'>
+        <div className='flex gap-3 justify-start px-8 py-6 bg-gray-50 rounded-lg border border-gray-200 mt-8'>
           <button
             type='button'
             onClick={handleSubmit(onSubmitBasicDetails)}

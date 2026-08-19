@@ -259,7 +259,7 @@ export default function Subpage3_1({ handleNext }) {
       <div className='subpage3_1 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen'>
         {/* Header */}
         <div className='mb-6'>
-          <h2 className='text-3xl font-bold text-gray-800 mb-1'>
+          <h2 className='text-xl font-bold text-gray-800 mb-1'>
             Store Details 
           </h2>
           <p className='text-gray-500 text-sm'>
@@ -421,7 +421,7 @@ export default function Subpage3_1({ handleNext }) {
         </div>
 
         {/* Navigation Buttons */}
-        <div className='flex justify-end gap-4 mt-12'>
+        <div className='flex justify-start gap-4 mt-12'>
           {!isSaved ? (
             <button
               type='button'

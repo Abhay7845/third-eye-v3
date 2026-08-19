@@ -372,10 +372,10 @@ export default function Subpage4_1({ handleNext }) {
   }
 
   return (
-    <div className='p-6 bg-gradient-to-br from-orange-50 to-amber-50 min-h-screen'>
+      <div className='p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen'>
       {/* Header */}
       <div className='mb-8'>
-        <h2 className='text-3xl font-bold text-gray-800 mb-1'>
+          <h2 className='text-xl font-bold text-gray-800 mb-1'>
           Stage 1 — Capex Planning
         </h2>
         <p className='text-gray-500 text-sm'>
@@ -411,17 +411,17 @@ export default function Subpage4_1({ handleNext }) {
       <div className='bg-white rounded-xl shadow-lg overflow-x-auto'>
         <table className='min-w-full border-collapse'>
           <thead>
-            <tr className='bg-amber-700 text-white text-sm font-semibold'>
-              <th className='border border-amber-600 px-4 py-3 text-left min-w-[260px]'>
+            <tr className='bg-[#233044] text-white text-sm font-semibold'>
+              <th className='border border-[#1a2535] px-4 py-3 text-left min-w-[260px]'>
                 Capex Item
               </th>
-              <th className='border border-amber-600 px-4 py-3 text-center min-w-[160px]'>
+              <th className='border border-[#1a2535] px-4 py-3 text-center min-w-[160px]'>
                 Selection
               </th>
-              <th className='border border-amber-600 px-4 py-3 text-center min-w-[160px]'>
+              <th className='border border-[#1a2535] px-4 py-3 text-center min-w-[160px]'>
                 Amount (₹)
               </th>
-              <th className='border border-amber-600 px-4 py-3 text-left min-w-[220px]'>
+              <th className='border border-[#1a2535] px-4 py-3 text-left min-w-[220px]'>
                 Basis
               </th>
             </tr>
@@ -546,7 +546,7 @@ export default function Subpage4_1({ handleNext }) {
       )}
 
       {/* Navigation */}
-      <div className='flex justify-end gap-4 mt-8'>
+      <div className='flex justify-start gap-4 mt-8'>
         {!isSaved ? (
           <button
             type='button'

@@ -5,7 +5,28 @@ const YEARS = ["Yr 0", "Yr 1", "Yr 2", "Yr 3", "Yr 4", "Yr 5", "Yr 6"];
 
 const r2 = (n) => Math.round((n ?? 0) * 100) / 100;
 
-function parseApiRows(rows) {
+// Bisection IRR — guaranteed convergence when sign changes within [-99.99%, 5000%]
+function computeIRR(cashFlows, maxIter = 400, tol = 1e-10) {
+  if (!cashFlows.length || cashFlows[0] >= 0) return null;
+  const npvAt = (r) =>
+    cashFlows.reduce((s, cf, i) => s + cf / Math.pow(1 + r, i), 0);
+  let lo = -0.9999, hi = 50;
+  // widen or narrow until we bracket a sign change
+  if (npvAt(lo) * npvAt(hi) > 0) {
+    hi = 5;
+    if (npvAt(lo) * npvAt(hi) > 0) return null;
+  }
+  for (let i = 0; i < maxIter; i++) {
+    const mid = (lo + hi) / 2;
+    const midNpv = npvAt(mid);
+    if (Math.abs(midNpv) < tol || hi - lo < tol) return r2(mid * 100);
+    if (npvAt(lo) * midNpv <= 0) hi = mid;
+    else lo = mid;
+  }
+  return r2(((lo + hi) / 2) * 100);
+}
+
+function parseApiRows(rows, opts = {}) {
   if (!rows?.length) return null;
   const by = {};
   rows.forEach((r) => {
@@ -27,8 +48,23 @@ function parseApiRows(rows) {
   };
   const scalar = (name) => parseFloat(by[name]?.Header) || 0;
 
-  const gross = yrs("Gross earnings/Commission");
-  const totExp = yrs("Total expenses");
+  // Expense-side values come from expense planning (stored in Rupees).
+  // Sales-side values (UCP Sales, Gross earnings) come from sales planning (stored in Lakhs).
+  // Normalise expenses to Lakhs so EBITDA / PBT / IRR use consistent units.
+  const LAKH = 100_000;
+  const toLakh = (arr) => arr.map((v) => (v !== null ? r2((v ?? 0) / LAKH) : null));
+
+  const gross = yrs("Gross earnings/Commission"); // already in Lakhs
+  const totExp = toLakh(yrs("Total expenses"));    // Rupees → Lakhs
+  const ucpSales = yrs("UCP Sales");
+  const customerDiscount = yrs("Customer Discount");
+
+  // NSV: prefer the API row, fall back to UCP − Customer Discount
+  const nsvFromApi = yrs("NSV Sales");
+  const nsvSales = nsvFromApi.some((v, i) => i > 0 && (v ?? 0) > 0)
+    ? nsvFromApi
+    : [null, ...ucpSales.slice(1).map((u, i) => r2((u ?? 0) - (customerDiscount[i + 1] ?? 0)))];
+
   const ebitda = [
     null,
     ...Array.from({ length: 6 }, (_, i) =>
@@ -38,8 +74,8 @@ function parseApiRows(rows) {
   const deprn = [null, 0, 0, 0, 0, 0, 0];
   const pbt = [null, ...ebitda.slice(1).map((e) => r2((e ?? 0) - 0))];
 
-  const storeInteriors = scalar("Store Interiors value on Set Up");
-  const secDep = scalar("Security Deposit");
+  const storeInteriors = scalar("Store Interiors value on Set Up") / LAKH; // Rupees → Lakhs
+  const secDep = scalar("Security Deposit") / LAKH;
   const totalInv = r2(storeInteriors + secDep);
   const roiPct = [
     null,
@@ -57,6 +93,10 @@ function parseApiRows(rows) {
     npv += v / Math.pow(1.11, i + 1);
   });
   npv = r2(npv);
+
+  // IRR
+  const irrCashFlows = [-totalInv, ...pbtYrs];
+  const irr = totalInv > 0 ? computeIRR(irrCashFlows) : null;
 
   // Payback period
   let cum = -totalInv,
@@ -85,12 +125,17 @@ function parseApiRows(rows) {
   const rev5 = grossYrs.slice(0, 5).reduce((s, v) => s + v, 0);
   const rentRev5 = rev5 > 0 ? r2((rent5 / rev5) * 100) : null;
 
+  // Rev per sqft — requires retailArea passed via opts
+  const retailArea = opts.retailArea ?? 0;
+  const avgGross = grossYrs.reduce((s, v) => s + v, 0) / 6;
+  const revPerSqft = retailArea > 0 ? Math.round(avgGross / retailArea * 100000) : 0;
+
   return {
     roiType: by["ROI New Store"]?.Header ?? "—",
     cityName: by["City Name"]?.Header ?? "—",
-    ucpSales: yrs("UCP Sales"),
-    customerDiscount: yrs("Customer Discount"),
-    nsvSales: yrs("NSV Sales"),
+    ucpSales,
+    customerDiscount,
+    nsvSales,
     grossEarnings: gross,
     totalExpenses: totExp,
     expenses: [
@@ -146,10 +191,10 @@ function parseApiRows(rows) {
     capexTotal: [-totalInv, 0, 0, 0, 0, 0, secDep],
     kpis: {
       rentRevenue5yr: rentRev5,
-      revPerSqft: 0,
+      revPerSqft,
       revenueCAGR: cagr,
       payout5yr: null,
-      irr: null,
+      irr,
       npv,
       paybackCapex: payback,
     },
@@ -419,7 +464,10 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
         );
         if (!res.ok) throw new Error("Failed to load summary data.");
         const json = await res.json();
-        setApiData(parseApiRows(json.data));
+        const retailArea = parseFloat(
+          roiContext?.historyRetailArea || roiContext?.existingRetailArea
+        ) || 0;
+        setApiData(parseApiRows(json.data, { retailArea }));
       } catch (e) {
         setFetchError(e.message);
       } finally {
@@ -429,6 +477,28 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
   }, [roiContext?.roiId]);
 
   const d = apiData;
+
+  // ── Submission validation rules ─────────────────────────────────────────
+  const storeFormat = d?.roiType ?? "";
+  const irr         = d?.kpis?.irr;
+  const payback     = d?.kpis?.paybackCapex;
+  const validationWarnings = d ? (() => {
+    const w = [];
+    if (storeFormat === "L1" && irr !== null && irr < 17.95)
+      w.push("The IRR is very low for an L1 Store. Please tweak the projections to improve the IRR to minimum 18%.");
+    if ((storeFormat === "L2" || storeFormat === "L4") && irr !== null && irr < 15)
+      w.push("The IRR is very low for an L2/L4 Store. Please tweak the projections to improve the IRR to minimum 16%.");
+    if (storeFormat === "L3" && irr !== null && irr < 11.95)
+      w.push("The IRR is very low for an L3 Store. Please tweak the projections to improve the IRR to minimum 12%.");
+    if (storeFormat === "L2.5" && irr !== null && irr < 11.75)
+      w.push("The IRR is very low for an L2.5 Store. Please tweak the projections to improve the IRR to minimum 12%.");
+    if (storeFormat === "L1" && payback !== null && payback > 4)
+      w.push("The CAPEX Payback period is very high for an L1 Store. Please rework the projections.");
+    if (storeFormat !== "L1" && storeFormat !== "" && payback !== null && payback > 5)
+      w.push("The CAPEX Payback period is very high for the Store. Please rework the projections.");
+    return w;
+  })() : [];
+  const canSubmit = validationWarnings.length === 0;
 
   const handleSubmit = async () => {
     if (!d || !roiContext?.roiId) return;
@@ -482,7 +552,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
     return (
       <div className='flex flex-col items-center justify-center min-h-[60vh] p-12 text-center'>
         <div className='text-7xl mb-6'>🎉</div>
-        <h2 className='text-3xl font-extrabold text-gray-900 mb-2'>
+        <h2 className='text-xl font-extrabold text-gray-900 mb-2'>
           ROI Request Submitted!
         </h2>
         <p className='text-gray-500 text-lg mb-4'>
@@ -538,16 +608,24 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
       <div className='bg-white rounded-xl shadow-sm border border-gray-100 px-6 py-4'>
         <div className='grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm'>
           {[
-            ["Project Type", roiContext?.projectType ?? "New Store"],
-            ["City", roiContext?.city ?? "—"],
-            ["Region", roiContext?.region ?? "—"],
-            ["Store Code", roiContext?.existingStoreCode ?? "—"],
-          ].map(([label, value]) => (
-            <div key={label}>
+            ["Project Type", roiContext?.projectType ?? "New Store", false],
+            ["City", roiContext?.city ?? "—", false],
+            ["Region", roiContext?.region ?? "—", false],
+            roiContext?.projectType === "New Store"
+              ? ["History ID", roiContext?.historyId ?? "—", true]
+              : ["Store Code", roiContext?.existingStoreCode || "—", true],
+          ].map(([label, value, mono]) => (
+            <div key={label} className='min-w-0'>
               <p className='text-xs text-gray-400 font-semibold uppercase tracking-wide'>
                 {label}
               </p>
-              <p className='font-bold text-gray-800 mt-0.5'>{value}</p>
+              <p
+                className={`font-bold text-gray-800 mt-0.5 truncate ${
+                  mono ? "font-mono text-xs" : ""
+                }`}
+                title={String(value)}>
+                {value}
+              </p>
             </div>
           ))}
         </div>
@@ -873,7 +951,19 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
       </div>
 
       {/* ── Action bar ────────────────────────────────────────────────────── */}
-      <div className='bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-5 flex items-center justify-end gap-4'>
+      {/* Validation warnings — shown above submit when thresholds fail */}
+      {validationWarnings.length > 0 && (
+        <div className='bg-red-50 border border-red-300 rounded-2xl px-6 py-4 space-y-2'>
+          <p className='text-xs font-bold text-red-700 uppercase tracking-wide mb-1'>⚠ Cannot Submit — Please resolve the following issues:</p>
+          {validationWarnings.map((msg, i) => (
+            <div key={i} className='flex items-start gap-2 text-sm text-red-700'>
+              <span className='mt-0.5 flex-shrink-0'>•</span>
+              <span>{msg}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className='bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-5 flex items-center justify-start gap-4'>
               <div className='flex items-center gap-3'>
           <p className='text-xs text-gray-400 hidden sm:block'>
             All sections are complete. Submit your ROI request for approval.
@@ -890,8 +980,8 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
           <button
             type='button'
             onClick={handleSubmit}
-            disabled={submitting}
-            className={`px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition ${submitting
+            disabled={submitting || !canSubmit}
+            className={`px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition ${submitting || !canSubmit
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-green-600 hover:bg-green-700 text-white"
               }`}>

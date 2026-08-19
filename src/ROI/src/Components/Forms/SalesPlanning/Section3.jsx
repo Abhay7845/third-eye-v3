@@ -108,7 +108,13 @@ function Stepper({ currentStep, savedSteps }) {
 export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
   const [subSteps, setSubSteps] = useState(initialSubStep);
   const [savedSteps, setSavedSteps] = useState([false, false, false, false]);
-  const [forwardDetail, setforwardDetail] = useState({});
+  // Pre-seed from roiContext so sub-page resume effects fire immediately on mount
+  const [forwardDetail, setforwardDetail] = useState({
+    roiid: roiContext?.roiId ?? "",
+    refStoreCode: roiContext?.refStoreCode ?? "",
+    region: roiContext?.region ?? "",
+    storeFormat: roiContext?.effectiveStoreFormat ?? roiContext?.existingStoreFormat ?? "",
+  });
   const [subpage3_2Data, setSubpage3_2Data] = useState(null);
   const [isFetched, setIsFetched] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
@@ -168,9 +174,9 @@ export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
     }));
     setforwardDetail({
       roiid: roiContext?.roiId,
-      refStoreCode: roiContext?.refStoreCode,
+      refStoreCode: storeCode,
       region: roiContext?.region,
-      storeFormat: roiContext?.existingStoreFormat,
+      storeFormat: roiContext?.effectiveStoreFormat ?? roiContext?.existingStoreFormat,
     });
     setIsFetched(true);
   };
@@ -191,7 +197,7 @@ export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
 
   const handleFetchRefStoreDetail = async () => {
     setIsFetching(true);
-    const code = roiContext?.refStoreCode;
+    let code = roiContext?.refStoreCode;
     const roi_id = roiContext?.roiId;
     try {
       if (roiContext?.projectType !== "New Store") {
@@ -219,6 +225,14 @@ export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
           }));
         }
       } else {
+        // For New Store: if refStoreCode wasn't persisted, recover it from history
+        if (!code && roiContext?.historyId) {
+          const hr = await fetch(`${BASE_URL}/history/${roiContext.historyId}`);
+          if (hr.ok) {
+            const hj = await hr.json();
+            code = hj?.data?.[0]?.storecode ?? "";
+          }
+        }
         const data = await fetchScreen2Detail(roi_id);
         setStoreParticulars((prev) => ({
           ...prev,
@@ -226,7 +240,7 @@ export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
           "Carpet area": data[1] || 0,
         }));
       }
-      await fetchRefStoreMixDetail(code);
+      if (code) await fetchRefStoreMixDetail(code);
     } catch (err) {
       console.error(err);
       toast.error(
@@ -264,28 +278,31 @@ export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
         }
         if (r2.ok) {
           const j2 = await r2.json();
-          const row2 = j2?.data?.[0];
-          if (row2) {
+          const rows2 = j2?.data ?? [];
+          if (rows2.length > 0) {
             markStepSaved(1);
-            // Restore context data so Subpage3_3/4 computed values work
-            const inp = row2.inputs ?? row2;
+            const yrs = (header) => {
+              const r = rows2.find((x) => x.Header === header);
+              if (!r) return Array(6).fill(0);
+              return [r.Yr1, r.Yr2, r.Yr3, r.Yr4, r.Yr5, r.Yr6].map((v) => parseFloat(v) || 0);
+            };
             setSubpage3_2Data({
               roiid,
-              total_sales_data: row2.computed?.totalSales ?? Array(6).fill(0),
-              plainShare:    inp.salesMix?.plainShare    ?? Array(6).fill(0),
-              studdedShare:  inp.salesMix?.studdedShare  ?? Array(6).fill(0),
-              coinsShare:    inp.salesMix?.coinsShare    ?? Array(6).fill(0),
-              lcg:           inp.plainMix?.lcg           ?? Array(6).fill(0),
-              mcg:           inp.plainMix?.mcg           ?? Array(6).fill(0),
-              hcg:           inp.plainMix?.hcg           ?? Array(6).fill(0),
-              stoneShareHCG: inp.plainMix?.stoneShareHCG ?? Array(6).fill(0),
-              gis:           inp.studdedMix?.gis          ?? Array(6).fill(0),
-              regular:       inp.studdedMix?.regular      ?? Array(6).fill(0),
-              colorStones:   inp.studdedMix?.colorStones  ?? Array(6).fill(0),
-              solitaireA:    inp.studdedMix?.solitaireA   ?? Array(6).fill(0),
-              solitaireB:    inp.studdedMix?.solitaireB   ?? Array(6).fill(0),
-              solitaireC:    inp.studdedMix?.solitaireC   ?? Array(6).fill(0),
-              solitaireD:    inp.studdedMix?.solitaireD   ?? Array(6).fill(0),
+              total_sales_data: yrs("Sales Planning_Total Sales"),
+              plainShare:    yrs("Sales Planning_Plain Share"),
+              studdedShare:  yrs("Sales Planning_Studded Share"),
+              coinsShare:    yrs("Sales Planning_Coins /Silver Share"),
+              lcg:           yrs("Sales Planning_LCG"),
+              mcg:           yrs("Sales Planning_MCG"),
+              hcg:           yrs("Sales Planning_HCG"),
+              stoneShareHCG: yrs("Sales Planning_Stoneshare(HCG only)"),
+              gis:           yrs("Sales Planning_GIS"),
+              regular:       yrs("Sales Planning_Regular"),
+              colorStones:   yrs("Sales Planning_Color Stones"),
+              solitaireA:    yrs("Sales Planning_Solitaire A(<70C)"),
+              solitaireB:    yrs("Sales Planning_Solitaire B(70-100C)"),
+              solitaireC:    yrs("Sales Planning_Solitaire C(1CRT+)"),
+              solitaireD:    yrs("Sales Planning_Solitaire D(2CRT+)"),
             });
           }
         }
