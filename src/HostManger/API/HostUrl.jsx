@@ -1,14 +1,22 @@
-// DEVELOPMENT URL
-// export const HOST_URL = "http://localhost:8080";
+const UAT_URL = "https://uat-tanishqdigitalmerch.titan.in:8443/ThirdEyeApp";
+const PROD_URL = "https://tanishqdigitalmerch.titan.in:8443/ThirdEyeApp";
 
-// LOCAL UAT TESTING URL WITHOUT SSO
-// export const HOST_URL =
-//   "https://uat-tanishqdigitalmerch.titan.in:8443/ThirdEyeAppTest";
+const hostname = window.location.hostname;
 
-// UAT TESTING URL WITH SSO
+let HOST_URL;
 
-export const HOST_URL =
-  "https://uat-tanishqdigitalmerch.titan.in:8443/ThirdEyeApp";
+switch (hostname) {
+  case "localhost":
+  case "uat-tanishqdigitalmerch.titan.in":
+    HOST_URL = UAT_URL;
+    break;
 
-// PRODUCTION URL
-// export const HOST_URL = "https://tanishqdigitalmerch.titan.in:8443/ThirdEyeApp";
+  case "tanishqdigitalmerch.titan.in":
+    HOST_URL = PROD_URL;
+    break;
+
+  default:
+    HOST_URL = UAT_URL;
+}
+
+export { HOST_URL };
