@@ -28,10 +28,11 @@ function LabelCell({ label, subLabel }) {
 function AutoCell({ value, prefix = "₹", highlight = false }) {
   return (
     <td
-      className={`border border-gray-200 px-3 py-2 text-sm text-right ${highlight
+      className={`border border-gray-200 px-3 py-2 text-sm text-right ${
+        highlight
           ? "bg-amber-50 font-bold text-amber-800"
           : "bg-gray-50 text-gray-700"
-        }`}>
+      }`}>
       {value === "—" || value === null || value === undefined
         ? "—"
         : `${prefix} ${fmt(value)}`}
@@ -42,8 +43,9 @@ function AutoCell({ value, prefix = "₹", highlight = false }) {
 function BlueInputCell({ value, onChange, disabled, prefix = "" }) {
   return (
     <td
-      className={`border border-gray-200 p-0 ${disabled ? "bg-gray-100" : "bg-blue-50"
-        }`}>
+      className={`border border-gray-200 p-0 ${
+        disabled ? "bg-gray-100" : "bg-blue-50"
+      }`}>
       <div className='flex items-center'>
         {prefix && (
           <span className='pl-2 text-sm text-blue-700 font-bold'>{prefix}</span>
@@ -54,8 +56,9 @@ function BlueInputCell({ value, onChange, disabled, prefix = "" }) {
           value={value}
           onChange={onChange}
           disabled={disabled}
-          className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-400 ${disabled ? "cursor-not-allowed text-gray-500" : ""
-            }`}
+          className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-400 ${
+            disabled ? "cursor-not-allowed text-gray-500" : ""
+          }`}
         />
       </div>
     </td>
@@ -129,10 +132,12 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const isRestoredRef = useRef(false);
   // ── Rent inputs (6 years) ─────────────────────────────────────────────────
   const [revenueSharing, setRevenueSharing] = useState("No");
-  const selected_sba = (storeData?.project_type === "Renovation" || storeData?.project_type === "New Store" || storeData?.project_type === "Relocation")
-    ? parseFloat(storeData?.new_over_all_area_SBA)
-    : parseFloat(storeData?.existing_over_all_area_SBA)
-  console.log(storeData)
+  const selected_sba =
+    storeData?.project_type === "Renovation" ||
+    storeData?.project_type === "New Store" ||
+    storeData?.project_type === "Relocation"
+      ? parseFloat(storeData?.new_over_all_area_SBA)
+      : parseFloat(storeData?.existing_over_all_area_SBA);
   const [sba, setSba] = useState(Array(6).fill(selected_sba));
   // initialized to empty; seeded by the sync effect below once subpage4_2Data loads
   const [ratePerSqft, setRatePerSqft] = useState(
@@ -255,16 +260,46 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     const _interiors = subpage4_1Data?.interiors ?? 0;
     const _nos = subpage4_2Data?.salaries?.totalNos ?? 0;
     setEditableRows((prev) => ({
-      repairs: { ...prev.repairs, yr1: toAnn(s["repairs maintenance"]) || prev.repairs.yr1 },
-      insurance: { ...prev.insurance, yr1: toAnn(s.insurance) || _interiors * 0.01 || prev.insurance.yr1 },
+      repairs: {
+        ...prev.repairs,
+        yr1: toAnn(s["repairs maintenance"]) || prev.repairs.yr1,
+      },
+      insurance: {
+        ...prev.insurance,
+        yr1: toAnn(s.insurance) || _interiors * 0.01 || prev.insurance.yr1,
+      },
       btl: { ...prev.btl, yr1: toAnn(s.btl) || prev.btl.yr1 },
-      travel: { ...prev.travel, yr1: toAnn(s["travel & Conveyance"]) || prev.travel.yr1 },
-      telephone: { ...prev.telephone, yr1: toAnn(s["telephone/internet"]) || prev.telephone.yr1 },
-      creditCard: { ...prev.creditCard, yr1: toAnn(s["credit card commission"]) || prev.creditCard.yr1 },
-      gst: { ...prev.gst, yr1: toAnn(s["GST (primarily rental)"]) || prev.gst.yr1 },
-      printing: { ...prev.printing, yr1: toAnn(s["Store - Printing/Pantry"]) || prev.printing.yr1 },
-      consumables: { ...prev.consumables, yr1: toAnn(s.consumables) || prev.consumables.yr1 },
-      staffWelfare: { ...prev.staffWelfare, yr1: toAnn(s["Other - Staff welfare/Uniforms"]) || 3500 * _nos * 12 || prev.staffWelfare.yr1 },
+      travel: {
+        ...prev.travel,
+        yr1: toAnn(s["travel & Conveyance"]) || prev.travel.yr1,
+      },
+      telephone: {
+        ...prev.telephone,
+        yr1: toAnn(s["telephone/internet"]) || prev.telephone.yr1,
+      },
+      creditCard: {
+        ...prev.creditCard,
+        yr1: toAnn(s["credit card commission"]) || prev.creditCard.yr1,
+      },
+      gst: {
+        ...prev.gst,
+        yr1: toAnn(s["GST (primarily rental)"]) || prev.gst.yr1,
+      },
+      printing: {
+        ...prev.printing,
+        yr1: toAnn(s["Store - Printing/Pantry"]) || prev.printing.yr1,
+      },
+      consumables: {
+        ...prev.consumables,
+        yr1: toAnn(s.consumables) || prev.consumables.yr1,
+      },
+      staffWelfare: {
+        ...prev.staffWelfare,
+        yr1:
+          toAnn(s["Other - Staff welfare/Uniforms"]) ||
+          3500 * _nos * 12 ||
+          prev.staffWelfare.yr1,
+      },
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen1Expenses]);
@@ -347,7 +382,9 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
         editableRowState: editableRows,        lockedRowEsc,        rows: expenseRows.map((r) => ({
           label: r.label,
           basis: r.basis,
-          escalation: r.locked ? r.escalation : `${editableRows[r.key]?.esc ?? ""}%`,
+          escalation: r.locked
+            ? r.escalation
+            : `${editableRows[r.key]?.esc ?? ""}%`,
           values: r.values,
         })),
         total: totalExpenses,
@@ -364,7 +401,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
         const errData = await res.json().catch(() => null);
         toast.error(
           errData?.message ??
-          "Failed to save expense summary. Please try again.",
+            "Failed to save expense summary. Please try again.",
         );
         return;
       }
@@ -403,10 +440,11 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
             value={revenueSharing}
             onChange={(e) => setRevenueSharing(e.target.value)}
             disabled={isSaved}
-            className={`px-4 py-2 border-2 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400 ${revenueSharing === "Yes"
+            className={`px-4 py-2 border-2 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+              revenueSharing === "Yes"
                 ? "border-green-400 bg-green-50 text-green-800"
                 : "border-gray-300 bg-white text-gray-700"
-              } ${isSaved ? "cursor-not-allowed" : ""}`}>
+            } ${isSaved ? "cursor-not-allowed" : ""}`}>
             <option value='No'>No</option>
             <option value='Yes'>Yes</option>
           </select>
@@ -542,8 +580,9 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
                   value={securityDepositRate}
                   onChange={(e) => setSecurityDepositRate(e.target.value)}
                   disabled={isSaved}
-                  className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-400 ${isSaved ? "cursor-not-allowed" : ""
-                    }`}
+                  className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+                    isSaved ? "cursor-not-allowed" : ""
+                  }`}
                 />
               </td>
             </tr>
@@ -702,10 +741,11 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
             type='button'
             disabled={!isFormComplete || isSaving}
             onClick={handleSave}
-            className={`font-semibold px-8 py-3 rounded-lg shadow-lg transition transform ${isFormComplete && !isSaving
+            className={`font-semibold px-8 py-3 rounded-lg shadow-lg transition transform ${
+              isFormComplete && !isSaving
                 ? "bg-amber-600 hover:bg-amber-700 text-white hover:scale-105 cursor-pointer"
                 : "bg-gray-400 text-gray-200 cursor-not-allowed"
-              }`}>
+            }`}>
             {isSaving ? "Saving…" : "Save & Complete"}
           </button>
         ) : (

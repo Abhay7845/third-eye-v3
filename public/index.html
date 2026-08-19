@@ -24,7 +24,7 @@
     <script nonce="RbuQC4Hrsky4YHmhE6LK2R==" type="text/javascript">
       const nonce = "RbuQC4Hrsky4YHmhE6LK2R==";
       document.currentScript.setAttribute("nonce", nonce);
-     const csp = `
+      const csp = `
   default-src 'self';
   base-uri 'none';
 
@@ -73,19 +73,12 @@
 
   manifest-src
     'self'
+    http://localhost:3000;
     https://uat-tanishqdigitalmerch.titan.in:8443;
 `
-.replace(/\s+/g, " ")
-.trim();
+        .replace(/\s+/g, " ")
+        .trim();
       document.querySelector("#csp-meta").setAttribute("content", csp);
-
-      // window.addEventListener("DOMContentLoaded", () => {
-      //   const script = document.createElement("script");
-      //   script.src = "/ThirdEye/static/js/main.36cce28b.js";
-      //   script.defer = true;
-      //   script.setAttribute("nonce", nonce);
-      //   document.head.appendChild(script);
-      // });
     </script>
   </body>
 </html>

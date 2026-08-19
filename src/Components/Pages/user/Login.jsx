@@ -166,11 +166,7 @@ export default function Login() {
       if (response?.data?.username) {
         startAuthSession();
         sessionStorage.removeItem("sso_redirect_in_progress");
-        const data = {
-          ...response.data,
-          name: response.data.name.replace(/\s+/g, ""),
-        };
-        GetUserLogin(data);
+        GetUserLogin(response.data);
       }
     } catch (err) {
       const status = err?.response?.status;

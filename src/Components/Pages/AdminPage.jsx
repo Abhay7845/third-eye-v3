@@ -21,7 +21,6 @@ export default function AdminPage({ toggle_open, toggle }) {
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
   const [showShadow, setShowShadow] = useState(false);
-  console.log("cityCount==>", cityCount);
   const getLoginActivityData = async () => {
     try {
       setLoading(true);
