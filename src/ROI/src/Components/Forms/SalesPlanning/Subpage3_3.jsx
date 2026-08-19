@@ -253,10 +253,56 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const { markStepSaved, subpage3_2Data, forwardDetail } = useSection3Context();
+  const { markStepSaved, subpage3_2Data, setSubpage3_2Data, forwardDetail } = useSection3Context();
   const computed = computeValues(inputs, subpage3_2Data);
-  // const hasOver100StockTurn = computed.remainingStockTurn.some((v) => v < 0);
   const userLog = useSelector((state) => state?.user?.user);
+
+  // Fetch screen-2 sales data if context is empty (resumed directly at step 3)
+  useEffect(() => {
+    const roiid = forwardDetail?.roiid;
+    if (!roiid) return;
+    if (subpage3_2Data?.total_sales_data?.some((v) => v > 0)) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/sales_planning`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ screen: 2, roiid }),
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const rows = json?.data ?? [];
+        if (!rows.length) return;
+        const yrs = (header) => {
+          const r = rows.find((x) => x.Header === header);
+          if (!r) return Array(6).fill(0);
+          return [r.Yr1, r.Yr2, r.Yr3, r.Yr4, r.Yr5, r.Yr6].map((v) => parseFloat(v) || 0);
+        };
+        const totalSales = yrs("Sales Planning_Total Sales");
+        if (!totalSales.some((v) => v > 0)) return;
+        setSubpage3_2Data({
+          roiid,
+          total_sales_data: totalSales,
+          plainShare:    yrs("Sales Planning_Plain Share"),
+          studdedShare:  yrs("Sales Planning_Studded Share"),
+          coinsShare:    yrs("Sales Planning_Coins /Silver Share"),
+          lcg:           yrs("Sales Planning_LCG"),
+          mcg:           yrs("Sales Planning_MCG"),
+          hcg:           yrs("Sales Planning_HCG"),
+          stoneShareHCG: yrs("Sales Planning_Stoneshare(HCG only)"),
+          gis:           yrs("Sales Planning_GIS"),
+          regular:       yrs("Sales Planning_Regular"),
+          colorStones:   yrs("Sales Planning_Color Stones"),
+          solitaireA:    yrs("Sales Planning_Solitaire A(<70C)"),
+          solitaireB:    yrs("Sales Planning_Solitaire B(70-100C)"),
+          solitaireC:    yrs("Sales Planning_Solitaire C(1CRT+)"),
+          solitaireD:    yrs("Sales Planning_Solitaire D(2CRT+)"),
+        });
+      } catch (e) {
+        console.error("Failed to fetch upstream sales data for stock calc:", e);
+      }
+    })();
+  }, [forwardDetail?.roiid]);
 
   const [amcMetrics, setAmcMetrics] = useState({
     lcg: 0,
@@ -512,12 +558,18 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
   //     fetchStockTurnGuideLine('Plain')
   // }, [])
 
+  // Formatter for Indian currency
+const fmt = (n) =>
+  n === null || n === undefined || n === ""
+    ? "—"
+    : Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+
   return (
     <div>
       <div className='subpage3_3 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen'>
         {/* Page Header */}
         <div className='mb-6'>
-          <h2 className='text-3xl font-bold text-gray-800 mb-2'>
+          <h2 className='text-xl font-bold text-gray-800 mb-2'>
             Pricing Metrics &amp; Stock Turn
           </h2>
           <p className='text-sm text-gray-500 flex items-center gap-3'>
@@ -669,22 +721,22 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                 <tr>
                   <LabelCell label='Plain' />
                   {computed.stockPlain.map((v, i) => (
-                    <AutoCell key={i} value={v} />
+                    <AutoCell key={i} value={fmt(v)} />
                   ))}
                 </tr>
                 <tr>
                   <LabelCell label='Studded' />
                   {computed.stockStudded.map((v, i) => (
-                    <AutoCell key={i} value={v} />
+                    <AutoCell key={i} value={fmt(v)} />
                   ))}
                 </tr>
                 <tr>
                   <LabelCell label='Coins / Silver Share' />
                   {computed.stockCoins.map((v, i) => (
-                    <AutoCell key={i} value={v} />
+                    <AutoCell key={i} value={fmt(v)} />
                   ))}
                 </tr>
-                <TotalRow label='Total' values={computed.totalStock} />
+                <TotalRow label='Total' values={(computed.totalStock)} />
               </tbody>
             </table>
           </div>
@@ -708,7 +760,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
         </div>
 
         {/* Navigation Buttons */}
-        <div className='flex justify-end mt-10'>
+        <div className='flex justify-start mt-10'>
           {/* <button
                         type="button"
                         onClick={handlePrevious}

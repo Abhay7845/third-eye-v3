@@ -48,6 +48,8 @@
 
   connect-src
     'self'
+    http://127.0.0.1:8000
+    http://localhost:8000
     https://uat-tanishqdigitalmerch.titan.in
     https://maps.googleapis.com
     https://login.microsoftonline.com
@@ -71,6 +73,7 @@
 
   manifest-src
     'self'
+    http://localhost:3000;
     https://uat-tanishqdigitalmerch.titan.in:8443;
 `
         .replace(/\s+/g, " ")

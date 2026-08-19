@@ -164,6 +164,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   // ── Fetch level options and reference salary data ─────────────────────────
 
   const fetchHeadCount = async (storeCode) => {
+    if (!storeCode) return {}; // no ref store available — nos will default to 0
     const res = await fetch(`${BASE_URL}/head_count?store=${storeCode}`);
 
     if (!res.ok) {
@@ -190,11 +191,24 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
     }
 
     const json = await res.json();
+    const d = json.data?.[0] ?? {};
 
-    const storeCode =
-      storeData?.project_type === "New Store"
-        ? storeData?.refStoreCode
-        : json.data?.[0]?.exsisting_store_code;
+    let storeCode;
+    if (storeData?.project_type === "New Store") {
+      storeCode = storeData?.refStoreCode ?? d.ref_store_code ?? "";
+      // recover from history when not persisted — same pattern as Section 3
+      if (!storeCode) {
+        const historyId = d.ty_history_id ?? d.TY_historyID ?? d.history_id ?? d.historyId ?? "";
+        if (historyId) {
+          try {
+            const hr = await fetch(`${BASE_URL}/history/${historyId}`);
+            if (hr.ok) storeCode = (await hr.json())?.data?.[0]?.storecode ?? "";
+          } catch (_) { /* non-fatal — nos will default to 0 */ }
+        }
+      }
+    } else {
+      storeCode = d.exsisting_store_code ?? d.existing_store_code ?? "";
+    }
 
     return await fetchHeadCount(storeCode);
   };
@@ -263,7 +277,10 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
           }),
         );
 
-        setSalaryRows(rows);
+        // preserve rows already restored by the resume effect
+        setSalaryRows((prev) =>
+          Object.values(prev).some((r) => r.monthly > 0) ? prev : rows,
+        );
       } catch (err) {
         console.error(err);
       } finally {
@@ -429,24 +446,24 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   }
 
   return (
-    <div className='p-6 bg-gradient-to-br from-orange-50 to-amber-50 min-h-screen space-y-8'>
+      <div className='p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen space-y-4'>
       {/* Header */}
-      <div>
-        <h2 className='text-3xl font-bold text-gray-800 mb-1'>
-          Stage 2 — Salaries & Operating Expenses
+      {/* <div>
+          <h2 className='text-lg font-bold text-gray-800 mb-0.5'>
+          Stage 2 — Salaries &amp; Operating Expenses
         </h2>
-        <p className='text-gray-500 text-sm'>
+        <p className='text-gray-500 text-xs'>
           Configure staff salaries, electricity, security &amp; other operating
           costs for Year 1
         </p>
-      </div>
+      </div> */}
 
       {/* ──────────────────────────────────────────────────────────────
                 SALARY TABLE
             ────────────────────────────────────────────────────────────── */}
       <div className='bg-white rounded-xl shadow-lg overflow-x-auto'>
-        <div className='px-6 py-4 border-b border-gray-100 flex items-center justify-between'>
-          <h3 className='text-lg font-bold text-gray-800'>
+        <div className='px-4 py-3 border-b border-gray-100 flex items-center justify-between'>
+          <h3 className='text-base font-bold text-gray-800'>
             Salaries (₹) — Year 1
           </h3>
           <span className='text-xs text-gray-400'>
@@ -455,20 +472,20 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
         </div>
         <table className='min-w-full border-collapse text-sm'>
           <thead>
-            <tr className='bg-amber-700 text-white text-xs font-semibold'>
-              <th className='border border-amber-600 px-3 py-2 text-center'>
+            <tr className='bg-[#233044] text-white text-xs font-semibold'>
+              <th className='border border-[#1a2535] px-3 py-2 text-center'>
                 Source
               </th>
-              <th className='border border-amber-600 px-3 py-2 text-left min-w-[180px]'>
+              <th className='border border-[#1a2535] px-3 py-2 text-left min-w-[180px]'>
                 Role
               </th>
-              <th className='border border-amber-600 px-3 py-2 text-center min-w-[100px]'>
+              <th className='border border-[#1a2535] px-3 py-2 text-center min-w-[100px]'>
                 Level
               </th>
-              <th className='border border-amber-600 px-3 py-2 text-center min-w-[110px]'>
+              <th className='border border-[#1a2535] px-3 py-2 text-center min-w-[110px]'>
                 Monthly Ref Salary
               </th>
-              <th className='border border-amber-600 px-3 py-2 text-center min-w-[110px]'>
+              <th className='border border-[#1a2535] px-3 py-2 text-center min-w-[110px]'>
                 Annual Ref Salary
               </th>
               <th className='border border-amber-600 px-3 py-2 text-center min-w-[70px]'>
@@ -520,10 +537,10 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
                 —
               </td>
               <td className='border border-amber-300 px-3 py-2 text-right text-amber-800'>
-                ₹ {fmt(totalrefMonthlyFixed)}
+                ₹ {fmt(totalrefMonthlyFixed / 12)}
               </td>
               <td className='border border-amber-300 px-3 py-2 text-right text-amber-800'>
-                ₹ {fmt(totalrefMonthlyFixed * 12)}
+                ₹ {fmt(totalrefMonthlyFixed)}
               </td>
               <td className='border border-amber-300 px-3 py-2 text-center text-amber-800'>
                 {totalNos}
@@ -548,7 +565,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
         </table>
 
         {/* Salary stats */}
-        <div className='px-6 py-3 bg-amber-50 border-t border-amber-200 flex gap-8 text-sm'>
+        <div className='px-4 py-2 bg-amber-50 border-t border-amber-200 flex gap-8 text-sm'>
           <span>
             <strong>Sqft / Emp:</strong> {sqftPerEmp}
           </span>
@@ -556,33 +573,32 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
             <strong>Cost / Emp:</strong> ₹ {fmt(costPerEmp)}
           </span>
         </div>
-        <p className='px-6 py-2 text-xs text-gray-400 italic border-t border-gray-100'>
+        <p className='px-4 py-1.5 text-xs text-gray-400 italic border-t border-gray-100'>
           Note: Salary increase should account for both headcount increase and
           mean salary increase over years.
         </p>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────────
-                ELECTRICITY
-            ────────────────────────────────────────────────────────────── */}
+      {/* Electricity + Other Expenses side by side */}
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+
+      {/* ── Electricity ───────────────────────────────────── */}
       <div className='bg-white rounded-xl shadow-lg overflow-hidden'>
-        <div className='px-6 py-4 border-b border-gray-100'>
-          <h3 className='text-lg font-bold text-gray-800'>
-            Electricity — Year 1
-          </h3>
+        <div className='px-4 py-3 border-b border-gray-100'>
+          <h3 className='text-base font-bold text-gray-800'>Electricity — Year 1</h3>
         </div>
-        <div className='p-6 grid grid-cols-1 md:grid-cols-3 gap-6'>
-          <div className='bg-gray-50 rounded-lg p-4 border border-gray-200'>
+        <div className='p-4 grid grid-cols-3 gap-3'>
+          <div className='bg-gray-50 rounded-lg p-3 border border-gray-200'>
             <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1'>
               Carpet Area (sqft)
             </p>
-            <p className='text-2xl font-bold text-gray-800'>
+            <p className='text-xl font-bold text-gray-800'>
               {fmt(carpetArea)}
             </p>
           </div>
-          <div className='bg-blue-50 rounded-lg p-4 border border-blue-200'>
+          <div className='bg-blue-50 rounded-lg p-3 border border-blue-200'>
             <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1'>
-              Rate per Sqft (₹)
+              Rate / Sqft (₹)
             </p>
             <input
               type='number'
@@ -590,33 +606,27 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
               value={electricity.ratePerSqft}
               onChange={(e) => setElectricity({ ratePerSqft: e.target.value })}
               disabled={isSaved}
-              className={`w-full text-2xl font-bold text-blue-800 bg-transparent focus:outline-none ${
-                isSaved ? "cursor-not-allowed" : ""
+              className={`w-full text-xl font-bold text-blue-800 bg-transparent focus:outline-none ${
+                isSaved ? 'cursor-not-allowed' : ''
               }`}
             />
           </div>
-          <div className='bg-amber-50 rounded-lg p-4 border border-amber-200'>
+          <div className='bg-amber-50 rounded-lg p-3 border border-amber-200'>
             <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1'>
               Total — ₹
             </p>
-            <p className='text-2xl font-bold text-amber-800'>
-              ₹ {fmt(electricityTotal)}
-            </p>
+            <p className='text-xl font-bold text-amber-800'>₹ {fmt(electricityTotal)}</p>
           </div>
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────────
-                OTHER EXPENSES
-            ────────────────────────────────────────────────────────────── */}
+      {/* ── Other Expenses ─────────────────────────────────── */}
       <div className='bg-white rounded-xl shadow-lg overflow-hidden'>
-        <div className='px-6 py-4 border-b border-gray-100'>
-          <h3 className='text-lg font-bold text-gray-800'>
-            Other Expenses — Year 1
-          </h3>
+        <div className='px-4 py-3 border-b border-gray-100'>
+          <h3 className='text-base font-bold text-gray-800'>Other Expenses — Year 1</h3>
         </div>
-        <div className='p-6 grid grid-cols-1 md:grid-cols-3 gap-6'>
-          <div className='bg-blue-50 rounded-lg p-4 border border-blue-200'>
+        <div className='p-4 grid grid-cols-3 gap-3'>
+          <div className='bg-blue-50 rounded-lg p-3 border border-blue-200'>
             <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1'>
               Registration Charges (₹)
             </p>
@@ -625,20 +635,17 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
               min={0}
               value={otherExpenses.registrationCharges}
               onChange={(e) =>
-                setOtherExpenses((p) => ({
-                  ...p,
-                  registrationCharges: e.target.value,
-                }))
+                setOtherExpenses((p) => ({ ...p, registrationCharges: e.target.value }))
               }
               disabled={isSaved}
-              className={`w-full text-2xl font-bold text-blue-800 bg-transparent focus:outline-none ${
-                isSaved ? "cursor-not-allowed" : ""
+              className={`w-full text-xl font-bold text-blue-800 bg-transparent focus:outline-none ${
+                isSaved ? 'cursor-not-allowed' : ''
               }`}
             />
           </div>
-          <div className='bg-blue-50 rounded-lg p-4 border border-blue-200'>
+          <div className='bg-blue-50 rounded-lg p-3 border border-blue-200'>
             <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1'>
-              Temporary Relocation Cost (₹)
+              Relocation Cost (₹)
             </p>
             <input
               type='number'
@@ -648,44 +655,42 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
                 setOtherExpenses((p) => ({ ...p, relocCost: e.target.value }))
               }
               disabled={isSaved}
-              className={`w-full text-2xl font-bold text-blue-800 bg-transparent focus:outline-none ${
-                isSaved ? "cursor-not-allowed" : ""
+              className={`w-full text-xl font-bold text-blue-800 bg-transparent focus:outline-none ${
+                isSaved ? 'cursor-not-allowed' : ''
               }`}
             />
           </div>
-          <div className='bg-amber-50 rounded-lg p-4 border border-amber-200'>
+          <div className='bg-amber-50 rounded-lg p-3 border border-amber-200'>
             <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1'>
               Total — ₹
             </p>
-            <p className='text-2xl font-bold text-amber-800'>
-              ₹ {fmt(otherTotal)}
-            </p>
+            <p className='text-xl font-bold text-amber-800'>₹ {fmt(otherTotal)}</p>
           </div>
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────────
-                SECURITY & HOUSEKEEPING
-            ────────────────────────────────────────────────────────────── */}
+      </div>{/* end 2-col grid */}
+
+      {/* ── Security & Housekeeping ──────────────────────────── */}
       <div className='bg-white rounded-xl shadow-lg overflow-x-auto'>
-        <div className='px-6 py-4 border-b border-gray-100'>
-          <h3 className='text-lg font-bold text-gray-800'>
+        <div className='px-4 py-3 border-b border-gray-100'>
+          <h3 className='text-base font-bold text-gray-800'>
             Security &amp; Housekeeping — Year 1
           </h3>
         </div>
         <table className='min-w-full border-collapse text-sm'>
           <thead>
-            <tr className='bg-amber-700 text-white text-xs font-semibold'>
-              <th className='border border-amber-600 px-4 py-2 text-left min-w-[160px]'>
+            <tr className='bg-[#233044] text-white text-xs font-semibold'>
+              <th className='border border-[#1a2535] px-4 py-2 text-left min-w-[160px]'>
                 Role
               </th>
-              <th className='border border-amber-600 px-4 py-2 text-center min-w-[80px]'>
+              <th className='border border-[#1a2535] px-4 py-2 text-center min-w-[80px]'>
                 Nos.
               </th>
-              <th className='border border-amber-600 px-4 py-2 text-center min-w-[120px]'>
+              <th className='border border-[#1a2535] px-4 py-2 text-center min-w-[120px]'>
                 Monthly (₹)
               </th>
-              <th className='border border-amber-600 px-4 py-2 text-center min-w-[130px]'>
+              <th className='border border-[#1a2535] px-4 py-2 text-center min-w-[130px]'>
                 Annual (₹)
               </th>
             </tr>
@@ -761,7 +766,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
       )}
 
       {/* Navigation */}
-      <div className='flex justify-between gap-4 mt-4'>
+        <div className='flex justify-start gap-4 mt-4'>
         {/* <button
           type='button'
           onClick={handlePrevious}

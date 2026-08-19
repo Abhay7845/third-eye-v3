@@ -94,7 +94,6 @@ export default function StoreRetailSpecifications({
   const [storeTypes, setStoreTypes] = useState([]);
   const [flooringTypes, setFlooringTypes] = useState([]);
   const [displayTypes, setDisplayTypes] = useState([]);
-
   const prevFloorPlateRef = useRef({});
   const userLog = useSelector((state) => state?.user?.user);
   const selectedStoreType = useWatch({ control, name: "storeType" });
@@ -148,6 +147,101 @@ export default function StoreRetailSpecifications({
     if (isNewStore && roiContext.historyRetailArea)
       setValue("newRetailArea", String(roiContext.historyRetailArea));
   }, [roiContext, isNewStore, setValue]);
+
+  // For New Store: fetch missing storeType / retail area directly from the history record
+  useEffect(() => {
+    const hid = roiContext?.historyId;
+    if (!isNewStore || !hid || isSaved) return;
+    if (roiContext.storeType && roiContext.historyRetailArea) return; // already have both
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/history/${hid}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const d = json?.data?.[0];
+        if (!d) return;
+        if (!roiContext.storeType && d.store_type)
+          setValue("storeType", formatStoreType(d.store_type));
+        if (!roiContext.historyRetailArea && d.retail_space)
+          setValue("newRetailArea", String(d.retail_space));
+      } catch (e) {
+        console.error("Failed to fetch history details for Screen 2:", e);
+      }
+    })();
+  }, [roiContext?.historyId, isNewStore]);
+
+  // Non-New Store: recover retailArea / storeType from basic-store-details when screen 2 not yet saved
+  useEffect(() => {
+    if (isNewStore || !roiContext?.roiId) return;
+    if (roiContext.existingRetailArea && roiContext.storeType) return;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${BASE_URL}/fetchScreen?parameter=roi_basic_store_details&roiid=${roiContext.roiId}`,
+        );
+        if (!res.ok) return;
+        const json = await res.json();
+        const d = json?.data?.[0];
+        if (!d) return;
+        const area = d.retail_area ?? d.retailArea;
+        if (area && !roiContext.existingRetailArea)
+          setValue("existingRetailArea", String(area));
+        const stype = d.store_type ?? d.storeType;
+        if (stype && !roiContext.storeType)
+          setValue("storeType", formatStoreType(stype));
+      } catch (e) {
+        console.error("Failed to fetch basic store details for Screen 2:", e);
+      }
+    })();
+  }, [roiContext?.roiId, isNewStore]);
+
+  // Restore all architectural fields from DB when resuming
+  useEffect(() => {
+    if (!roiContext?.roiId || isSaved) return;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${BASE_URL}/fetchScreen?parameter=roi_store_retail_specifications&roiid=${roiContext.roiId}`,
+        );
+        if (!res.ok) return;
+        const json = await res.json();
+        const d = json?.data?.[0];
+        if (!d) return;
+        const str = (v) => (v != null ? String(v) : undefined);
+        if (d.no_of_floors)               setValue("noOfFloors", str(d.no_of_floors));
+        if (d.gf_area)                    setValue("floorPlate.GF", str(d.gf_area));
+        if (d.ff_area)                    setValue("floorPlate.FF", str(d.ff_area));
+        if (d.sf_area)                    setValue("floorPlate.SF", str(d.sf_area));
+        if (d.tf_area)                    setValue("floorPlate.TF", str(d.tf_area));
+        if (d.frontage)                   setValue("frontage", str(d.frontage));
+        if (d.ceiling_height)             setValue("ceilingHeight", str(d.ceiling_height));
+        if (d.facade_led)                 setValue("facadeLed", d.facade_led);
+        if (d.terrace_branding)           setValue("terraceBranding", d.terrace_branding);
+        if (d.totem_pole)                 setValue("totemPole", d.totem_pole);
+        if (d.display_type)               setValue("displayType", d.display_type);
+        if (d.flooring_type)              setValue("flooringType", d.flooring_type);
+        if (d.retail_floors)              setValue("retailFloors", d.retail_floors);
+        if (d.cashier_count)              setValue("cashierCount", str(d.cashier_count));
+        if (d.karatmeter_count)           setValue("karatmeterCount", str(d.karatmeter_count));
+        if (d.strong_room)                setValue("strongRoom", str(d.strong_room));
+        if (d.franchise_room)             setValue("franchiseRoom", str(d.franchise_room));
+        if (d.manager_room)               setValue("managerRoom", str(d.manager_room));
+        if (d.conference_room)            setValue("conferenceRoom", str(d.conference_room));
+        if (d.pvr_room)                   setValue("pvrRoom", str(d.pvr_room));
+        if (d.additional_workstation)     setValue("additionalWorkstation", str(d.additional_workstation));
+        if (d.regional_service_centre)    setValue("regionalServiceCentre", d.regional_service_centre);
+        if (d.remarks)                    setValue("remarks", d.remarks);
+        if (d.existing_overall_area_SBA)  setValue("existingOverallArea", str(d.existing_overall_area_SBA));
+        if (d.new_over_all_area_SBA)      setValue("newOverallArea", str(d.new_over_all_area_SBA));
+        // restore newRetailArea for all project types (Renovation/Relocation/Expansion also have new_retail_area)
+        if (d.new_retail_area)             setValue("newRetailArea", str(d.new_retail_area));
+        if (d.existing_retail_area && !isNewStore) setValue("existingRetailArea", str(d.existing_retail_area));
+        setIsSaved(true);
+      } catch (e) {
+        console.error("Failed to restore store specifications:", e);
+      }
+    })();
+  }, [roiContext?.roiId]);
 
   useEffect(() => {
     if (
@@ -732,7 +826,7 @@ export default function StoreRetailSpecifications({
 
       {/* FOOTER */}
       {specCompleted && archCompleted && !isSaved && (
-        <div className='flex gap-3 justify-end px-8 py-6 bg-gray-50 rounded-lg border border-gray-200 mt-8'>
+        <div className='flex gap-3 justify-start px-8 py-6 bg-gray-50 rounded-lg border border-gray-200 mt-8'>
           <button
             type='button'
             onClick={onPrevious}

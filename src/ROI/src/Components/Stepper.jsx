@@ -2,7 +2,7 @@
 
 export default function Stepper({ currentStep, steps }) {
   return (
-    <div className="w-full flex justify-center pb-6">
+    <div className="w-full flex justify-center pb-2">
       <div className="flex items-start justify-center w-full max-w-5xl">
         {steps.map((step, index) => {
           const stepNo    = index + 1;
@@ -16,7 +16,7 @@ export default function Stepper({ currentStep, steps }) {
               {/* Circle + Label */}
               <div className="flex flex-col items-center flex-shrink-0" style={{ minWidth: 60 }}>
                 <div
-                  className={`w-11 h-11 rounded-full flex items-center justify-center text-base font-bold border-2 shadow-lg transition-all duration-300 ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 shadow-md transition-all duration-300 ${
                     completed
                       ? "bg-green-400 border-green-300 text-white"
                       : active
@@ -27,12 +27,12 @@ export default function Stepper({ currentStep, steps }) {
                   {completed ? "✓" : (icon ?? stepNo)}
                 </div>
                 <span
-                  className={`text-xs mt-2 text-center font-medium leading-tight transition-all duration-300 ${
+                  className={`text-[10px] mt-1 text-center font-medium leading-tight transition-all duration-300 ${
                     completed ? "text-green-300" :
                     active    ? "text-white font-bold" :
                                 "text-white/40"
                   }`}
-                  style={{ maxWidth: 68 }}
+                  style={{ maxWidth: 56 }}
                 >
                   {label}
                 </span>
@@ -40,7 +40,7 @@ export default function Stepper({ currentStep, steps }) {
 
               {/* Connector */}
               {index < steps.length - 1 && (
-                <div className="flex-1 mt-5 mx-1">
+                <div className="flex-1 mt-3.5 mx-1">
                   <div className="h-0.5 w-full rounded-full bg-white/20 overflow-hidden">
                     <div
                       className="h-full bg-green-300 rounded-full transition-all duration-500"

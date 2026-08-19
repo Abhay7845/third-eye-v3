@@ -251,21 +251,29 @@ export default function HistoryPage({ onBack, onContinueROI }) {
       const roiContext = {
         roiId: selectedRoi.roiid,
         projectType,
-        historyId: d1.ty_history_id ?? d1.history_id ?? "",
+        historyId: d1.TY_historyID ?? d1.history_id ?? "",
         city: d1.city ?? "",
         state: d1.state ?? "",
         region: d1.region ?? "",
         newCity: d1.new_city ?? "",
         existingStoreCode,
         existingStoreFormat: d1.existing_store_format ?? "",
-        storeType: d2.store_type ?? "",
-        existingRetailArea: d2.existing_retail_area ?? "",
+        // effective format drives Section 3 validation-metrics benchmark lookup
+        effectiveStoreFormat:
+          (projectType === "New Store")
+            ? (d1.new_store_format ?? "")
+            : (d1.exsisting_store_format ?? ""),
+        // d2 wins when screen 2 was saved; d1 carries storeType as fallback
+        storeType: d2.store_type ?? d1.store_type ?? "",
+        existingRetailArea: d2.existing_retail_area ?? d1.retail_area ?? d1.retailArea ?? "",
         historyRetailArea: d2.new_retail_area ?? "",
         refStoreCode:
-          projectType === "New Store"
+          (projectType === "New Store" || projectType === "Renovation" )
             ? d1.ref_store_code ?? existingStoreCode
             : existingStoreCode,
       };
+
+      console.log(roiContext)
 
       onContinueROI(roiContext, firstIncomplete.step, firstIncomplete.subStep);
     } catch (err) {

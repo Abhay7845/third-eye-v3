@@ -146,6 +146,32 @@ export default function Section4({
     handleFetchStoreData();
   }, []);
 
+  // Rehydrate context objects consumed by Subpage4_3 when resuming mid-flow
+  useEffect(() => {
+    const roiid = roiContext?.roiId;
+    if (!roiid || !isFetched) return;
+    (async () => {
+      try {
+        const [r1, r2] = await Promise.all([
+          fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=CAPEX`),
+          fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=RESOURCE`),
+        ]);
+        if (r1.ok) {
+          const j1 = await r1.json();
+          const d1 = j1?.data?.[0];
+          if (d1) { setSubpage4_1Data(d1); markStepSaved(0); }
+        }
+        if (r2.ok) {
+          const j2 = await r2.json();
+          const d2 = j2?.data?.[0];
+          if (d2) { setSubpage4_2Data(d2); markStepSaved(1); }
+        }
+      } catch (e) {
+        console.error("Failed to rehydrate Section4 context:", e);
+      }
+    })();
+  }, [roiContext?.roiId, isFetched]);
+
   return (
     <Section4Context.Provider value={contextValue}>
       {/* ── Store Code Fetch Bar ──────────────────────────────────────── */}

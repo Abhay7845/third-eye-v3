@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSection4Context } from "./Section4Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
@@ -68,18 +68,18 @@ function BlueInputCell({ value, onChange, disabled, prefix = "" }) {
 function SectionHeader({ label }) {
   return (
     <thead>
-      <tr className='bg-amber-700 text-white text-sm font-semibold'>
-        <th className='border border-amber-600 px-3 py-2 text-left min-w-[200px]'>
+      <tr className='bg-[#233044] text-white text-sm font-semibold'>
+        <th className='border border-[#1a2535] px-3 py-2 text-left min-w-[200px]'>
           {label}
         </th>
         {YEARS.map((yr) => (
           <th
             key={yr}
-            className='border border-amber-600 px-3 py-2 text-center min-w-[110px]'>
+            className='border border-[#1a2535] px-3 py-2 text-center min-w-[110px]'>
             {yr}
           </th>
         ))}
-        <th className='border border-amber-600 px-3 py-2 text-center min-w-[120px]'>
+        <th className='border border-[#1a2535] px-3 py-2 text-center min-w-[120px]'>
           Security Deposit
         </th>
       </tr>
@@ -90,16 +90,16 @@ function SectionHeader({ label }) {
 function SectionHeaderNoSD({ label, extraCol }) {
   return (
     <thead>
-      <tr className='bg-amber-700 text-white text-sm font-semibold'>
-        <th className='border border-amber-600 px-3 py-2 text-left min-w-[200px]'>
+      <tr className='bg-[#233044] text-white text-sm font-semibold'>
+        <th className='border border-[#1a2535] px-3 py-2 text-left min-w-[200px]'>
           {label}
         </th>
         {extraCol && (
-          <th className='border border-amber-600 px-3 py-2 text-left min-w-[140px]'>
+          <th className='border border-[#1a2535] px-3 py-2 text-left min-w-[140px]'>
             {extraCol}
           </th>
         )}
-        <th className='border border-amber-600 px-3 py-2 text-left min-w-[160px]'>
+        <th className='border border-[#1a2535] px-3 py-2 text-left min-w-[160px]'>
           Annual Cost Escalation
         </th>
         {YEARS.map((yr) => (
@@ -127,8 +127,9 @@ function escalate(base, pct, years = 6) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Subpage4_3({ handlePrevious, onNext }) {
-  const { storeData, subpage4_1Data, subpage4_2Data, markStepSaved } =
-    useSection4Context();
+  const { storeData, subpage4_1Data, subpage4_2Data, markStepSaved } = useSection4Context();
+  // true once rent-restore runs; prevents the seed effect from overwriting restored values
+  const isRestoredRef = useRef(false);
   // ── Rent inputs (6 years) ─────────────────────────────────────────────────
   const [revenueSharing, setRevenueSharing] = useState("No");
   const selected_sba =
@@ -138,8 +139,9 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
       ? parseFloat(storeData?.new_over_all_area_SBA)
       : parseFloat(storeData?.existing_over_all_area_SBA);
   const [sba, setSba] = useState(Array(6).fill(selected_sba));
+  // initialized to empty; seeded by the sync effect below once subpage4_2Data loads
   const [ratePerSqft, setRatePerSqft] = useState(
-    Array(6).fill(subpage4_2Data?.salaries?.sqftPerEmp),
+    Array(6).fill(subpage4_2Data?.salaries?.sqftPerEmp ?? null),
   );
   const [revSharePct, setRevSharePct] = useState([
     2.0, 2.0, 2.0, 2.3, 2.3, 2.3,
@@ -171,33 +173,59 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const updateEditableRow = (rowKey, field, value) =>
     setEditableRows((prev) => ({
       ...prev,
-      [rowKey]: { ...prev[rowKey], [field]: parseFloat(value) || 0 },
+      [rowKey]: {
+        ...prev[rowKey],
+        // clamp escalation % to 0-99 and always store as number to prevent leading-zero display
+        [field]: field === 'esc'
+          ? Math.min(Math.max(parseFloat(value) || 0, 0), 99)
+          : parseFloat(value) || 0,
+      },
     }));
 
-  // Load previously saved rent inputs when resuming
-  // useEffect(() => {
-  //   const roiid = storeData?.roiid;
-  //   if (!roiid || isSaved) return;
-  //   (async () => {
-  //     try {
-  //       const res = await fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=OTHER`);
-  //       if (!res.ok) return;
-  //       const json = await res.json();
-  //       const row = json?.data?.[0];
-  //       if (!row) return;
-  //       const rent = row.rent ?? row;
-  //       if (rent.revenueSharing != null) setRevenueSharing(rent.revenueSharing);
-  //       if (rent.sba)            setSba(rent.sba);
-  //       if (rent.ratePerSqft)   setRatePerSqft(rent.ratePerSqft);
-  //       if (rent.revSharePct)   setRevSharePct(rent.revSharePct);
-  //       if (rent.minGuaranteeMth) setMinGuaranteeMth(rent.minGuaranteeMth);
-  //       if (rent.securityDeposit != null) setSecurityDepositRate(rent.securityDeposit);
-  //       setIsSaved(true);
-  //     } catch (e) {
-  //       console.error("Failed to load saved rent data:", e);
-  //     }
-  //   })();
-  // }, [storeData?.roiid]);
+  // user-editable escalation % for the three upstream-locked rows
+  const [lockedRowEsc, setLockedRowEsc] = useState({ salaries: 5, secHk: 5, electricity: 5 });
+  const updateLockedEsc = (key, value) =>
+    setLockedRowEsc((prev) => ({ ...prev, [key]: Math.min(Math.max(parseFloat(value) || 0, 0), 99) }));
+
+  // Restore previously saved rent & editable-row inputs when resuming
+  useEffect(() => {
+    const roiid = storeData?.roiid;
+    if (!roiid || isSaved) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=SUMMARY`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const row = json?.data?.[0];
+        if (!row) return;
+        const rent = row.rent ?? row;
+        if (rent.revenueSharing != null) setRevenueSharing(rent.revenueSharing);
+        if (rent.sba?.length)          setSba(rent.sba);
+        if (rent.ratePerSqft?.length)  setRatePerSqft(rent.ratePerSqft);
+        if (rent.revSharePct?.length)  setRevSharePct(rent.revSharePct);
+        if (rent.minGuaranteeMth?.length) setMinGuaranteeMth(rent.minGuaranteeMth);
+        if (rent.securityDeposit != null) setSecurityDepositRate(rent.securityDeposit);
+        if (row.expenseSummary?.editableRowState)
+          setEditableRows(row.expenseSummary.editableRowState);
+        if (row.expenseSummary?.lockedRowEsc)
+          setLockedRowEsc(row.expenseSummary.lockedRowEsc);
+        isRestoredRef.current = true;
+        markStepSaved(2);
+        setIsSaved(true);
+      } catch (e) {
+        console.error("Failed to load saved rent data:", e);
+      }
+    })();
+  }, [storeData?.roiid]);
+
+  // Seed ratePerSqft from upstream salary data when context loads after a resume
+  useEffect(() => {
+    const sqft = subpage4_2Data?.salaries?.sqftPerEmp;
+    if (!sqft) return;
+    setRatePerSqft((prev) =>
+      prev.every((v) => v == null || v === undefined) ? Array(6).fill(sqft) : prev,
+    );
+  }, [subpage4_2Data?.salaries?.sqftPerEmp]);
 
   const fetchExpenseData = async () => {
     if (!storeData?.roiid) return;
@@ -226,7 +254,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
 
   // Seed editable Yr1 values from screen-1 key expenses once loaded
   useEffect(() => {
-    if (!screen1Expenses) return;
+    if (!screen1Expenses || isRestoredRef.current) return;
     const s = screen1Expenses;
     const toAnn = (m) => (parseFloat(m) || 0) * 12;
     const _interiors = subpage4_1Data?.interiors ?? 0;
@@ -295,135 +323,28 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   });
   const monthlyRent = annualRent.map((r) => Math.round(r / 12));
 
-  // Locked rows: computed from upstream subpages (not user-editable)
-  const salaryEscalated = escalate(salaryYr1, 5);
-  const secHkEscalated = escalate(secHkYr1, 5);
-  const electricityEscalated = escalate(electricityYr1, 5);
+  // Locked rows: computed from upstream subpages (not user-editable Yr1)
+  const salaryEscalated     = escalate(salaryYr1,      lockedRowEsc.salaries);
+  const secHkEscalated      = escalate(secHkYr1,       lockedRowEsc.secHk);
+  const electricityEscalated = escalate(electricityYr1, lockedRowEsc.electricity);
   const totalNos = subpage4_2Data?.salaries?.totalNos ?? 0;
 
   // Expense summary rows — locked=true rows are read-only; others expose Yr1 + escalation% inputs
   const expenseRows = [
-    {
-      key: null,
-      locked: true,
-      label: "Rent",
-      basis: "as under",
-      escalation: "—",
-      values: annualRent,
-    },
-    {
-      key: null,
-      locked: true,
-      label: "Salaries",
-      basis: "as under",
-      escalation: "5%",
-      values: salaryEscalated,
-    },
-    {
-      key: null,
-      locked: true,
-      label: "Security & Housekeeping",
-      basis: "as under",
-      escalation: "5%",
-      values: secHkEscalated,
-    },
-    {
-      key: null,
-      locked: true,
-      label: "Electricity",
-      basis: "as under",
-      escalation: "5%",
-      values: electricityEscalated,
-    },
-    {
-      key: "repairs",
-      locked: false,
-      label: "Repairs & Maintenance",
-      basis: "1%–3% initial capex",
-      escalation: "",
-      values: escalate(editableRows.repairs.yr1, editableRows.repairs.esc),
-    },
-    {
-      key: "insurance",
-      locked: false,
-      label: "Insurance",
-      basis: "1% interiors",
-      escalation: "",
-      values: escalate(editableRows.insurance.yr1, editableRows.insurance.esc),
-    },
-    {
-      key: "btl",
-      locked: false,
-      label: "BTL",
-      basis: "0.3% sale",
-      escalation: "",
-      values: escalate(editableRows.btl.yr1, editableRows.btl.esc),
-    },
-    {
-      key: "travel",
-      locked: false,
-      label: "Travel & Conveyance",
-      basis: "17.5k p.m",
-      escalation: "",
-      values: escalate(editableRows.travel.yr1, editableRows.travel.esc),
-    },
-    {
-      key: "telephone",
-      locked: false,
-      label: "Telephone/Internet",
-      basis: "11k p.m",
-      escalation: "",
-      values: escalate(editableRows.telephone.yr1, editableRows.telephone.esc),
-    },
-    {
-      key: "creditCard",
-      locked: false,
-      label: "Credit Card Commission",
-      basis: "30% sale @ 1.2%",
-      escalation: "",
-      values: escalate(
-        editableRows.creditCard.yr1,
-        editableRows.creditCard.esc,
-      ),
-    },
-    {
-      key: "gst",
-      locked: false,
-      label: "GST (primarily rental)",
-      basis: "0.1% sale",
-      escalation: "",
-      values: escalate(editableRows.gst.yr1, editableRows.gst.esc),
-    },
-    {
-      key: "printing",
-      locked: false,
-      label: "Store — Printing/Pantry etc",
-      basis: "17.5k p.m",
-      escalation: "",
-      values: escalate(editableRows.printing.yr1, editableRows.printing.esc),
-    },
-    {
-      key: "consumables",
-      locked: false,
-      label: "Consumables, Safety, Cust Exp",
-      basis: "20k p.m",
-      escalation: "",
-      values: escalate(
-        editableRows.consumables.yr1,
-        editableRows.consumables.esc,
-      ),
-    },
-    {
-      key: "staffWelfare",
-      locked: false,
-      label: "Other — Staff welfare/Uniforms",
-      basis: "3.5k/person/month",
-      escalation: "",
-      values: escalate(
-        editableRows.staffWelfare.yr1,
-        editableRows.staffWelfare.esc,
-      ),
-    },
+    { key: null, locked: true,  escKey: null,         label: "Rent",                      basis: "as under",          escalation: "—",  values: annualRent },
+    { key: null, locked: true,  escKey: "salaries",   label: "Salaries",                  basis: "as under",          escalation: "",   values: salaryEscalated },
+    { key: null, locked: true,  escKey: "secHk",      label: "Security & Housekeeping",   basis: "as under",          escalation: "",   values: secHkEscalated },
+    { key: null, locked: true,  escKey: "electricity", label: "Electricity",              basis: "as under",          escalation: "",   values: electricityEscalated },
+    { key: "repairs", locked: false, label: "Repairs & Maintenance", basis: "1%–3% initial capex", escalation: "", values: escalate(editableRows.repairs.yr1, editableRows.repairs.esc) },
+    { key: "insurance", locked: false, label: "Insurance", basis: "1% interiors", escalation: "", values: escalate(editableRows.insurance.yr1, editableRows.insurance.esc) },
+    { key: "btl", locked: false, label: "BTL", basis: "0.3% sale", escalation: "", values: escalate(editableRows.btl.yr1, editableRows.btl.esc) },
+    { key: "travel", locked: false, label: "Travel & Conveyance", basis: "17.5k p.m", escalation: "", values: escalate(editableRows.travel.yr1, editableRows.travel.esc) },
+    { key: "telephone", locked: false, label: "Telephone/Internet", basis: "11k p.m", escalation: "", values: escalate(editableRows.telephone.yr1, editableRows.telephone.esc) },
+    { key: "creditCard", locked: false, label: "Credit Card Commission", basis: "30% sale @ 1.2%", escalation: "", values: escalate(editableRows.creditCard.yr1, editableRows.creditCard.esc) },
+    { key: "gst", locked: false, label: "GST (primarily rental)", basis: "0.1% sale", escalation: "", values: escalate(editableRows.gst.yr1, editableRows.gst.esc) },
+    { key: "printing", locked: false, label: "Store — Printing/Pantry etc", basis: "17.5k p.m", escalation: "", values: escalate(editableRows.printing.yr1, editableRows.printing.esc) },
+    { key: "consumables", locked: false, label: "Consumables, Safety, Cust Exp", basis: "20k p.m", escalation: "", values: escalate(editableRows.consumables.yr1, editableRows.consumables.esc) },
+    { key: "staffWelfare", locked: false, label: "Other — Staff welfare/Uniforms", basis: "3.5k/person/month", escalation: "", values: escalate(editableRows.staffWelfare.yr1, editableRows.staffWelfare.esc) },
   ];
 
   const totalExpenses = YEARS.map((_, i) =>
@@ -458,8 +379,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
         securityDeposit: securityDepositRate,
       },
       expenseSummary: {
-        editableRowState: editableRows,
-        rows: expenseRows.map((r) => ({
+        editableRowState: editableRows,        lockedRowEsc,        rows: expenseRows.map((r) => ({
           label: r.label,
           basis: r.basis,
           escalation: r.locked
@@ -497,16 +417,16 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   };
 
   return (
-    <div className='p-6 bg-gradient-to-br from-orange-50 to-amber-50 min-h-screen space-y-8'>
+      <div className='p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen space-y-8'>
       {/* Header */}
-      <div>
-        <h2 className='text-3xl font-bold text-gray-800 mb-1'>
+      {/* <div>
+        <h2 className='text-xl font-bold text-gray-800 mb-1'>
           Stage 3 — Rent &amp; Expense Summary
         </h2>
         <p className='text-gray-500 text-sm'>
           Configure rent terms and review the 6-year expense projection
         </p>
-      </div>
+      </div> */}
 
       {/* ──────────────────────────────────────────────────────────────
                 REVENUE SHARING TOGGLE
@@ -594,7 +514,10 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
                     key={i}
                     value={v}
                     onChange={(e) =>
-                      handleInputArray(setRevSharePct, i, e.target.value)
+                      handleInputArray(
+                        setRevSharePct, i,
+                        Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 99),
+                      )
                     }
                     disabled={isSaved}
                   />
@@ -716,71 +639,62 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
         <table className='min-w-full border-collapse text-sm'>
           <SectionHeaderNoSD label='Expense Item' extraCol='Basis' />
           <tbody>
-            {expenseRows.map(
-              ({ key, label, basis, escalation, values, locked }) => (
-                <tr key={label} className='hover:bg-gray-50'>
-                  <LabelCell label={label} />
-                  <td className='border border-gray-200 px-3 py-2 text-xs text-gray-500 italic bg-white'>
-                    {basis}
+            {expenseRows.map(({ key, label, basis, escalation, values, locked, escKey }) => (
+              <tr key={label} className='hover:bg-gray-50'>
+                <LabelCell label={label} />
+                <td className='border border-gray-200 px-3 py-2 text-xs text-gray-500 italic bg-white'>
+                  {basis}
+                </td>
+                {/* Escalation %: static for Rent, editable input for all other rows */}
+                {locked && !escKey ? (
+                  <td className='border border-gray-200 px-3 py-2 text-xs text-gray-500 text-center bg-white'>
+                    {escalation}
                   </td>
-                  {/* Escalation % — read-only for locked rows, input for editable rows */}
-                  {locked ? (
-                    <td className='border border-gray-200 px-3 py-2 text-xs text-gray-500 text-center bg-white'>
-                      {escalation}
-                    </td>
-                  ) : (
-                    <td className='border border-gray-200 p-0 bg-blue-50'>
-                      <div className='flex items-center'>
+                ) : (
+                  <td className='border border-gray-200 p-0 bg-blue-50'>
+                    <div className='flex items-center'>
+                      <input
+                        type='number'
+                        min={0}
+                        max={99}
+                        step={0.5}
+                        value={locked ? lockedRowEsc[escKey] : editableRows[key].esc}
+                        onChange={(e) =>
+                          locked
+                            ? updateLockedEsc(escKey, e.target.value)
+                            : updateEditableRow(key, "esc", e.target.value)
+                        }
+                        disabled={isSaved}
+                        className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-400 ${isSaved ? "cursor-not-allowed text-gray-500" : ""}`}
+                      />
+                      <span className='pr-2 text-xs text-blue-600'>%</span>
+                    </div>
+                  </td>
+                )}
+                {/* Yr1 editable for non-locked rows; Yr2–6 always auto-computed */}
+                {values.map((v, i) => {
+                  if (!locked && i === 0) {
+                    return (
+                      <td key={i} className='border border-gray-200 p-0 bg-blue-50'>
                         <input
                           type='number'
                           min={0}
-                          step={0.5}
-                          value={editableRows[key].esc}
-                          onChange={(e) =>
-                            updateEditableRow(key, "esc", e.target.value)
-                          }
+                          value={editableRows[key].yr1}
+                          onChange={(e) => updateEditableRow(key, "yr1", e.target.value)}
                           disabled={isSaved}
-                          className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-400 ${
-                            isSaved ? "cursor-not-allowed text-gray-500" : ""
-                          }`}
+                          className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-400 ${isSaved ? "cursor-not-allowed text-gray-500" : ""}`}
                         />
-                        <span className='pr-2 text-xs text-blue-600'>%</span>
-                      </div>
-                    </td>
-                  )}
-                  {/* Yr1 editable for non-locked rows; Yr2–6 always auto-computed */}
-                  {values.map((v, i) => {
-                    if (!locked && i === 0) {
-                      return (
-                        <td
-                          key={i}
-                          className='border border-gray-200 p-0 bg-blue-50'>
-                          <input
-                            type='number'
-                            min={0}
-                            value={editableRows[key].yr1}
-                            onChange={(e) =>
-                              updateEditableRow(key, "yr1", e.target.value)
-                            }
-                            disabled={isSaved}
-                            className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-400 ${
-                              isSaved ? "cursor-not-allowed text-gray-500" : ""
-                            }`}
-                          />
-                        </td>
-                      );
-                    }
-                    return (
-                      <td
-                        key={i}
-                        className='border border-gray-200 px-3 py-2 text-right text-sm text-gray-700 bg-gray-50'>
-                        {(parseFloat(v) || 0) === 0 ? "—" : `₹ ${fmt(v)}`}
                       </td>
                     );
-                  })}
-                </tr>
-              ),
-            )}
+                  }
+                  return (
+                    <td key={i} className='border border-gray-200 px-3 py-2 text-right text-sm text-gray-700 bg-gray-50'>
+                      {(parseFloat(v) || 0) === 0 ? "—" : `₹ ${fmt(v)}`}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
 
             {/* Total row */}
             <tr className='bg-amber-100 font-bold'>
@@ -820,7 +734,8 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
       )}
 
       {/* Navigation */}
-      <div className='flex justify-end gap-4 mt-4'>
+      <div className='flex justify-start gap-4 mt-4'>
+
         {!isSaved ? (
           <button
             type='button'

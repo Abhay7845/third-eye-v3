@@ -311,34 +311,41 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
         });
         if (!res.ok) return;
         const json = await res.json();
-        const row = json?.data?.[0];
-        if (!row) return;
-        const inp = row.inputs ?? row;
-        const sm = inp.salesMix ?? {};
-        const pm = inp.plainMix ?? {};
-        const stm = inp.studdedMix ?? {};
+        const rows = json?.data ?? [];
+        if (!rows.length) return;
+        // API returns flat { Header, Yr1..Yr6 } rows — extract by header name
+        const yrs = (header) => {
+          const r = rows.find((x) => x.Header === header);
+          if (!r) return null;
+          return [r.Yr1, r.Yr2, r.Yr3, r.Yr4, r.Yr5, r.Yr6].map((v) => parseFloat(v) || 0);
+        };
+        const walkInRow  = yrs("Sales Planning_Walk-in per day");
+        const ticketRow  = yrs("Sales Planning_Average Ticket Size (Rs)");
+        const increaseRow = yrs("Sales Planning_Increase in Wallk ins per day");
+        const growthRow  = yrs("Sales Planning_Growth in Ticket Size");
+        const daysRow    = yrs("Sales Planning_No. of store days in a year");
         setInputs((prev) => ({
           ...prev,
-          walkInPerDay: inp.walkInPerDayYr1 != null ? [inp.walkInPerDayYr1, ...Array(5).fill(0)] : prev.walkInPerDay,
-          increaseWalkIns: inp.increaseWalkIns ? [0, ...inp.increaseWalkIns] : prev.increaseWalkIns,
-          conversionPct: inp.conversionPct ?? prev.conversionPct,
-          avgTicketSize: inp.avgTicketSizeYr1 != null ? [inp.avgTicketSizeYr1, ...Array(5).fill(0)] : prev.avgTicketSize,
-          growthTicketSize: inp.growthTicketSize ? [0, ...inp.growthTicketSize] : prev.growthTicketSize,
-          storeDays: inp.storeDays != null ? Array(6).fill(inp.storeDays) : prev.storeDays,
-          plainShare: sm.plainShare ?? prev.plainShare,
-          studdedShare: sm.studdedShare ?? prev.studdedShare,
-          coinsShare: sm.coinsShare ?? prev.coinsShare,
-          lcg: pm.lcg ?? prev.lcg,
-          mcg: pm.mcg ?? prev.mcg,
-          hcg: pm.hcg ?? prev.hcg,
-          stoneShareHCG: pm.stoneShareHCG ?? prev.stoneShareHCG,
-          gis: stm.gis ?? prev.gis,
-          regular: stm.regular ?? prev.regular,
-          colorStones: stm.colorStones ?? prev.colorStones,
-          solitaireA: stm.solitaireA ?? prev.solitaireA,
-          solitaireB: stm.solitaireB ?? prev.solitaireB,
-          solitaireC: stm.solitaireC ?? prev.solitaireC,
-          solitaireD: stm.solitaireD ?? prev.solitaireD,
+          walkInPerDay:     walkInRow  ? [walkInRow[0],  ...Array(5).fill(0)] : prev.walkInPerDay,
+          increaseWalkIns:  increaseRow ?? prev.increaseWalkIns,
+          conversionPct:    yrs("Sales Planning_Conv.%") ?? prev.conversionPct,
+          avgTicketSize:    ticketRow  ? [ticketRow[0],  ...Array(5).fill(0)] : prev.avgTicketSize,
+          growthTicketSize: growthRow  ?? prev.growthTicketSize,
+          storeDays:        daysRow    ? Array(6).fill(daysRow[0])             : prev.storeDays,
+          plainShare:    yrs("Sales Planning_Plain Share")              ?? prev.plainShare,
+          studdedShare:  yrs("Sales Planning_Studded Share")            ?? prev.studdedShare,
+          coinsShare:    yrs("Sales Planning_Coins /Silver Share")      ?? prev.coinsShare,
+          lcg:           yrs("Sales Planning_LCG")                      ?? prev.lcg,
+          mcg:           yrs("Sales Planning_MCG")                      ?? prev.mcg,
+          hcg:           yrs("Sales Planning_HCG")                      ?? prev.hcg,
+          stoneShareHCG: yrs("Sales Planning_Stoneshare(HCG only)")     ?? prev.stoneShareHCG,
+          gis:           yrs("Sales Planning_GIS")                      ?? prev.gis,
+          regular:       yrs("Sales Planning_Regular")                  ?? prev.regular,
+          colorStones:   yrs("Sales Planning_Color Stones")             ?? prev.colorStones,
+          solitaireA:    yrs("Sales Planning_Solitaire A(<70C)")        ?? prev.solitaireA,
+          solitaireB:    yrs("Sales Planning_Solitaire B(70-100C)")     ?? prev.solitaireB,
+          solitaireC:    yrs("Sales Planning_Solitaire C(1CRT+)")       ?? prev.solitaireC,
+          solitaireD:    yrs("Sales Planning_Solitaire D(2CRT+)")       ?? prev.solitaireD,
         }));
         setIsSaved(true);
       } catch (e) {
@@ -362,6 +369,8 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
     solitaireC: 0,
     solitaireD: 0,
   });
+
+  console.log(forwardDetail)
 
   useEffect(() => {
     const region = forwardDetail?.region;
@@ -670,7 +679,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
       <div className='subpage3_2 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen'>
         {/* Page Header */}
         <div className='mb-6'>
-          <h2 className='text-3xl font-bold text-gray-800 mb-2'>
+          <h2 className='text-xl font-bold text-gray-800 mb-2'>
             Sales Planning Parameters &amp; Sales Mix %
           </h2>
           <p className='text-sm text-gray-500 flex items-center gap-3'>
@@ -1016,7 +1025,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
         </div>
 
         {/* Navigation Buttons */}
-        <div className='flex justify-end mt-10'>
+        <div className='flex justify-start mt-10'>
           {/* <button
                         type="button"
                         onClick={handlePrevious}

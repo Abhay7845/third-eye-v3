@@ -173,9 +173,15 @@ function computeValues(subpage3_2Data, customerDiscount) {
 // ─── Reusable cell components ─────────────────────────────────────────────────
 
 function AutoCell({ value = "—" }) {
+  const display =
+    value === null || value === undefined || value === "—"
+      ? "—"
+      : typeof value === "number"
+      ? value.toLocaleString("en-IN", { maximumFractionDigits: 2 })
+      : value;
   return (
-    <td className='border border-gray-200 px-3 py-2 bg-gray-50 text-center text-sm text-gray-500'>
-      <strong>{value}</strong>
+    <td className='border border-gray-200 px-3 py-2 bg-gray-50 text-right text-sm text-gray-700 tabular-nums'>
+      {display}
     </td>
   );
 }
@@ -371,7 +377,7 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
           <div className='subpage3_4 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen'>
             {/* Page Header */}
             <div className='mb-6'>
-              <h2 className='text-3xl font-bold text-gray-800 mb-2'>
+              <h2 className='text-xl font-bold text-gray-800 mb-2'>
                 Calculation for Total Customer Discount &amp; Total GHS Discount
               </h2>
               <p className='text-sm text-gray-500 flex items-center gap-2'>
@@ -503,7 +509,7 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
             </div>
 
             {/* Navigation Buttons */}
-            <div className='flex justify-between mt-10'>
+            <div className='flex justify-start mt-10'>
               {/* <button
                                     type="button"
                                     onClick={handlePrevious}

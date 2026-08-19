@@ -28,39 +28,41 @@ export default function MultiStepROIForm({
   const progressPct = Math.round(((activeForm - 1) / (STEPS.length - 1)) * 100);
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-8 px-4'>
+    <div className='bg-gradient-to-br from-slate-50 to-blue-50 px-2 pb-2'>
       <div className='max-w-7xl mx-auto'>
         {/* Page Header */}
-        <div className='mb-8 text-center'>
-          {/*<div className="inline-flex items-center gap-2 bg-white/70 backdrop-blur border border-indigo-100 rounded-full px-5 py-1.5 text-sm font-semibold text-indigo-600 shadow-sm mb-4">
+        {/* <div className='mb-2 text-center'>
+          <div className="inline-flex items-center gap-2 bg-white/70 backdrop-blur border border-indigo-100 rounded-full px-5 py-1.5 text-sm font-semibold text-indigo-600 shadow-sm mb-4">
             📈 ROI Calculator
-          </div>*/}
-          <h1 className='text-4xl font-extrabold text-gray-900 tracking-tight'>
+          </div>
+          <h3 className='text-4xl font-extrabold text-gray-900 tracking-tight'>
             New Investment Request
-          </h1>
+          </h3>
           <p className='mt-2 text-gray-500 text-base'>
             Complete all sections to calculate and submit your investment
             proposal
           </p>
-        </div>
+        </div> */}
 
         {/* Main Card */}
-        <div className='bg-white rounded-3xl shadow-2xl shadow-indigo-100 overflow-hidden border border-gray-100'>
+        <div className='bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden'>
           {/* Stepper Header */}
-          <div className='bg-gradient-to-r from-indigo-700 via-blue-600 to-blue-500 px-8 pt-8'>
+          <div className='bg-gradient-to-r from-[#233044] to-[#3a5a80] px-2 pt-2'>
             <Stepper currentStep={activeForm} steps={STEPS} />
             {/* Progress bar */}
-            <div className='pb-0'>
-              <div className='h-1 bg-white/20 rounded-full overflow-hidden'>
+            <div className='-mt-2 pb-1.5'>
+              <div className='h-0.5 bg-white/20 rounded-full overflow-hidden'>
                 <div
                   className='h-full bg-white/70 rounded-full transition-all duration-500'
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
-              <div className='flex justify-between text-white/50 text-xs py-2'>
-                <span>
-                  Step {activeForm} of {STEPS.length}
-                </span>
+              <div className='flex justify-between text-white/50 text-[10px] pt-0.5 mt-2 items-center'>
+                <button
+                  onClick={onExit}
+                  className='flex items-center gap-1.5 bg-white text-[#233044] hover:bg-[#87cefa] hover:text-[#233044] rounded-full px-3 py-1 text-[10px] font-bold shadow transition-all'>
+                  🏠 ROI Home
+                </button>
                 <span>{progressPct}% complete</span>
               </div>
             </div>

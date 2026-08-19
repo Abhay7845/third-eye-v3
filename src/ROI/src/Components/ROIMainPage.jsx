@@ -53,9 +53,11 @@ function ROIMainPage() {
 
       {/* Non-ABM roles (RBM, Commercial, Retail, …) get the approver dashboard */}
       {userRole !== null && userRole !== "ABM" ? (
-        <RBMDashboard userRole={userRole} />
+        <div className='flex-1 overflow-hidden' style={{ zoom: '0.85' }}>
+          <RBMDashboard userRole={userRole} />
+        </div>
       ) : (
-        <div className='flex-1 overflow-auto relative'>
+        <div className='flex-1 overflow-auto relative' style={{ zoom: '0.85' }}>
 
           {/* Role loading spinner */}
           {userRole === null ? (
