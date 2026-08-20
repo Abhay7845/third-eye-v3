@@ -8,6 +8,7 @@ import Loader from "../custom/Loader";
 import AdminDashboard from "../custom/AdminDashboard";
 import UserSummaryTblModal from "../custom/UserSummaryTblModal";
 import DailySummaryTblModal from "../custom/DailySummaryTblModal";
+import { toast } from "react-toastify";
 
 export default function AdminPage({ toggle_open, toggle }) {
   const [slideOut, setSlideOut] = useState(false);
@@ -22,6 +23,20 @@ export default function AdminPage({ toggle_open, toggle }) {
   const [toDate, setToDate] = useState(null);
   const [showShadow, setShowShadow] = useState(false);
   const getLoginActivityData = async () => {
+    if (!fromDate) {
+      toast.error("Please select Form Date!", {
+        theme: "colored",
+        autoClose: 2000,
+      });
+      return;
+    }
+    if (!toDate) {
+      toast.error("Please select To Date!", {
+        theme: "colored",
+        autoClose: 2000,
+      });
+      return;
+    }
     try {
       setLoading(true);
       const response = await axiosInstance.get(
