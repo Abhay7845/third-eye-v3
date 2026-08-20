@@ -15,6 +15,7 @@ import { initializeMsal, msalInstance } from "./Components/auth/AuthConfig";
 import { store } from "../src/redux/store/store";
 import { BrowserRouter } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
+import AppLoader from "./Components/custom/AppLoader";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
@@ -25,7 +26,10 @@ const GoogleKey = process.env.NODE_ENV === "development" ? uat_key : prod_key;
 const renderApp = () => {
   root.render(
     <React.StrictMode>
-      <LoadScript googleMapsApiKey={GoogleKey} libraries={GOOGLE_MAP_LIBRARIES}>
+      <LoadScript
+        googleMapsApiKey={GoogleKey}
+        libraries={GOOGLE_MAP_LIBRARIES}
+        loadingElement={<AppLoader />}>
         <MsalProvider instance={msalInstance}>
           <Provider store={store}>
             <BrowserRouter>
