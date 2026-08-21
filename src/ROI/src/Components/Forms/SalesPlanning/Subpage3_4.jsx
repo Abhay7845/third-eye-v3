@@ -49,45 +49,45 @@ function computeValues(subpage3_2Data, customerDiscount) {
 
     // Customer Discount
     const cdLCGVal =
-      totalSales * plainShare * lcg * (customerDiscount["LCG"] ?? 0);
+      totalSales * (plainShare/100) * (lcg/100) * (customerDiscount["LCG"]/100 ?? 0);
     const cdMCGVal =
-      totalSales * plainShare * mcg * (customerDiscount["MCG"] ?? 0);
+      totalSales * (plainShare/100) * (mcg/100) * (customerDiscount["MCG"]/100 ?? 0);
     const cdHCGVal =
-      totalSales * plainShare * hcg * (customerDiscount["HCG"] ?? 0);
+      totalSales * (plainShare/100) * (hcg/100) * (customerDiscount["HCG"]/100 ?? 0);
 
     const cdGISVal =
-      totalSales * studdedShare * gis * (customerDiscount["GIS"] ?? 0);
+      totalSales * (studdedShare/100) * (gis/100) * (customerDiscount["GIS"]/100 ?? 0);
     const cdRegularVal =
-      totalSales * studdedShare * regular * (customerDiscount["Regular"] ?? 0);
+      totalSales * (studdedShare/100) * (regular/100) * (customerDiscount["Regular"]/100 ?? 0);
     const cdColorStonesVal =
       totalSales *
-      studdedShare *
-      colorStones *
-      (customerDiscount["Color Stones"] ?? 0);
+      (studdedShare/100) *
+      (colorStones/100) *
+      (customerDiscount["Color Stones"]/100 ?? 0);
 
     const cdSolitaireAVal =
       totalSales *
-      studdedShare *
-      solitaireA *
-      (customerDiscount["Solitaire A(<70C)"] ?? 0);
+      (studdedShare/100) *
+      (solitaireA/100) *
+      (customerDiscount["Solitaire A(<70C)"]/100 ?? 0);
     const cdSolitaireBVal =
       totalSales *
-      studdedShare *
-      solitaireB *
-      (customerDiscount["Solitaire B(70-100C)"] ?? 0);
+      (studdedShare/100) *
+      (solitaireB/100) *
+      (customerDiscount["Solitaire B(70-100C)"]/100 ?? 0);
     const cdSolitaireCVal =
       totalSales *
-      studdedShare *
-      solitaireC *
-      (customerDiscount["Solitaire C(1CRT+)"] ?? 0);
+      (studdedShare/100) *
+      (solitaireC/100) *
+      (customerDiscount["Solitaire C(1CRT+)"]/100 ?? 0);
     const cdSolitaireDVal =
       totalSales *
-      studdedShare *
-      solitaireD *
-      (customerDiscount["Solitaire D(2CRT+)"] ?? 0);
+      (studdedShare/100) *
+      (solitaireD/100) *
+      (customerDiscount["Solitaire D(2CRT+)"]/100 ?? 0);
 
     const cdCoinsVal =
-      totalSales * coinsShare * (customerDiscount["Coins"] ?? 0);
+      totalSales * (coinsShare/100) * (customerDiscount["Coins"]/100 ?? 0);
 
     const cdTotalVal =
       cdLCGVal +
@@ -108,18 +108,18 @@ function computeValues(subpage3_2Data, customerDiscount) {
     // GHS
     const ghsPlainVal =
       totalSales *
-      plainShare *
-      (customerDiscount["GHS-Plain Disc % on UCP"] ?? 0);
+      (plainShare/100) *
+      (customerDiscount["GHS-Plain Disc % on UCP"]/100 ?? 0);
 
     const ghsStuddedVal =
       totalSales *
-      studdedShare *
-      (customerDiscount["GHS-Studded Disc % on UCP"] ?? 0);
+      (studdedShare/100) *
+      (customerDiscount["GHS-Studded Disc % on UCP"]/100 ?? 0);
 
     const ghsCoinsVal =
       totalSales *
-      coinsShare *
-      (customerDiscount["GHS-Coins Disc % on UCP"] ?? 0);
+      (coinsShare/100) *
+      (customerDiscount["GHS-Coins Disc % on UCP"]/100 ?? 0);
 
     const ghsTotalVal = ghsPlainVal + ghsStuddedVal + ghsCoinsVal;
 
@@ -215,7 +215,7 @@ function PctRow({ label, values }) {
       {values.map((v, i) => (
         <td
           key={i}
-          className='border border-gray-200 px-3 py-2 bg-blue-50 text-center text-sm font-semibold text-blue-700'>
+          className='border border-gray-200 px-3 py-2 bg-blue-50 text-end text-sm font-bold text-blue-700'>
           {v}
         </td>
       ))}

@@ -154,7 +154,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   const [electricity, setElectricity] = useState({ ratePerSqft: 25 });
   const [otherExpenses, setOtherExpenses] = useState({
     registrationCharges: 500000,
-    relocCost: 10000000, // 1 Cr default
+    relocCost: storeData?.project_type === "New Store"? 0 : 1000000, // 1M default
   });
   const [secHousekeeping, setSecHousekeeping] = useState([
     { role: "Security", nos: 2, monthly: 20000 },
