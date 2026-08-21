@@ -86,10 +86,10 @@ function YesNoRow({
           <option value=''>Select</option>
           <option value='No'>No</option>
           <option value='Yes'>Yes</option>
-          <option value='By User'>By User</option>
+          <option value='Enter Custom Value'>Enter Custom Value</option>
         </select>
-        {/* User-defined amount input shown only when 'By User' is selected */}
-        {value === "By User" && (
+        {/* User-defined amount input shown only when 'Enter Custom Value' is selected */}
+        {value === "Enter Custom Value" && (
           <input
             type='number'
             min={0}
@@ -104,12 +104,12 @@ function YesNoRow({
       <td className='border border-gray-200 px-4 py-3 text-sm font-bold text-right text-gray-800 bg-amber-50'>
         {value === "Yes"
           ? `₹ ${fmt(computedValue)}`
-          : value === "By User"
+          : value === "Enter Custom Value"
           ? `₹ ${fmt(userValue || 0)}`
           : "—"}
       </td>
       <td className='border border-gray-200 px-4 py-3 text-xs text-gray-400 italic bg-white'>
-        {value === "By User"
+        {value === "Enter Custom Value"
           ? "User-defined amount"
           : "If Yes: DB rate/sqft × carpet area"}
       </td>
@@ -176,7 +176,7 @@ export default function Subpage4_1({ handleNext }) {
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  // Stores user-entered amounts when selection is 'By User'
+  // Stores user-entered amounts when selection is 'Enter Custom Value'
   const [userEnteredAmounts, setUserEnteredAmounts] = useState(() =>
     Object.fromEntries([
       ...YES_NO_ITEMS.map(({ key }) => [key, ""]),
@@ -277,12 +277,12 @@ export default function Subpage4_1({ handleNext }) {
     setUserEnteredAmounts((prev) => ({ ...prev, [key]: val }));
   };
 
-  // Effective amount per item: DB rate (Yes), user-entered (By User), or 0 (No)
+  // Effective amount per item: DB rate (Yes), user-entered (Enter Custom Value), or 0 (No)
   const getEffectiveAmount = (key) => {
     const sel = selections[key];
     return sel === "Yes"
       ? computedAmounts[key] ?? 0
-      : sel === "By User"
+      : sel === "Enter Custom Value"
       ? parseFloat(userEnteredAmounts[key]) || 0
       : 0;
   };
@@ -339,7 +339,7 @@ export default function Subpage4_1({ handleNext }) {
   ].every((key) => {
     if (selections[key] === "") return false;
     if (
-      selections[key] === "By User" &&
+      selections[key] === "Enter Custom Value" &&
       !(parseFloat(userEnteredAmounts[key]) > 0)
     )
       return false;

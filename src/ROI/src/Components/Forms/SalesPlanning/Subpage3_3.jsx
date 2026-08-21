@@ -60,17 +60,17 @@ const computeValues = (inputs, subpage3_2Data) => {
   if (subpage3_2Data) {
     for (let i = 0; i <= 5; i++) {
       stockPlain[i] = Math.round(
-        (subpage3_2Data.total_sales_data[i] * subpage3_2Data.plainShare[i]) /
+        (subpage3_2Data.total_sales_data[i] * (subpage3_2Data.plainShare[i]/100)) /
           inputs.stockTurnPlain[i],
       );
 
       stockStudded[i] = Math.round(
-        (subpage3_2Data.total_sales_data[i] * subpage3_2Data.studdedShare[i]) /
+        (subpage3_2Data.total_sales_data[i] * (subpage3_2Data.studdedShare[i]/100)) /
           inputs.stockTurnStudded[i],
       );
 
       stockCoins[i] = Math.round(
-        (subpage3_2Data.total_sales_data[i] * subpage3_2Data.coinsShare[i]) /
+        (subpage3_2Data.total_sales_data[i] * (subpage3_2Data.coinsShare[i]/100)) /
           inputs.stockTurnCoins[i],
       );
 

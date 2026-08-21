@@ -114,11 +114,11 @@ function parseApiRows(rows, opts = {}) {
     g6 = grossYrs[5];
   const cagr = g1 > 0 && g6 > 0 ? r2((Math.pow(g6 / g1, 0.2) - 1) * 100) : null;
 
-  // Rent / Revenue (5yr)
+  // Rent / Revenue (5yr) — both sides must be in Lakhs
   const rentR = by["Rent"];
   const rent5 = rentR
     ? [rentR.Yr1, rentR.Yr2, rentR.Yr3, rentR.Yr4, rentR.Yr5].reduce(
-      (s, v) => s + (v ?? 0),
+      (s, v) => s + ((v ?? 0) / LAKH),
       0,
     )
     : 0;
@@ -139,43 +139,22 @@ function parseApiRows(rows, opts = {}) {
     grossEarnings: gross,
     totalExpenses: totExp,
     expenses: [
-      { label: "Rent", values: yrs("Rent") },
-      { label: "Staff Salaries", values: yrs("Staff Salaries") },
-      {
-        label: "Security & Housekeeping",
-        values: yrs("Security & Housekeeping"),
-      },
-      { label: "Electricity", values: yrs("Electricity") },
-      { label: "Repairs & Maintenance", values: yrs("Repairs & Maintenance") },
-      { label: "Insurance", values: yrs("Insurance") },
-      { label: "BTL", values: yrs("BTL") },
-      { label: "Travel & Conveyance", values: yrs("Travel & Conveyance") },
-      { label: "Telephone / Internet", values: yrs("Telephone/Internet") },
-      {
-        label: "Credit Card Commission",
-        values: yrs("Credit Card Commission"),
-      },
-      {
-        label: "GST (primarily rental)",
-        values: yrs("GST (primarily rental)"),
-      },
-      {
-        label: "Store \u2014 Printing / Pantry etc",
-        values: yrs("Store - Printing/Pantry etc"),
-      },
-      {
-        label: "Consumables, Safety, Cust Exp",
-        values: yrs("Consumables, Safety, Cust experience"),
-      },
-      {
-        label: "Other \u2014 Staff welfare/Uniforms",
-        values: yrs("Other - Staff welfare/Uniforms etc"),
-      },
-      { label: "BG cost", values: [null, 0, 0, 0, 0, 0, 0] },
-      {
-        label: "Regn Charges / Temp Store Cost",
-        values: [0, 0, 0, 0, 0, 0, 0],
-      },
+      { label: "Rent",                            values: toLakh(yrs("Rent")) },
+      { label: "Staff Salaries",                  values: toLakh(yrs("Staff Salaries")) },
+      { label: "Security & Housekeeping",         values: toLakh(yrs("Security & Housekeeping")) },
+      { label: "Electricity",                     values: toLakh(yrs("Electricity")) },
+      { label: "Repairs & Maintenance",           values: toLakh(yrs("Repairs & Maintenance")) },
+      { label: "Insurance",                       values: toLakh(yrs("Insurance")) },
+      { label: "BTL",                             values: toLakh(yrs("BTL")) },
+      { label: "Travel & Conveyance",             values: toLakh(yrs("Travel & Conveyance")) },
+      { label: "Telephone / Internet",            values: toLakh(yrs("Telephone/Internet")) },
+      { label: "Credit Card Commission",          values: toLakh(yrs("Credit Card Commission")) },
+      { label: "GST (primarily rental)",          values: toLakh(yrs("GST (primarily rental)")) },
+      { label: "Store \u2014 Printing / Pantry etc",  values: toLakh(yrs("Store - Printing/Pantry etc")) },
+      { label: "Consumables, Safety, Cust Exp",   values: toLakh(yrs("Consumables, Safety, Cust experience")) },
+      { label: "Other \u2014 Staff welfare/Uniforms", values: toLakh(yrs("Other - Staff welfare/Uniforms etc")) },
+      { label: "BG cost",                         values: [null, 0, 0, 0, 0, 0, 0] },
+      { label: "Regn Charges / Temp Store Cost",  values: [0, 0, 0, 0, 0, 0, 0] },
     ],
     ebitda,
     depreciation: deprn,
@@ -270,7 +249,7 @@ function buildSubmitPayload(d) {
 const fmt = (n) => {
   if (n === null || n === undefined) return "—";
   if (n === 0) return " - ";
-  const abs = Math.abs(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  const abs = Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return n < 0 ? `(${abs})` : abs;
 };
 
@@ -340,7 +319,7 @@ function TotalRow({ label, values, color = "amber" }) {
             key={i}
             className={`border px-3 py-2 text-xs text-right tabular-nums whitespace-nowrap ${cls} ${isNeg ? "text-red-700" : ""
               }`}>
-            {fmt(v)}
+            {label ==="NSV Sales"?fmt(v/10):fmt(v)}
           </td>
         );
       })}
@@ -718,6 +697,19 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                 values={d.grossEarnings}
                 color='green'
               />
+              {/* UI-only: Gross Earnings as % of UCP Sales per year */}
+              <tr>
+                <Label indent muted>%</Label>
+                {d.grossEarnings.map((g, i) => {
+                  const u = d.ucpSales[i];
+                  const pct = g && u ? r2((g / u) * 100) : null;
+                  return (
+                    <td key={i} className='border border-gray-200 px-3 py-2 text-right text-xs tabular-nums text-indigo-600 bg-indigo-50'>
+                      {pct !== null ? `${pct.toFixed(2)}%` : "—"}
+                    </td>
+                  );
+                })}
+              </tr>
 
               {/* ── EXPENSES ──────────────────────────────────────────── */}
               <SectionHead>

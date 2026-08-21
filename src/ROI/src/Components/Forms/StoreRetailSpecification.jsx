@@ -827,12 +827,12 @@ export default function StoreRetailSpecifications({
       {/* FOOTER */}
       {specCompleted && archCompleted && !isSaved && (
         <div className='flex gap-3 justify-start px-8 py-6 bg-gray-50 rounded-lg border border-gray-200 mt-8'>
-          <button
+          {/* <button
             type='button'
             onClick={onPrevious}
             className='px-6 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg font-medium hover:bg-gray-100 transition'>
             ← Previous
-          </button>
+          </button> */}
           <button
             type='button'
             onClick={handleSubmit(onSubmitSpecifications)}
