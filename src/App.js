@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { routes } from "./routes";
 import DashboardMain from "./Mainpages/DashboardMain";
@@ -18,10 +18,24 @@ import PlainTOTHome from "./Components/Pages/PlainTOTHome";
 import StuddedTOTHome from "./studded_tot/StuddedTOTHome";
 import BPMSummaryHome from "./BPMSummary/BPMSummaryHome";
 import ROIMainPage from "./ROI/src/Components/ROIMainPage";
+import AppLoader from "./Components/custom/AppLoader";
 
 const App = () => {
   const [toggle, setToggle] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(true);
   const toggle_open = () => setToggle(!toggle);
+
+  useEffect(() => {
+    const loaderTimer = setTimeout(() => {
+      setPortalLoading(false);
+    }, 1800);
+
+    return () => clearTimeout(loaderTimer);
+  }, []);
+
+  if (portalLoading) {
+    return <AppLoader />;
+  }
 
   return (
     <React.Fragment>
@@ -35,7 +49,6 @@ const App = () => {
           element={<Login toggle_open={toggle_open} toggle={toggle} />}
         />
         <Route element={<PrivateAuth />}>
-          {/* Store-only routes */}
           <Route element={<RoleAuth allowedRole='store' />}>
             <Route
               path={routes.NEW_STORE}
