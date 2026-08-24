@@ -273,7 +273,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
             : existingStoreCode,
       };
 
-      console.log(roiContext)
+
 
       onContinueROI(roiContext, firstIncomplete.step, firstIncomplete.subStep);
     } catch (err) {
@@ -905,8 +905,8 @@ export default function HistoryPage({ onBack, onContinueROI }) {
 
       {/* ── View Page Modal ────────────────────────────────────── */}
       {viewModal.open && (
-        <div className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4'>
-          <div className='bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col'>
+        <div className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-6 sm:p-10'>
+          <div className='bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col'>
             {/* Modal header */}
             <div className='flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-r from-indigo-50 to-white rounded-t-2xl'>
               <div className='flex items-center gap-3'>
@@ -938,276 +938,395 @@ export default function HistoryPage({ onBack, onContinueROI }) {
             </div>
 
             {/* Modal body */}
-            <div className='flex-1 overflow-y-auto p-6'>
+            <div className='flex-1 overflow-y-auto bg-slate-50'>
               {viewModal.loading ? (
-                <div className='flex flex-col items-center justify-center h-40 gap-3'>
-                  <svg
-                    className='h-8 w-8 animate-spin text-indigo-500'
-                    fill='none'
-                    viewBox='0 0 24 24'>
-                    <circle
-                      className='opacity-25'
-                      cx='12'
-                      cy='12'
-                      r='10'
-                      stroke='currentColor'
-                      strokeWidth='4'
-                    />
-                    <path
-                      className='opacity-75'
-                      fill='currentColor'
-                      d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z'
-                    />
+                <div className='flex flex-col items-center justify-center h-48 gap-3'>
+                  <svg className='h-8 w-8 animate-spin text-indigo-500' fill='none' viewBox='0 0 24 24'>
+                    <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' />
+                    <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z' />
                   </svg>
-                  <span className='text-sm text-gray-500'>Loading data…</span>
+                  <span className='text-sm text-gray-500 font-medium'>Loading data…</span>
                 </div>
-              ) : viewModal.data?.length > 0 ? (
-                (() => {
-                  const first = viewModal.data[0] ?? {};
-                  const isParticularsFormat = "Particulars" in first;
-                  const isHeaderFormat =
-                    "Header" in first && !isParticularsFormat;
+              ) : !viewModal.data?.length ? (
+                <div className='flex flex-col items-center justify-center h-48 text-gray-400'>
+                  <p className='text-5xl mb-3'>📭</p>
+                  <p className='text-sm font-semibold text-gray-500'>No data saved for this section yet</p>
+                </div>
+              ) : (() => {
+                const data = viewModal.data;
+                const pageName = viewModal.pageName;
+                const first = data[0] ?? {};
 
-                  if (isParticularsFormat) {
-                    const infoRows = viewModal.data.filter(
-                      (r) =>
-                        r.Yr1 === null &&
-                        r.Yr2 === null &&
-                        r.Yr3 === null &&
-                        r.Yr4 === null &&
-                        r.Yr5 === null &&
-                        r.Yr6 === null,
-                    );
-                    const dataRows = viewModal.data.filter(
-                      (r) =>
-                        r.Yr1 !== null ||
-                        r.Yr2 !== null ||
-                        r.Yr3 !== null ||
-                        r.Yr4 !== null ||
-                        r.Yr5 !== null ||
-                        r.Yr6 !== null,
-                    );
-                    return (
-                      <div className='space-y-4'>
-                        {infoRows.length > 0 && (
-                          <div className='grid grid-cols-2 gap-2'>
-                            {infoRows.map((row, i) => (
-                              <div
-                                key={i}
-                                className='bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 px-4 py-3'>
-                                <p className='text-[10px] font-semibold text-indigo-400 uppercase tracking-wider mb-1'>
-                                  {row.Particulars}
-                                </p>
-                                <p className='text-sm font-bold text-gray-800'>
-                                  {row.Header || "—"}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {dataRows.length > 0 && (
-                          <div className='overflow-x-auto rounded-xl border border-gray-200 shadow-sm'>
-                            <table className='min-w-full border-collapse text-xs'>
-                              <thead>
-                                <tr className='bg-gradient-to-r from-indigo-700 to-blue-600 text-white'>
-                                  <th className='px-4 py-3 text-left font-semibold min-w-[220px]'>
-                                    Particulars
-                                  </th>
-                                  {[
-                                    "Yr 1",
-                                    "Yr 2",
-                                    "Yr 3",
-                                    "Yr 4",
-                                    "Yr 5",
-                                    "Yr 6",
-                                  ].map((y) => (
-                                    <th
-                                      key={y}
-                                      className='px-3 py-3 text-right font-semibold min-w-[80px]'>
-                                      {y}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {dataRows.map((row, i) => (
-                                  <tr
-                                    key={i}
-                                    className={`transition-colors hover:bg-indigo-50/50 ${
-                                      i % 2 === 0 ? "bg-white" : "bg-slate-50"
-                                    }`}>
-                                    <td className='px-4 py-2.5 font-medium text-gray-700 border-b border-gray-100 leading-tight'>
-                                      {row.Particulars}
-                                    </td>
-                                    {[
-                                      "Yr1",
-                                      "Yr2",
-                                      "Yr3",
-                                      "Yr4",
-                                      "Yr5",
-                                      "Yr6",
-                                    ].map((y) => (
-                                      <td
-                                        key={y}
-                                        className='px-3 py-2.5 text-right text-gray-700 border-b border-gray-100 tabular-nums font-semibold'>
-                                        {row[y] !== null && row[y] !== undefined
-                                          ? fmtModalNum(row[y])
-                                          : "—"}
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
+                // ── Shared helpers ─────────────────────────────────────────────────
+                const YR_KEYS = ['Yr1','Yr2','Yr3','Yr4','Yr5','Yr6'];
+                const YR_LABELS = ['Yr. 1','Yr. 2','Yr. 3','Yr. 4','Yr. 5','Yr. 6'];
+                const fmtVal = (v) => {
+                  if (v == null || v === '') return '—';
+                  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+                  const n = parseFloat(v);
+                  if (!isNaN(n) && String(v).trim() !== '') return n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+                  return String(v);
+                };
+                const fmtLabel = (k) => k.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 
-                  if (isHeaderFormat) {
-                    return (
-                      <div className='overflow-x-auto rounded-xl border border-gray-200 shadow-sm'>
+                const InfoCard = ({ label, value, accent = false }) => (
+                  <div className={`rounded-xl px-4 py-3 border ${accent ? 'bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-100' : 'bg-white border-gray-200'}`}>
+                    <p className='text-[10px] font-bold uppercase tracking-widest text-indigo-400 mb-1'>{label}</p>
+                    <p className='text-sm font-bold text-gray-800 break-words leading-snug'>{value || '—'}</p>
+                  </div>
+                );
+
+                const SectionHead = ({ children }) => (
+                  <div className='flex items-center gap-3 mb-3'>
+                    <div className='h-px flex-1 bg-gray-200' />
+                    <span className='text-[10px] font-black uppercase tracking-widest text-gray-400 whitespace-nowrap px-1'>{children}</span>
+                    <div className='h-px flex-1 bg-gray-200' />
+                  </div>
+                );
+
+                // ── Year-wise table (Sales Planning pages) ─────────────────────────
+                // Data format: [{ Header: "Sales Planning_Total Sales", Yr1: N, … }]
+                if ('Header' in first && !('Particulars' in first)) {
+                  // Group rows: "Total" / "total_" prefixed → bold amber; section breaks by prefix change
+                  const TOTAL_WORDS = ['total', 'sum', 'net', 'overall'];
+                  const isTotal = (h) => h && TOTAL_WORDS.some(w => h.toLowerCase().includes(w));
+                  // Strip common prefixes like "Sales Planning_", "Pricing Metrics_", etc.
+                  const stripPrefix = (h) => h?.replace(/^[^_]+_/, '') ?? h ?? '';
+                  const prevGroup = { val: null };
+
+                  return (
+                    <div className='p-5'>
+                      <div className='overflow-x-auto rounded-2xl border border-gray-200 shadow-md bg-white'>
                         <table className='min-w-full border-collapse text-xs'>
                           <thead>
-                            <tr className='bg-gradient-to-r from-indigo-700 to-blue-600 text-white'>
-                              <th className='px-4 py-3 text-left font-semibold min-w-[220px]'>
-                                Metric
-                              </th>
-                              {[
-                                "Yr 1",
-                                "Yr 2",
-                                "Yr 3",
-                                "Yr 4",
-                                "Yr 5",
-                                "Yr 6",
-                              ].map((y) => (
-                                <th
-                                  key={y}
-                                  className='px-3 py-3 text-right font-semibold min-w-[80px]'>
-                                  {y}
-                                </th>
+                            <tr className='bg-[#1e3a5f] text-white'>
+                              <th className='px-4 py-3.5 text-left font-bold text-sm min-w-[240px] sticky left-0 bg-[#1e3a5f] z-10'>Metric</th>
+                              {YR_LABELS.map(y => (
+                                <th key={y} className='px-4 py-3.5 text-right font-bold min-w-[100px]'>{y}</th>
                               ))}
                             </tr>
                           </thead>
                           <tbody>
-                            {viewModal.data.map((row, i) => (
-                              <tr
-                                key={i}
-                                className={`transition-colors hover:bg-indigo-50/50 ${
-                                  i % 2 === 0 ? "bg-white" : "bg-slate-50"
-                                }`}>
-                                <td className='px-4 py-2.5 font-medium text-gray-700 border-b border-gray-100 leading-tight'>
-                                  {row.Header}
-                                </td>
-                                {["Yr1", "Yr2", "Yr3", "Yr4", "Yr5", "Yr6"].map(
-                                  (y) => (
-                                    <td
-                                      key={y}
-                                      className='px-3 py-2.5 text-right text-gray-700 border-b border-gray-100 tabular-nums font-semibold'>
-                                      {row[y] !== null && row[y] !== undefined
-                                        ? fmtModalNum(row[y])
-                                        : "—"}
+                            {data.map((row, i) => {
+                              const label = stripPrefix(row.Header);
+                              const tot = isTotal(label);
+                              return (
+                                <tr key={i} className={`transition-colors ${tot ? 'bg-amber-50 hover:bg-amber-100' : i % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/60 hover:bg-slate-100/60'}`}>
+                                  <td className={`px-4 py-2.5 border-b border-gray-100 sticky left-0 z-10 ${tot ? 'font-bold text-amber-900 bg-amber-50' : 'font-medium text-gray-700 bg-inherit'}`}>{label}</td>
+                                  {YR_KEYS.map(y => (
+                                    <td key={y} className={`px-4 py-2.5 text-right border-b border-gray-100 tabular-nums ${tot ? 'font-bold text-amber-800' : 'text-gray-700'}`}>
+                                      {row[y] != null ? fmtModalNum(row[y]) : '—'}
                                     </td>
-                                  ),
-                                )}
-                              </tr>
-                            ))}
+                                  ))}
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
-                    );
-                  }
+                    </div>
+                  );
+                }
+
+                // ── Financial statement (Final Summary / Particulars + Yr1-Yr6) ─────
+                if ('Particulars' in first) {
+                  const scalarRows = data.filter(r => YR_KEYS.every(y => r[y] == null));
+                  const yearRows   = data.filter(r => YR_KEYS.some(y => r[y] != null));
+                  const INCOME_KEYS = ['ucp', 'nsv', 'gross', 'commission', 'discount'];
+                  const EXPENSE_KEYS = ['expense', 'rent', 'salary', 'electric', 'repair', 'insurance', 'btl', 'travel', 'gst', 'credit', 'printing', 'consumable', 'staff', 'welfare', 'bg cost', 'regn'];
+                  const PROFIT_KEYS = ['ebitda', 'pbt', 'roi', 'depreciation', 'profit', 'operating'];
+                  const INVEST_KEYS = ['investment', 'interior', 'depreciation', 'working capital', 'security deposit', 'current value'];
+                  const sectionOf = (label) => {
+                    const l = (label ?? '').toLowerCase();
+                    if (INVEST_KEYS.some(k => l.includes(k))) return 'Investment';
+                    if (PROFIT_KEYS.some(k => l.includes(k))) return 'Profitability';
+                    if (EXPENSE_KEYS.some(k => l.includes(k))) return 'Expenses';
+                    if (INCOME_KEYS.some(k => l.includes(k))) return 'Income';
+                    return 'Other';
+                  };
+                  const SECTION_COLORS = {
+                    Income: 'bg-green-50 text-green-900',
+                    Expenses: 'bg-amber-50 text-amber-900',
+                    Profitability: 'bg-blue-50 text-blue-900',
+                    Investment: 'bg-purple-50 text-purple-900',
+                    Other: 'bg-gray-50 text-gray-800',
+                  };
+                  const SECTION_HEADER_COLORS = {
+                    Income: 'bg-green-700',
+                    Expenses: 'bg-amber-700',
+                    Profitability: 'bg-blue-700',
+                    Investment: 'bg-purple-700',
+                    Other: 'bg-[#1e3a5f]',
+                  };
+                  // Group year rows by section
+                  let lastSection = null;
+                  const groupedRows = yearRows.map(r => ({ ...r, _section: sectionOf(r.Particulars) }));
 
                   return (
-                    <div className='space-y-4'>
-                      {viewModal.data.map((row, rowIdx) => {
-                        const entries = Object.entries(row).filter(
-                          ([k, v]) =>
-                            !HIDDEN_MODAL_KEYS.has(k) &&
-                            v !== null &&
-                            v !== undefined &&
-                            v !== "",
-                        );
-                        if (!entries.length) return null;
-                        return (
-                          <div key={rowIdx}>
-                            {viewModal.data.length > 1 && (
-                              <p className='text-[10px] text-gray-400 font-semibold uppercase tracking-widest mb-2 px-1'>
-                                Record {rowIdx + 1}
-                              </p>
-                            )}
-                            <div className='grid grid-cols-2 gap-2.5'>
-                              {entries.map(([key, value]) => {
-                                const isObj =
-                                  typeof value === "object" &&
-                                  value !== null &&
-                                  !Array.isArray(value);
-                                const isArr = Array.isArray(value);
+                    <div className='p-5 space-y-5'>
+                      {scalarRows.length > 0 && (
+                        <div className='grid grid-cols-2 sm:grid-cols-3 gap-3'>
+                          {scalarRows.map((r, i) => <InfoCard key={i} label={r.Particulars} value={r.Header} accent />)}
+                        </div>
+                      )}
+                      {yearRows.length > 0 && (
+                        <div className='overflow-x-auto rounded-2xl border border-gray-200 shadow-md bg-white'>
+                          <table className='min-w-full border-collapse text-xs'>
+                            <thead>
+                              <tr className='bg-[#1e3a5f] text-white'>
+                                <th className='px-4 py-3.5 text-left font-bold text-sm min-w-[240px] sticky left-0 bg-[#1e3a5f] z-10'>Particulars</th>
+                                {YR_LABELS.map(y => <th key={y} className='px-4 py-3.5 text-right font-bold min-w-[90px]'>{y}</th>)}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {groupedRows.map((row, i) => {
+                                const isNewSection = row._section !== lastSection;
+                                lastSection = row._section;
+                                const isTotalRow = ['total', 'ebitda', 'pbt', 'roi', 'net'].some(k => row.Particulars?.toLowerCase().includes(k));
+                                const secCls = SECTION_COLORS[row._section] ?? 'bg-white';
+                                const secHdrCls = SECTION_HEADER_COLORS[row._section] ?? 'bg-[#1e3a5f]';
                                 return (
-                                  <div
-                                    key={key}
-                                    className={`rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 hover:border-indigo-200 transition-colors${
-                                      isObj || isArr ? " col-span-2" : ""
-                                    }`}>
-                                    <p className='text-[10px] font-semibold text-indigo-400 uppercase tracking-wider mb-1'>
-                                      {formatModalLabel(key)}
-                                    </p>
-                                    {isObj ? (
-                                      <div className='grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5'>
-                                        {Object.entries(value)
-                                          .filter(
-                                            ([, v]) =>
-                                              v !== null &&
-                                              v !== undefined &&
-                                              v !== "",
-                                          )
-                                          .map(([k2, v2]) => (
-                                            <div
-                                              key={k2}
-                                              className='bg-white rounded-lg px-3 py-2 border border-gray-100'>
-                                              <p className='text-[9px] text-gray-400 uppercase font-semibold'>
-                                                {formatModalLabel(k2)}
-                                              </p>
-                                              <p className='text-sm font-semibold text-gray-800 mt-0.5 tabular-nums'>
-                                                {formatModalValue(v2) ?? "—"}
-                                              </p>
-                                            </div>
-                                          ))}
-                                      </div>
-                                    ) : isArr ? (
-                                      <div className='flex flex-wrap gap-1.5 mt-1'>
-                                        {value.map((v, i) => (
-                                          <span
-                                            key={i}
-                                            className='bg-indigo-50 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-md border border-indigo-100'>
-                                            Yr {i + 1}: {fmtModalNum(v)}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <p className='text-sm font-semibold text-gray-800 leading-snug tabular-nums'>
-                                        {formatModalValue(value)}
-                                      </p>
+                                  <>
+                                    {isNewSection && i > 0 && (
+                                      <tr key={`sec-${row._section}`}>
+                                        <td colSpan={7} className={`${secHdrCls} text-white text-[10px] font-black uppercase tracking-widest px-4 py-2`}>{row._section}</td>
+                                      </tr>
                                     )}
-                                  </div>
+                                    <tr key={i} className={`transition-colors ${isTotalRow ? `${secCls} font-bold` : 'hover:bg-gray-50'}`}>
+                                      <td className={`px-4 py-2.5 border-b border-gray-100 sticky left-0 z-10 ${isTotalRow ? `${secCls} font-bold` : 'bg-white font-medium text-gray-700'}`}>
+                                        {row.Particulars}
+                                      </td>
+                                      {YR_KEYS.map(y => (
+                                        <td key={y} className={`px-4 py-2.5 text-right border-b border-gray-100 tabular-nums ${isTotalRow ? 'font-bold' : 'text-gray-700'} ${(row[y] ?? 0) < 0 ? 'text-red-600' : ''}`}>
+                                          {row[y] != null ? fmtModalNum(row[y]) : '—'}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  </>
                                 );
                               })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // ── Flat key-value pages (Store Details, Expense Details) ────────────
+                // Smart section map per page
+                const PAGE_SECTIONS = {
+                  'Basic Store Details': [
+                    { title: 'Project', keys: ['project_type', 'ty_history_id', 'history_id', 'TY_historyID'] },
+                    { title: 'Location', keys: ['city', 'state', 'region', 'new_city'] },
+                    { title: 'Store Format', keys: ['existing_store_code', 'existing_store_format', 'store_format_change', 'new_store_format', 'store_type', 'retail_area'] },
+                    { title: 'Franchise Details', keys: ['new_franchise', 'new_franchisee_storename', 'new_franchisee_storecode', 'existing_franchisee_store_name', 'existing_franchisee_store_code', 'franchisee_ba_iat_score', 'partner_db_status', 'partner_score'] },
+                  ],
+                  'Store Retail Specifications': [
+                    { title: 'Store Type & Areas', keys: ['store_type', 'existing_overall_area_SBA', 'existing_retail_area', 'new_over_all_area_SBA', 'new_retail_area', 'no_of_floors', 'floor_plate'] },
+                    { title: 'Architecture', keys: ['frontage', 'ceiling_height', 'facade_led', 'terrace_branding', 'totem_pole', 'display_type', 'flooring_type', 'floors_for_facade'] },
+                    { title: 'Facilities', keys: ['cashier_count', 'karatmeter_count', 'strong_room', 'franchise_room', 'manager_room', 'conference_room', 'pvr_room', 'additional_workstation', 'regional_service_centre'] },
+                    { title: 'Notes', keys: ['remarks'] },
+                  ],
+                };
+
+                const sections = PAGE_SECTIONS[pageName];
+                const row = data[0] ?? {};
+                const allKeys = Object.keys(row);
+
+                // Check if it's a nested JSON payload (CAPEX / RESOURCE / SUMMARY expense pages)
+                const hasNestedObjects = allKeys.some(k => typeof row[k] === 'object' && row[k] !== null && !Array.isArray(row[k]));
+
+                if (hasNestedObjects) {
+                  // Deep render nested expense payloads
+                  const renderValue = (v, depth = 0) => {
+                    if (v == null || v === '') return '—';
+                    if (Array.isArray(v)) {
+                      const nums = v.filter(x => x != null);
+                      if (!nums.length) return '—';
+                      return (
+                        <div className='flex flex-wrap gap-1 mt-1'>
+                          {nums.map((n, i) => (
+                            <span key={i} className='bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-lg border border-indigo-100'>
+                              {YR_LABELS[i] ?? `#${i+1}`}: {fmtModalNum(n)}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    }
+                    if (typeof v === 'object') {
+                      const entries = Object.entries(v).filter(([, val]) => val != null && val !== '');
+                      return (
+                        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-1.5 ${depth > 0 ? 'bg-white rounded-lg p-2 border border-gray-100' : ''}`}>
+                          {entries.map(([k2, v2]) => (
+                            <div key={k2} className='bg-slate-50 rounded-lg px-3 py-2 border border-gray-100'>
+                              <p className='text-[9px] font-bold text-gray-400 uppercase tracking-wide'>{fmtLabel(k2)}</p>
+                              <div className='text-xs font-semibold text-gray-800 mt-0.5'>{renderValue(v2, depth + 1)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return fmtVal(v);
+                  };
+
+                  const topEntries = Object.entries(row).filter(([k]) => !HIDDEN_MODAL_KEYS.has(k));
+                  const scalarEntries = topEntries.filter(([, v]) => typeof v !== 'object' || v == null);
+                  const objEntries = topEntries.filter(([, v]) => typeof v === 'object' && v !== null);
+
+                  return (
+                    <div className='p-5 space-y-5'>
+                      {scalarEntries.length > 0 && (
+                        <div className='grid grid-cols-2 sm:grid-cols-3 gap-3'>
+                          {scalarEntries.map(([k, v]) => <InfoCard key={k} label={fmtLabel(k)} value={fmtVal(v)} />)}
+                        </div>
+                      )}
+                      {objEntries.map(([k, v]) => (
+                        <div key={k} className='bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden'>
+                          <div className='px-5 py-3 bg-gradient-to-r from-[#1e3a5f] to-[#2d5f8a]'>
+                            <h4 className='text-xs font-black text-white uppercase tracking-widest'>{fmtLabel(k)}</h4>
+                          </div>
+                          <div className='p-4'>
+                            {Array.isArray(v) ? (
+                              v.length === 0 ? <p className='text-xs text-gray-400'>—</p> :
+                              typeof v[0] === 'object' ? (
+                                // Table for array of objects (e.g., salary rows)
+                                <div className='overflow-x-auto rounded-xl border border-gray-100'>
+                                  <table className='min-w-full text-xs border-collapse'>
+                                    <thead>
+                                      <tr className='bg-slate-100'>
+                                        {Object.keys(v[0]).filter(k2 => !HIDDEN_MODAL_KEYS.has(k2)).map(k2 => (
+                                          <th key={k2} className='px-3 py-2 text-left font-bold text-gray-500 uppercase tracking-wide text-[9px]'>{fmtLabel(k2)}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {v.map((item, i) => (
+                                        <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                                          {Object.entries(item).filter(([k2]) => !HIDDEN_MODAL_KEYS.has(k2)).map(([k2, v2]) => (
+                                            <td key={k2} className='px-3 py-2 border-b border-gray-100 text-gray-700 font-medium'>{fmtVal(v2)}</td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
+                                <div className='flex flex-wrap gap-1.5'>
+                                  {v.map((n, i) => (
+                                    <span key={i} className='bg-amber-50 text-amber-700 text-[10px] font-bold px-2.5 py-1 rounded-lg border border-amber-100'>
+                                      {YR_LABELS[i] ?? `#${i+1}`}: {fmtModalNum(n)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )
+                            ) : typeof v === 'object' && v !== null ? (
+                              <div className='grid grid-cols-2 sm:grid-cols-3 gap-2'>
+                                {Object.entries(v).filter(([k2, val]) => !HIDDEN_MODAL_KEYS.has(k2) && val != null && val !== '').map(([k2, v2]) => (
+                                  <InfoCard key={k2} label={fmtLabel(k2)} value={typeof v2 === 'object' ? JSON.stringify(v2) : fmtVal(v2)} />
+                                ))}
+                              </div>
+                            ) : <p className='text-sm font-semibold text-gray-800'>{fmtVal(v)}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+
+                // Sectioned flat display for known pages
+                if (sections) {
+                  const usedKeys = new Set();
+                  return (
+                    <div className='p-5 space-y-5'>
+                      {sections.map(({ title, keys }) => {
+                        const entries = keys
+                          .map(k => {
+                            const val = row[k] ?? row[k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())];
+                            if (val == null || val === '') return null;
+                            usedKeys.add(k);
+                            return [k, val];
+                          })
+                          .filter(Boolean);
+                        if (!entries.length) return null;
+                        return (
+                          <div key={title} className='bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden'>
+                            <div className='px-5 py-3 bg-gradient-to-r from-[#1e3a5f] to-[#2d5f8a]'>
+                              <h4 className='text-xs font-black text-white uppercase tracking-widest'>{title}</h4>
+                            </div>
+                            <div className='grid grid-cols-2 sm:grid-cols-3 gap-px bg-gray-100'>
+                              {entries.map(([k, v]) => (
+                                <div key={k} className='bg-white px-4 py-3'>
+                                  <p className='text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-0.5'>{fmtLabel(k)}</p>
+                                  <p className='text-sm font-semibold text-gray-800 break-words'>{fmtVal(v)}</p>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         );
                       })}
+                      {/* Ungrouped remainder */}
+                      {(() => {
+                        const rem = Object.entries(row).filter(([k, v]) => !HIDDEN_MODAL_KEYS.has(k) && !usedKeys.has(k) && v != null && v !== '');
+                        return rem.length > 0 ? (
+                          <div className='bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden'>
+                            <div className='px-5 py-3 bg-slate-100 border-b border-gray-200'>
+                              <h4 className='text-xs font-bold text-gray-500 uppercase tracking-widest'>Other</h4>
+                            </div>
+                            <div className='grid grid-cols-2 sm:grid-cols-3 gap-px bg-gray-100'>
+                              {rem.map(([k, v]) => (
+                                <div key={k} className='bg-white px-4 py-3'>
+                                  <p className='text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-0.5'>{fmtLabel(k)}</p>
+                                  <p className='text-sm font-semibold text-gray-800 break-words'>{fmtVal(v)}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   );
-                })()
-              ) : (
-                <div className='flex flex-col items-center justify-center h-40 text-gray-400'>
-                  <p className='text-4xl mb-2'>📭</p>
-                  <p className='text-sm font-medium'>
-                    No data found for this page
-                  </p>
-                </div>
-              )}
+                }
+
+                // Generic fallback for multiple rows (e.g., ref store details)
+                return (
+                  <div className='p-5 space-y-4'>
+                    {data.map((row, rowIdx) => {
+                      const entries = Object.entries(row).filter(([k, v]) => !HIDDEN_MODAL_KEYS.has(k) && v != null && v !== '');
+                      if (!entries.length) return null;
+                      const scalarE = entries.filter(([, v]) => typeof v !== 'object');
+                      const objE    = entries.filter(([, v]) => typeof v === 'object' && v !== null);
+                      return (
+                        <div key={rowIdx} className='bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden'>
+                          {data.length > 1 && (
+                            <div className='px-5 py-2.5 bg-slate-100 border-b border-gray-200'>
+                              <p className='text-[10px] font-black text-gray-400 uppercase tracking-widest'>Record {rowIdx + 1}</p>
+                            </div>
+                          )}
+                          <div className='grid grid-cols-2 sm:grid-cols-3 gap-px bg-gray-100'>
+                            {scalarE.map(([k, v]) => (
+                              <div key={k} className='bg-white px-4 py-3'>
+                                <p className='text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-0.5'>{fmtLabel(k)}</p>
+                                <p className='text-sm font-semibold text-gray-800 break-words'>{fmtVal(v)}</p>
+                              </div>
+                            ))}
+                          </div>
+                          {objE.map(([k, v]) => (
+                            <div key={k} className='border-t border-gray-100 px-5 py-4'>
+                              <p className='text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2'>{fmtLabel(k)}</p>
+                              <div className='grid grid-cols-2 sm:grid-cols-3 gap-2'>
+                                {Object.entries(v).filter(([k2, v2]) => !HIDDEN_MODAL_KEYS.has(k2) && v2 != null && v2 !== '').map(([k2, v2]) => (
+                                  <InfoCard key={k2} label={fmtLabel(k2)} value={Array.isArray(v2) ? v2.map(n => fmtModalNum(n)).join(' · ') : fmtVal(v2)} />
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

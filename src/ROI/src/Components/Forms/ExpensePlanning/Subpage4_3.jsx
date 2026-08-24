@@ -129,12 +129,12 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const isRestoredRef = useRef(false);
   // ── Rent inputs (6 years) ─────────────────────────────────────────────────
   const [revenueSharing, setRevenueSharing] = useState("No");
-  const selected_sba =
-    storeData?.project_type === "Renovation" ||
-      storeData?.project_type === "New Store" ||
-      storeData?.project_type === "Relocation"
-      ? parseFloat(storeData?.new_over_all_area_SBA)
-      : parseFloat(storeData?.existing_over_all_area_SBA);
+  const selected_sba = parseFloat(storeData?.new_over_all_area_SBA)
+    // storeData?.project_type === "Renovation" ||
+    //   storeData?.project_type === "New Store" ||
+    //   storeData?.project_type === "Relocation" ||
+    //   ? parseFloat(storeData?.new_over_all_area_SBA)
+    //   : parseFloat(storeData?.existing_over_all_area_SBA);
   const [sba, setSba] = useState(Array(6).fill(selected_sba));
   // initialized to empty; seeded by the sync effect below once subpage4_2Data loads
   const [ratePerSqft, setRatePerSqft] = useState(
@@ -181,6 +181,8 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
 
   // user-editable escalation % for the three upstream-locked rows
   const [lockedRowEsc, setLockedRowEsc] = useState({ salaries: 5, secHk: 5, electricity: 5 });
+  // Yr1 base for locked rows — restored from SUMMARY on resume, synced from subpage4_2Data in live flow
+  const [lockedRowYr1, setLockedRowYr1] = useState({ salaries: 0, secHk: 0, electricity: 0 });
   const updateLockedEsc = (key, value) =>
     setLockedRowEsc((prev) => ({ ...prev, [key]: Math.min(Math.max(parseFloat(value) || 0, 0), 99) }));
 
@@ -206,6 +208,14 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
           setEditableRows(row.expenseSummary.editableRowState);
         if (row.expenseSummary?.lockedRowEsc)
           setLockedRowEsc(row.expenseSummary.lockedRowEsc);
+        // Restore Yr1 totals for locked rows from saved expense rows
+        const savedRows = row.expenseSummary?.rows ?? [];
+        const yr1 = (lbl) => savedRows.find((r) => r.label === lbl)?.values?.[0] ?? null;
+        const sal = yr1("Salaries");
+        const sHk = yr1("Security & Housekeeping");
+        const elec = yr1("Electricity");
+        if (sal != null || sHk != null || elec != null)
+          setLockedRowYr1({ salaries: sal ?? 0, secHk: sHk ?? 0, electricity: elec ?? 0 });
         isRestoredRef.current = true;
         markStepSaved(2);
         setIsSaved(true);
@@ -215,12 +225,23 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     })();
   }, [storeData?.roiid]);
 
+  // Sync locked-row Yr1 values from subpage4_2Data in the live (non-resume) flow
+  useEffect(() => {
+    const sal = subpage4_2Data?.salaries?.totalAnnualTotal;
+    const sec = subpage4_2Data?.securityHousekeeping?.totalAnnual;
+    const elec = subpage4_2Data?.electricity?.total;
+    if (!sal && !sec && !elec) return;
+    setLockedRowYr1({ salaries: sal ?? 0, secHk: sec ?? 0, electricity: elec ?? 0 });
+  }, [subpage4_2Data?.salaries?.totalAnnualTotal, subpage4_2Data?.securityHousekeeping?.totalAnnual, subpage4_2Data?.electricity?.total]);
+
   // Seed ratePerSqft from upstream salary data when context loads after a resume
   useEffect(() => {
     const sqft = subpage4_2Data?.salaries?.sqftPerEmp;
-    if (!sqft) return;
+    if (sqft == null) return; // guard null/undefined only — 0 is a valid (if uncommon) seed
     setRatePerSqft((prev) =>
-      prev.every((v) => v == null || v === undefined) ? Array(6).fill(sqft) : prev,
+      prev.every((v) => v == null || v === undefined || Number(v) <= 0)
+        ? Array(6).fill(sqft)
+        : prev,
     );
   }, [subpage4_2Data?.salaries?.sqftPerEmp]);
 
@@ -301,10 +322,10 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen1Expenses]);
 
-  // Pull year-1 data from upstream subpages
-  const salaryYr1 = subpage4_2Data?.salaries?.totalAnnualTotal ?? 0;
-  const secHkYr1 = subpage4_2Data?.securityHousekeeping?.totalAnnual ?? 0;
-  const electricityYr1 = subpage4_2Data?.electricity?.total ?? 0;
+  // Pull year-1 data — lockedRowYr1 is authoritative (restored from SUMMARY on resume, or synced from subpage4_2Data live)
+  const salaryYr1 = lockedRowYr1.salaries;
+  const secHkYr1 = lockedRowYr1.secHk;
+  const electricityYr1 = lockedRowYr1.electricity;
   const totalCapex = subpage4_1Data?.totalCapex ?? 0;
   const interiors = subpage4_1Data?.interiors ?? 0;
 

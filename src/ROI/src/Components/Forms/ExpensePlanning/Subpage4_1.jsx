@@ -186,6 +186,7 @@ export default function Subpage4_1({ handleNext }) {
 
   // Single additional cost field entered before the Total Capex row
   const [sectionAdditionalCost, setSectionAdditionalCost] = useState("");
+  const [additionalCostDescription, setAdditionalCostDescription] = useState("");
 
   // Load previously saved CAPEX selections when resuming
   useEffect(() => {
@@ -290,7 +291,7 @@ export default function Subpage4_1({ handleNext }) {
   // ── Compute capex amounts ─────────────────────────────────────────────────
   const carpetArea =
     storeData?.project_type === "Renovation" ||
-    storeData?.project_type === "New Store"
+    storeData?.project_type === "New Store" || storeData?.project_type === 'Store Expansion'
       ? parseFloat(storeData?.new_retail_area)
       : parseFloat(storeData?.existing_retail_area);
 
@@ -366,6 +367,7 @@ export default function Subpage4_1({ handleNext }) {
       interiors,
       itEquipment,
       additionalCapex,
+      additionalCapexDescription: additionalCostDescription,
       totalCapex,
       ratePerSqft,
     };
@@ -428,12 +430,7 @@ export default function Subpage4_1({ handleNext }) {
           { label: "Property Nature", value: storeData?.store_type ?? "—" },
           {
             label: "Carpet Area (sqft)",
-            value: fmt(
-              storeData?.project_type === "Renovation" ||
-                storeData?.project_type === "New Store"
-                ? storeData?.new_retail_area
-                : storeData?.existing_retail_area,
-            ),
+            value: fmt(carpetArea),
           },
         ].map(({ label, value }) => (
           <div key={label} className='text-center'>
@@ -521,7 +518,7 @@ export default function Subpage4_1({ handleNext }) {
               <td className='border border-indigo-200 px-4 py-3 text-sm font-semibold text-indigo-800'>
                 Additional Cost
               </td>
-              <td className='border border-indigo-200 px-4 py-3 bg-indigo-100'>
+              <td className='border border-indigo-200 px-4 py-3 bg-indigo-100 space-y-2'>
                 <input
                   type='number'
                   min={0}
@@ -531,15 +528,30 @@ export default function Subpage4_1({ handleNext }) {
                   placeholder='₹ Enter amount'
                   className={`w-full px-2 py-1.5 border border-indigo-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
                     isSaved
-                      ? "bg-gray-100 cursor-not-allowed text-gray-500"
-                      : "bg-white"
+                      ? 'bg-gray-100 cursor-not-allowed text-gray-500'
+                      : 'bg-white'
                   }`}
                 />
+                {/* Description box appears once an amount is entered */}
+                {parseFloat(sectionAdditionalCost) > 0 && (
+                  <textarea
+                    rows={2}
+                    value={additionalCostDescription}
+                    onChange={(e) => setAdditionalCostDescription(e.target.value)}
+                    disabled={isSaved}
+                    placeholder='Specify reason for this additional cost…'
+                    className={`w-full px-2 py-1.5 border border-indigo-300 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
+                      isSaved
+                        ? 'bg-gray-100 cursor-not-allowed text-gray-500'
+                        : 'bg-white'
+                    }`}
+                  />
+                )}
               </td>
               <td className='border border-indigo-200 px-4 py-3 text-sm font-bold text-right text-indigo-800 bg-amber-50'>
                 {sectionAdditionalCost
                   ? `₹ ${fmt(parseFloat(sectionAdditionalCost) || 0)}`
-                  : "—"}
+                  : '—'}
               </td>
               <td className='border border-indigo-200 px-4 py-3 text-xs text-gray-400 italic bg-white'>
                 Any other additional capex not covered above
