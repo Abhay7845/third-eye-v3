@@ -129,12 +129,15 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const isRestoredRef = useRef(false);
   // ── Rent inputs (6 years) ─────────────────────────────────────────────────
   const [revenueSharing, setRevenueSharing] = useState("No");
-  const selected_sba = parseFloat(storeData?.new_over_all_area_SBA)
-    // storeData?.project_type === "Renovation" ||
-    //   storeData?.project_type === "New Store" ||
-    //   storeData?.project_type === "Relocation" ||
-    //   ? parseFloat(storeData?.new_over_all_area_SBA)
-    //   : parseFloat(storeData?.existing_over_all_area_SBA);
+  const selected_sba = storeData?.project_type === "Store Expansion" ||
+      storeData?.project_type === "New Store" ||
+      storeData?.project_type === "Relocation"
+      ? parseFloat(storeData?.new_over_all_area_SBA)
+      : parseFloat(storeData?.existing_overall_area_SBA);
+
+  console.log('selected_sba',selected_sba)
+  console.log('store Data',storeData)
+    
   const [sba, setSba] = useState(Array(6).fill(selected_sba));
   // initialized to empty; seeded by the sync effect below once subpage4_2Data loads
   const [ratePerSqft, setRatePerSqft] = useState(
@@ -234,6 +237,8 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     setLockedRowYr1({ salaries: sal ?? 0, secHk: sec ?? 0, electricity: elec ?? 0 });
   }, [subpage4_2Data?.salaries?.totalAnnualTotal, subpage4_2Data?.securityHousekeeping?.totalAnnual, subpage4_2Data?.electricity?.total]);
 
+
+    console.log(subpage4_2Data)
   // Seed ratePerSqft from upstream salary data when context loads after a resume
   useEffect(() => {
     const sqft = subpage4_2Data?.salaries?.sqftPerEmp;
