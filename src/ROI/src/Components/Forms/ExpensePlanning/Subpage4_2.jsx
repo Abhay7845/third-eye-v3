@@ -322,8 +322,8 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
 
   // ── Derived totals ────────────────────────────────────────────────────────
   const carpetArea =
-    storeData?.project_type === "Renovation" ||
-    storeData?.project_type === "New Store"
+    storeData?.project_type === "Relocation" ||
+    storeData?.project_type === "New Store" || storeData?.project_type === "Store Expansion" 
       ? parseFloat(storeData?.new_retail_area)
       : parseFloat(storeData?.existing_retail_area);
 
