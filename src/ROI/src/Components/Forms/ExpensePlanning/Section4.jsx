@@ -152,9 +152,10 @@ export default function Section4({
     if (!roiid || !isFetched) return;
     (async () => {
       try {
-        const [r1, r2] = await Promise.all([
+        const [r1, r2, r3] = await Promise.all([
           fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=CAPEX`),
           fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=RESOURCE`),
+          fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=OTHER`),
         ]);
         if (r1.ok) {
           const j1 = await r1.json();
@@ -163,8 +164,58 @@ export default function Section4({
         }
         if (r2.ok) {
           const j2 = await r2.json();
-          const d2 = j2?.data?.[0];
-          if (d2) { setSubpage4_2Data(d2); markStepSaved(1); }
+          let d2 = j2?.data?.[0];
+          if (d2) {
+            // Parse OTHER once — used for sqftPerEmp, electricity total, etc.
+            let d3 = {};
+            if (r3.ok) {
+              const j3 = await r3.json();
+              d3 = j3?.data?.[0] ?? {};
+            }
+
+            // sqftPerEmp: saved to OTHER table
+            if (!d2.salaries?.sqftPerEmp) {
+              const sqft = d3['Sqft/emp'] ?? d3.sqftPerEmp ?? d3.p_sqft_emp;
+              if (sqft != null)
+                d2 = { ...d2, salaries: { ...(d2.salaries ?? {}), sqftPerEmp: sqft } };
+            }
+
+            // totalAnnualTotal: SP stores one row per role — recompute the aggregate here
+            if (!d2.salaries?.totalAnnualTotal) {
+              const rawRows = d2.salaries?.rows ?? {};
+              const vals = Array.isArray(rawRows) ? rawRows : Object.values(rawRows);
+              const fixed = vals.reduce((s, r) => s + (parseFloat(r.monthly) || 0) * 12 * (parseFloat(r.nos) || 0), 0);
+              const variable = vals.reduce((s, r) => {
+                const base = (parseFloat(r.monthly) || 0) * 12 * (parseFloat(r.nos) || 0);
+                return s + base * ((parseFloat(r.variablePct) || 0) / 100);
+              }, 0);
+              const totalAnnualTotal = fixed + variable;
+              if (totalAnnualTotal > 0)
+                d2 = { ...d2, salaries: { ...(d2.salaries ?? {}), totalAnnualTotal } };
+            }
+
+            // securityHousekeeping.totalAnnual: recompute from rows
+            if (!d2.securityHousekeeping?.totalAnnual) {
+              const secRows = d2.securityHousekeeping?.rows ?? [];
+              const totalAnnual = secRows.reduce((s, r) => s + (parseInt(r.nos) || 0) * (parseFloat(r.monthly) || 0) * 12, 0);
+              if (totalAnnual > 0)
+                d2 = { ...d2, securityHousekeeping: { ...(d2.securityHousekeeping ?? {}), totalAnnual } };
+            }
+
+            // electricity.total: same formula Subpage4_2 uses (ratePerSqft × carpetArea)
+            if (!d2.electricity?.total) {
+              const rps = parseFloat(d2.electricity?.ratePerSqft) || 0;
+              const isNewOrReno = storeData?.project_type === "Renovation" || storeData?.project_type === "New Store";
+              const area = parseFloat(isNewOrReno ? storeData?.new_retail_area : storeData?.existing_retail_area) || 0;
+              const total = (rps > 0 && area > 0) ? rps * area
+                : parseFloat(d3.electricity_total ?? d3.electricityTotal ?? d3.p_electricity_total) || 0;
+              if (total > 0)
+                d2 = { ...d2, electricity: { ...(d2.electricity ?? {}), total } };
+            }
+
+            setSubpage4_2Data(d2);
+            markStepSaved(1);
+          }
         }
       } catch (e) {
         console.error("Failed to rehydrate Section4 context:", e);
