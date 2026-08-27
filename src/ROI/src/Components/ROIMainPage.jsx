@@ -46,6 +46,11 @@ function ROIMainPage() {
     setHistoryReqFlag(false);
     setContinueContext(null);
   };
+  const handleHistoryBack = () => {
+    setNewReqFlag(false);
+    setHistoryReqFlag(true);
+    setContinueContext(null);
+  };
 
   return (
     <div className='flex flex-col h-screen overflow-hidden'>
@@ -156,6 +161,7 @@ function ROIMainPage() {
                 initialStep={continueContext?.startStep ?? 1}
                 initialSubStep={continueContext?.startSubStep ?? 1}
                 onExit={handleBack}
+                goToHistoryPage ={handleHistoryBack}
               />
             </div>
           ) : (

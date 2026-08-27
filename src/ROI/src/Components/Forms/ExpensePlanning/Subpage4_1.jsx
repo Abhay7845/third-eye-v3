@@ -290,14 +290,12 @@ export default function Subpage4_1({ handleNext }) {
 
   // ── Compute capex amounts ─────────────────────────────────────────────────
   const carpetArea =
-    storeData?.project_type === "Relocation" ||
+    storeData?.project_type === "Relocation" || storeData?.project_type === 'Renovation' ||
     storeData?.project_type === "New Store" || storeData?.project_type === 'Store Expansion'
       ? parseFloat(storeData?.new_retail_area)
       : parseFloat(storeData?.existing_retail_area);
 
   const computedAmounts = {};
-
-  console.log(storeData)
 
   YES_NO_ITEMS.forEach(({ key }) => {
     const rateData = dbRates.find(

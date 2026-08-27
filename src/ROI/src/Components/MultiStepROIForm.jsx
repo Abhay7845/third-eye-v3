@@ -20,7 +20,7 @@ export default function MultiStepROIForm({
   initialStep = 1,
   initialSubStep = 1,
   initialRoiContext = null,
-  onExit,
+  onExit, goToHistoryPage
 }) {
   // const [activeForm, setActiveForm] = useState(4);
   const [activeForm, setActiveForm] = useState(initialStep);
@@ -57,14 +57,35 @@ export default function MultiStepROIForm({
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
-              <div className='flex justify-between text-white/50 text-[10px] pt-0.5 mt-2 items-center'>
-                <button
-                  onClick={onExit}
-                  className='flex items-center gap-1.5 bg-white text-[#233044] hover:bg-[#87cefa] hover:text-[#233044] rounded-full px-3 py-1 text-[10px] font-bold shadow transition-all'>
-                  🏠 ROI Home
-                </button>
-                <span>{progressPct}% complete</span>
+
+              <div className="flex justify-between items-center text-white/50 text-[10px] pt-0.5 mt-2">
+                <div className="flex justify-between px-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={onExit}
+                    aria-label="Return to ROI Home"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[10px] font-bold text-[#233044] shadow-sm transition-all duration-200 hover:bg-[#87cefa] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#87cefa]/60 active:scale-95"
+                  >
+                    {/* <Home size={11} strokeWidth={2.5} /> */}
+                    <span>🏠 ROI Home</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={goToHistoryPage}
+                    aria-label="Open History Page"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[10px] font-bold text-[#233044] shadow-sm transition-all duration-200 hover:bg-[#87cefa] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#87cefa]/60 active:scale-95"
+                  >
+                    {/* <History size={11} strokeWidth={2.5} /> */}
+                    <span>📜History Page</span>
+                  </button>
+                </div>
+
+                <span className="tabular-nums whitespace-nowrap">
+                  {progressPct}% complete
+                </span>
               </div>
+
             </div>
           </div>
 
