@@ -2,14 +2,7 @@ import React, { useState, useRef } from "react";
 import PdfLoader from "./PdfLoader";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import {
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-} from "react-super-responsive-table";
+import { Table, Thead, Tbody, Tr, Th, Td } from "react-super-responsive-table";
 import third_eye from "../../asset/3rdeye.png";
 import StoreTypePdfDetails from "../custom/StoreTypePdfDetails";
 import { GetChannelLogo } from "../Data/ChannelLogo";
@@ -30,23 +23,16 @@ const NewStoreCatchmentPdf = ({
   StoreColorSet,
   pincodeSummary,
 }) => {
-  const userLog = useSelector(
-    (state) => state?.user?.user
-  );
+  const userLog = useSelector((state) => state?.user?.user);
 
   const [loading, setLoading] = useState(false);
-  const [showDownloadLoader, setShowDownloadLoader] =
-    useState(false);
+  const [showDownloadLoader, setShowDownloadLoader] = useState(false);
 
   const storeCatchment = useRef(null);
 
-  const logo = GetChannelLogo(
-    userLog?.channel?.toLowerCase()
-  );
+  const logo = GetChannelLogo(userLog?.channel?.toLowerCase());
 
-  const currentDate = moment(new Date()).format(
-    "DD-MM-YYYY"
-  );
+  const currentDate = moment(new Date()).format("DD-MM-YYYY");
 
   const t_header = [
     "Pincode",
@@ -57,9 +43,7 @@ const NewStoreCatchmentPdf = ({
     "Dormancy %",
   ];
 
-  const PDF_SECTIONS = [
-    "first_page_separation",
-  ];
+  const PDF_SECTIONS = ["first_page_separation"];
 
   /**
    * ==========================================================
@@ -599,723 +583,475 @@ const NewStoreCatchmentPdf = ({
     }
   `;
 
-
   /**
    * ==========================================================
    * INJECT PDF CSS
    * ==========================================================
    */
-  const injectPdfStyles = (
-    captureNode
-  ) => {
-    const style =
-      document.createElement(
-        "style"
-      );
+  const injectPdfStyles = (captureNode) => {
+    const style = document.createElement("style");
 
-    style.setAttribute(
-      "data-pdf-only-style",
-      "true"
-    );
+    style.setAttribute("data-pdf-only-style", "true");
 
-    style.textContent =
-      PDF_ONLY_STYLES;
+    style.textContent = PDF_ONLY_STYLES;
 
     captureNode.prepend(style);
 
-    captureNode.classList.add(
-      "pdf-capture-root"
-    );
+    captureNode.classList.add("pdf-capture-root");
   };
-
 
   /**
    * ==========================================================
    * FIX STORE SUMMARY
    * ==========================================================
    */
-  const fixStoreSummaryTables = (
-    captureNode
-  ) => {
-    const allTables =
-      captureNode.querySelectorAll(
-        "table"
-      );
+  const fixStoreSummaryTables = (captureNode) => {
+    const allTables = captureNode.querySelectorAll("table");
 
     allTables.forEach((table) => {
       /*
        * Skip Pincode Summary.
        */
-      if (
-        table.classList.contains(
-          "pdf-pincode-table"
-        )
-      ) {
+      if (table.classList.contains("pdf-pincode-table")) {
         return;
       }
 
       /*
        * Skip Customers Shares.
        */
-      if (
-        table.closest(
-          ".pdf-customer-share"
-        )
-      ) {
+      if (table.closest(".pdf-customer-share")) {
         return;
       }
 
       /*
        * Everything else here is Store Summary.
        */
-      const parent =
-        table.parentElement;
+      const parent = table.parentElement;
 
       if (parent) {
-        parent.classList.add(
-          "pdf-store-summary"
-        );
+        parent.classList.add("pdf-store-summary");
       }
 
       /*
        * Force normal table layout.
        */
-      table.style.display =
-        "table";
+      table.style.display = "table";
 
-      table.style.width =
-        "100%";
+      table.style.width = "100%";
 
-      table.style.maxWidth =
-        "100%";
+      table.style.maxWidth = "100%";
 
-      table.style.tableLayout =
-        "fixed";
+      table.style.tableLayout = "fixed";
 
-      table.style.borderCollapse =
-        "collapse";
+      table.style.borderCollapse = "collapse";
 
-      table.style.borderSpacing =
-        "0";
+      table.style.borderSpacing = "0";
 
       /*
        * KEEP OUTER BORDER.
        */
-      table.style.border =
-        "1px solid #233044";
-
+      table.style.border = "1px solid #233044";
 
       /*
        * Header cells.
        */
-      const headers =
-        table.querySelectorAll(
-          "th"
-        );
+      const headers = table.querySelectorAll("th");
 
       headers.forEach((th) => {
-        th.style.display =
-          "table-cell";
+        th.style.display = "table-cell";
 
-        th.style.boxSizing =
-          "border-box";
+        th.style.boxSizing = "border-box";
 
         /*
          * LIGHT GRAY.
          */
-        th.style.background =
-          "#e9ecef";
+        th.style.background = "#e9ecef";
 
-        th.style.color =
-          "#000000";
+        th.style.color = "#000000";
 
         /*
          * KEEP BORDER.
          */
-        th.style.border =
-          "1px solid #233044";
+        th.style.border = "1px solid #233044";
 
-        th.style.padding =
-          "7px 10px";
+        th.style.padding = "7px 10px";
 
-        th.style.fontFamily =
-          "Arial, Helvetica, sans-serif";
+        th.style.fontFamily = "Arial, Helvetica, sans-serif";
 
-        th.style.fontSize =
-          "11px";
+        th.style.fontSize = "11px";
 
-        th.style.fontWeight =
-          "600";
+        th.style.fontWeight = "600";
 
-        th.style.lineHeight =
-          "1.25";
+        th.style.lineHeight = "1.25";
 
-        th.style.textAlign =
-          "left";
+        th.style.textAlign = "left";
 
-        th.style.verticalAlign =
-          "middle";
+        th.style.verticalAlign = "middle";
 
-        th.style.whiteSpace =
-          "normal";
+        th.style.whiteSpace = "normal";
 
-        th.style.height =
-          "34px";
+        th.style.height = "34px";
       });
-
 
       /*
        * Body cells.
        */
-      const cells =
-        table.querySelectorAll(
-          "td"
-        );
+      const cells = table.querySelectorAll("td");
 
       cells.forEach((td) => {
-        td.style.display =
-          "table-cell";
+        td.style.display = "table-cell";
 
-        td.style.boxSizing =
-          "border-box";
+        td.style.boxSizing = "border-box";
 
-        td.style.background =
-          "#ffffff";
+        td.style.background = "#ffffff";
 
-        td.style.color =
-          "#000000";
+        td.style.color = "#000000";
 
         /*
          * KEEP BORDER.
          */
-        td.style.border =
-          "1px solid #233044";
+        td.style.border = "1px solid #233044";
 
-        td.style.padding =
-          "7px 10px";
+        td.style.padding = "7px 10px";
 
-        td.style.fontFamily =
-          "Arial, Helvetica, sans-serif";
+        td.style.fontFamily = "Arial, Helvetica, sans-serif";
 
-        td.style.fontSize =
-          "11px";
+        td.style.fontSize = "11px";
 
-        td.style.fontWeight =
-          "400";
+        td.style.fontWeight = "400";
 
-        td.style.lineHeight =
-          "1.25";
+        td.style.lineHeight = "1.25";
 
-        td.style.textAlign =
-          "left";
+        td.style.textAlign = "left";
 
-        td.style.verticalAlign =
-          "middle";
+        td.style.verticalAlign = "middle";
 
-        td.style.whiteSpace =
-          "normal";
+        td.style.whiteSpace = "normal";
       });
-
 
       /*
        * Rows.
        */
-      const rows =
-        table.querySelectorAll(
-          "tr"
-        );
+      const rows = table.querySelectorAll("tr");
 
       rows.forEach((row) => {
-        row.style.display =
-          "table-row";
+        row.style.display = "table-row";
 
-        row.style.height =
-          "auto";
+        row.style.height = "auto";
       });
-
 
       /*
        * THEAD.
        */
-      const thead =
-        table.querySelector(
-          "thead"
-        );
+      const thead = table.querySelector("thead");
 
       if (thead) {
-        thead.style.display =
-          "table-header-group";
+        thead.style.display = "table-header-group";
       }
-
 
       /*
        * TBODY.
        */
-      const tbody =
-        table.querySelector(
-          "tbody"
-        );
+      const tbody = table.querySelector("tbody");
 
       if (tbody) {
-        tbody.style.display =
-          "table-row-group";
+        tbody.style.display = "table-row-group";
       }
     });
   };
-
 
   /**
    * ==========================================================
    * FIX CUSTOMERS SHARES
    * ==========================================================
    */
-  const fixCustomerShareTable = (
-    captureNode
-  ) => {
-    const customerShare =
-      captureNode.querySelector(
-        ".pdf-customer-share"
-      );
+  const fixCustomerShareTable = (captureNode) => {
+    const customerShare = captureNode.querySelector(".pdf-customer-share");
 
     if (!customerShare) {
       return;
     }
 
-    customerShare.style.width =
-      "100%";
+    customerShare.style.width = "100%";
 
-    customerShare.style.marginBottom =
-      "18px";
+    customerShare.style.marginBottom = "18px";
 
-    customerShare.style.paddingBottom =
-      "10px";
+    customerShare.style.paddingBottom = "10px";
 
-
-    const tables =
-      customerShare.querySelectorAll(
-        "table"
-      );
-
+    const tables = customerShare.querySelectorAll("table");
 
     tables.forEach((table) => {
       /*
        * Force standard HTML table.
        */
-      table.style.display =
-        "table";
+      table.style.display = "table";
 
-      table.style.width =
-        "100%";
+      table.style.width = "100%";
 
-      table.style.maxWidth =
-        "100%";
+      table.style.maxWidth = "100%";
 
-      table.style.tableLayout =
-        "fixed";
+      table.style.tableLayout = "fixed";
 
-      table.style.borderCollapse =
-        "collapse";
+      table.style.borderCollapse = "collapse";
 
-      table.style.borderSpacing =
-        "0";
+      table.style.borderSpacing = "0";
 
       /*
        * KEEP BORDER.
        */
-      table.style.border =
-        "1px solid #233044";
-
+      table.style.border = "1px solid #233044";
 
       /*
        * Header cells.
        */
-      const headers =
-        table.querySelectorAll(
-          "th"
-        );
+      const headers = table.querySelectorAll("th");
 
       headers.forEach((th) => {
-        th.style.display =
-          "table-cell";
+        th.style.display = "table-cell";
 
-        th.style.boxSizing =
-          "border-box";
+        th.style.boxSizing = "border-box";
 
         /*
          * LIGHT GRAY HEADER.
          */
-        th.style.background =
-          "#e9ecef";
+        th.style.background = "#e9ecef";
 
-        th.style.color =
-          "#000000";
+        th.style.color = "#000000";
 
         /*
          * KEEP BORDER.
          */
-        th.style.border =
-          "1px solid #233044";
+        th.style.border = "1px solid #233044";
 
-        th.style.padding =
-          "8px 10px";
+        th.style.padding = "8px 10px";
 
-        th.style.fontFamily =
-          "Arial, Helvetica, sans-serif";
+        th.style.fontFamily = "Arial, Helvetica, sans-serif";
 
-        th.style.fontSize =
-          "11px";
+        th.style.fontSize = "11px";
 
-        th.style.fontWeight =
-          "600";
+        th.style.fontWeight = "600";
 
-        th.style.lineHeight =
-          "1.25";
+        th.style.lineHeight = "1.25";
 
-        th.style.textAlign =
-          "left";
+        th.style.textAlign = "left";
 
-        th.style.verticalAlign =
-          "middle";
+        th.style.verticalAlign = "middle";
 
-        th.style.whiteSpace =
-          "normal";
+        th.style.whiteSpace = "normal";
 
-        th.style.height =
-          "34px";
+        th.style.height = "34px";
       });
-
 
       /*
        * Body cells.
        */
-      const cells =
-        table.querySelectorAll(
-          "td"
-        );
+      const cells = table.querySelectorAll("td");
 
       cells.forEach((td) => {
-        td.style.display =
-          "table-cell";
+        td.style.display = "table-cell";
 
-        td.style.boxSizing =
-          "border-box";
+        td.style.boxSizing = "border-box";
 
-        td.style.background =
-          "#ffffff";
+        td.style.background = "#ffffff";
 
-        td.style.color =
-          "#000000";
+        td.style.color = "#000000";
 
         /*
          * KEEP BORDER.
          */
-        td.style.border =
-          "1px solid #233044";
+        td.style.border = "1px solid #233044";
 
-        td.style.padding =
-          "8px 10px";
+        td.style.padding = "8px 10px";
 
-        td.style.fontFamily =
-          "Arial, Helvetica, sans-serif";
+        td.style.fontFamily = "Arial, Helvetica, sans-serif";
 
-        td.style.fontSize =
-          "11px";
+        td.style.fontSize = "11px";
 
-        td.style.fontWeight =
-          "400";
+        td.style.fontWeight = "400";
 
-        td.style.lineHeight =
-          "1.25";
+        td.style.lineHeight = "1.25";
 
-        td.style.textAlign =
-          "left";
+        td.style.textAlign = "left";
 
-        td.style.verticalAlign =
-          "middle";
+        td.style.verticalAlign = "middle";
 
-        td.style.whiteSpace =
-          "normal";
+        td.style.whiteSpace = "normal";
       });
-
 
       /*
        * Rows.
        */
-      const rows =
-        table.querySelectorAll(
-          "tr"
-        );
+      const rows = table.querySelectorAll("tr");
 
       rows.forEach((row) => {
-        row.style.display =
-          "table-row";
+        row.style.display = "table-row";
 
-        row.style.height =
-          "auto";
+        row.style.height = "auto";
       });
-
 
       /*
        * THEAD.
        */
-      const thead =
-        table.querySelector(
-          "thead"
-        );
+      const thead = table.querySelector("thead");
 
       if (thead) {
-        thead.style.display =
-          "table-header-group";
+        thead.style.display = "table-header-group";
       }
-
 
       /*
        * TBODY.
        */
-      const tbody =
-        table.querySelector(
-          "tbody"
-        );
+      const tbody = table.querySelector("tbody");
 
       if (tbody) {
-        tbody.style.display =
-          "table-row-group";
+        tbody.style.display = "table-row-group";
       }
     });
   };
-
 
   /**
    * ==========================================================
    * FIX PINCODE TABLE
    * ==========================================================
    */
-  const fixPdfPincodeTable = (
-    captureNode
-  ) => {
-    const table =
-      captureNode.querySelector(
-        ".pdf-pincode-table"
-      );
+  const fixPdfPincodeTable = (captureNode) => {
+    const table = captureNode.querySelector(".pdf-pincode-table");
 
     if (!table) {
       return;
     }
 
-    table.style.display =
-      "table";
+    table.style.display = "table";
 
-    table.style.width =
-      "100%";
+    table.style.width = "100%";
 
-    table.style.maxWidth =
-      "100%";
+    table.style.maxWidth = "100%";
 
-    table.style.minWidth =
-      "100%";
+    table.style.minWidth = "100%";
 
-    table.style.tableLayout =
-      "fixed";
+    table.style.tableLayout = "fixed";
 
-    table.style.borderCollapse =
-      "collapse";
+    table.style.borderCollapse = "collapse";
 
-    table.style.borderSpacing =
-      "0";
+    table.style.borderSpacing = "0";
 
     /*
      * KEEP BORDER.
      */
-    table.style.border =
-      "1px solid #233044";
-
+    table.style.border = "1px solid #233044";
 
     /*
      * Add column widths.
      */
-    let colgroup =
-      table.querySelector(
-        "colgroup"
-      );
+    let colgroup = table.querySelector("colgroup");
 
     if (!colgroup) {
-      colgroup =
-        document.createElement(
-          "colgroup"
-        );
+      colgroup = document.createElement("colgroup");
 
-      const widths = [
-        "12%",
-        "23%",
-        "23%",
-        "12%",
-        "17%",
-        "13%",
-      ];
+      const widths = ["12%", "23%", "23%", "12%", "17%", "13%"];
 
-      widths.forEach(
-        (width, index) => {
-          const col =
-            document.createElement(
-              "col"
-            );
+      widths.forEach((width, index) => {
+        const col = document.createElement("col");
 
-          col.className =
-            `pdf-col-${
-              index + 1
-            }`;
+        col.className = `pdf-col-${index + 1}`;
 
-          col.style.width =
-            width;
+        col.style.width = width;
 
-          colgroup.appendChild(
-            col
-          );
-        }
-      );
+        colgroup.appendChild(col);
+      });
 
-      table.insertBefore(
-        colgroup,
-        table.firstChild
-      );
+      table.insertBefore(colgroup, table.firstChild);
     }
-
 
     /*
      * THEAD.
      */
-    const thead =
-      table.querySelector(
-        "thead"
-      );
+    const thead = table.querySelector("thead");
 
     if (thead) {
-      thead.style.display =
-        "table-header-group";
+      thead.style.display = "table-header-group";
 
-      thead.style.width =
-        "100%";
+      thead.style.width = "100%";
     }
-
 
     /*
      * TBODY.
      */
-    const tbody =
-      table.querySelector(
-        "tbody"
-      );
+    const tbody = table.querySelector("tbody");
 
     if (tbody) {
-      tbody.style.display =
-        "table-row-group";
+      tbody.style.display = "table-row-group";
 
-      tbody.style.width =
-        "100%";
+      tbody.style.width = "100%";
     }
-
 
     /*
      * Rows and cells.
      */
-    const rows =
-      table.querySelectorAll(
-        "tr"
-      );
+    const rows = table.querySelectorAll("tr");
 
     rows.forEach((row) => {
-      row.style.display =
-        "table-row";
+      row.style.display = "table-row";
 
-      row.style.width =
-        "100%";
+      row.style.width = "100%";
 
-      const cells =
-        row.querySelectorAll(
-          "th, td"
-        );
+      const cells = row.querySelectorAll("th, td");
 
       cells.forEach((cell) => {
-        cell.style.display =
-          "table-cell";
+        cell.style.display = "table-cell";
 
-        cell.style.boxSizing =
-          "border-box";
+        cell.style.boxSizing = "border-box";
 
-        cell.style.verticalAlign =
-          "middle";
+        cell.style.verticalAlign = "middle";
 
-        cell.style.textAlign =
-          "left";
+        cell.style.textAlign = "left";
 
-        cell.style.lineHeight =
-          "1.25";
+        cell.style.lineHeight = "1.25";
 
         /*
          * KEEP BORDER.
          */
-        cell.style.border =
-          "1px solid #233044";
+        cell.style.border = "1px solid #233044";
 
-        if (
-          cell.tagName.toLowerCase() ===
-          "th"
-        ) {
-          cell.style.padding =
-            "7px 8px";
+        if (cell.tagName.toLowerCase() === "th") {
+          cell.style.padding = "7px 8px";
 
-          cell.style.fontSize =
-            "11px";
+          cell.style.fontSize = "11px";
 
-          cell.style.fontWeight =
-            "600";
+          cell.style.fontWeight = "600";
 
-          cell.style.whiteSpace =
-            "normal";
+          cell.style.whiteSpace = "normal";
 
-          cell.style.height =
-            "38px";
+          cell.style.height = "38px";
 
-          cell.style.background =
-            "#2e4861";
+          cell.style.background = "#2e4861";
 
-          cell.style.color =
-            "#ffffff";
+          cell.style.color = "#ffffff";
         } else {
-          cell.style.padding =
-            "6px 8px";
+          cell.style.padding = "6px 8px";
 
-          cell.style.fontSize =
-            "11px";
+          cell.style.fontSize = "11px";
 
-          cell.style.fontWeight =
-            "400";
+          cell.style.fontWeight = "400";
 
-          cell.style.whiteSpace =
-            "nowrap";
+          cell.style.whiteSpace = "nowrap";
 
-          cell.style.height =
-            "28px";
+          cell.style.height = "28px";
 
-          cell.style.background =
-            "#ffffff";
+          cell.style.background = "#ffffff";
 
-          cell.style.color =
-            "#000000";
+          cell.style.color = "#000000";
         }
       });
     });
   };
-
 
   /**
    * ==========================================================
    * PDF TABLE FONT FIX
    * ==========================================================
    */
-  const applyPdfTableFonts = (
-    captureNode
-  ) => {
+  const applyPdfTableFonts = (captureNode) => {
     /*
      * Store Summary and Customers Shares use an exact
      * font size in PDF.
@@ -1324,882 +1060,555 @@ const NewStoreCatchmentPdf = ({
      * different font sizes and breaking alignment.
      */
 
-    const fixedTables =
-      captureNode.querySelectorAll(
-        ".pdf-store-summary th, " +
-          ".pdf-store-summary td, " +
-          ".pdf-customer-share th, " +
-          ".pdf-customer-share td"
-      );
-
-    fixedTables.forEach(
-      (cell) => {
-        cell.style.fontFamily =
-          "Arial, Helvetica, sans-serif";
-
-        cell.style.fontSize =
-          "11px";
-
-        cell.style.lineHeight =
-          "1.25";
-
-        cell.style.verticalAlign =
-          "middle";
-
-        cell.style.boxSizing =
-          "border-box";
-
-        /*
-         * NEVER remove table border.
-         */
-        cell.style.border =
-          "1px solid #233044";
-      }
+    const fixedTables = captureNode.querySelectorAll(
+      ".pdf-store-summary th, " +
+        ".pdf-store-summary td, " +
+        ".pdf-customer-share th, " +
+        ".pdf-customer-share td",
     );
 
+    fixedTables.forEach((cell) => {
+      cell.style.fontFamily = "Arial, Helvetica, sans-serif";
+
+      cell.style.fontSize = "11px";
+
+      cell.style.lineHeight = "1.25";
+
+      cell.style.verticalAlign = "middle";
+
+      cell.style.boxSizing = "border-box";
+
+      /*
+       * NEVER remove table border.
+       */
+      cell.style.border = "1px solid #233044";
+    });
 
     /*
      * Pincode Summary.
      */
-    const pincodeCells =
-      captureNode.querySelectorAll(
-        ".pdf-pincode-table th, " +
-          ".pdf-pincode-table td"
-      );
-
-    pincodeCells.forEach(
-      (cell) => {
-        cell.style.fontFamily =
-          "Arial, Helvetica, sans-serif";
-
-        cell.style.fontSize =
-          "11px";
-
-        cell.style.lineHeight =
-          "1.25";
-
-        cell.style.verticalAlign =
-          "middle";
-
-        cell.style.boxSizing =
-          "border-box";
-
-        /*
-         * NEVER remove border.
-         */
-        cell.style.border =
-          "1px solid #233044";
-      }
+    const pincodeCells = captureNode.querySelectorAll(
+      ".pdf-pincode-table th, " + ".pdf-pincode-table td",
     );
-  };
 
+    pincodeCells.forEach((cell) => {
+      cell.style.fontFamily = "Arial, Helvetica, sans-serif";
+
+      cell.style.fontSize = "11px";
+
+      cell.style.lineHeight = "1.25";
+
+      cell.style.verticalAlign = "middle";
+
+      cell.style.boxSizing = "border-box";
+
+      /*
+       * NEVER remove border.
+       */
+      cell.style.border = "1px solid #233044";
+    });
+  };
 
   /**
    * ==========================================================
    * MAP FIX
    * ==========================================================
    */
-  const fixPdfMap = (
-    captureNode
-  ) => {
-    const PDF_MAP_HEIGHT_PX =
-      320;
+  const fixPdfMap = (captureNode) => {
+    const PDF_MAP_HEIGHT_PX = 320;
 
-    const pdfMapImage =
-      captureNode.querySelector(
-        ".pdf-map-screenshot"
-      );
+    const pdfMapImage = captureNode.querySelector(".pdf-map-screenshot");
 
     if (!pdfMapImage) {
       return;
     }
 
-    pdfMapImage.style.height =
-      `${PDF_MAP_HEIGHT_PX}px`;
+    pdfMapImage.style.height = `${PDF_MAP_HEIGHT_PX}px`;
 
-    pdfMapImage.style.width =
-      "100%";
+    pdfMapImage.style.width = "100%";
 
-    pdfMapImage.style.display =
-      "block";
+    pdfMapImage.style.display = "block";
 
-    pdfMapImage.style.objectFit =
-      "cover";
+    pdfMapImage.style.objectFit = "cover";
   };
-
 
   /**
    * ==========================================================
    * CONCLUSION FONT FIX
    * ==========================================================
    */
-  const fixPdfConclusion = (
-    captureNode
-  ) => {
-    const PDF_CONCLUSION_FONT_BUMP_PX =
-      2;
+  const fixPdfConclusion = (captureNode) => {
+    const PDF_CONCLUSION_FONT_BUMP_PX = 2;
 
-    const nodes =
-      captureNode.querySelectorAll(
-        ".pdf-conclusion-section, " +
-          ".pdf-conclusion-section *"
-      );
+    const nodes = captureNode.querySelectorAll(
+      ".pdf-conclusion-section, " + ".pdf-conclusion-section *",
+    );
 
     nodes.forEach((node) => {
-      const computedSize =
-        parseFloat(
-          window.getComputedStyle(
-            node
-          ).fontSize
-        );
+      const computedSize = parseFloat(window.getComputedStyle(node).fontSize);
 
-      if (
-        !Number.isNaN(
-          computedSize
-        )
-      ) {
-        node.style.fontSize =
-          `${
-            computedSize +
-            PDF_CONCLUSION_FONT_BUMP_PX
-          }px`;
+      if (!Number.isNaN(computedSize)) {
+        node.style.fontSize = `${computedSize + PDF_CONCLUSION_FONT_BUMP_PX}px`;
       }
     });
   };
-
 
   /**
    * ==========================================================
    * RENDER PDF
    * ==========================================================
    */
-  const renderSectionsToPdf =
-    async (pdf) => {
-      const pdfWidth =
-        pdf.internal.pageSize.getWidth();
+  const renderSectionsToPdf = async (pdf) => {
+    const pdfWidth = pdf.internal.pageSize.getWidth();
 
-      const pdfHeight =
-        pdf.internal.pageSize.getHeight();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      const x =
-        pdfWidth * 0.04;
+    const x = pdfWidth * 0.04;
 
-      const y =
-        pdfHeight * 0.04;
+    const y = pdfHeight * 0.04;
 
-      const imgWidth =
-        pdfWidth * 0.92;
+    const imgWidth = pdfWidth * 0.92;
 
-      const usableHeight =
-        pdfHeight * 0.88;
+    const usableHeight = pdfHeight * 0.88;
 
-      const pageBottomY =
-        y + usableHeight;
+    const pageBottomY = y + usableHeight;
 
+    /**
+     * Draw page border.
+     */
+    const drawPageBorder = () => {
+      pdf.setDrawColor(0, 0, 0);
+
+      pdf.setLineWidth(0.3);
+
+      pdf.rect(x, y, imgWidth, usableHeight);
+    };
+
+    let isFirstPage = true;
+
+    let cursorY = y;
+
+    /**
+     * New page.
+     */
+    const ensureNewPage = () => {
+      if (!isFirstPage) {
+        drawPageBorder();
+
+        pdf.addPage();
+      }
+
+      isFirstPage = false;
+
+      cursorY = y;
+    };
+
+    const CAPTURE_WIDTH_PX = 1100;
+
+    const CAPTURE_SCALE = 2;
+
+    /**
+     * Process sections.
+     */
+    for (let i = 0; i < PDF_SECTIONS.length; i++) {
+      const element = document.querySelector(`.${PDF_SECTIONS[i]}`);
+
+      if (!element) {
+        continue;
+      }
 
       /**
-       * Draw page border.
+       * Temporary PDF host.
        */
-      const drawPageBorder =
-        () => {
-          pdf.setDrawColor(
-            0,
-            0,
-            0
-          );
+      const captureHost = document.createElement("div");
 
-          pdf.setLineWidth(
-            0.3
-          );
+      captureHost.style.position = "fixed";
 
-          pdf.rect(
-            x,
-            y,
-            imgWidth,
-            usableHeight
-          );
-        };
+      captureHost.style.left = "-20000px";
 
+      captureHost.style.top = "0";
 
-      let isFirstPage =
-        true;
+      captureHost.style.width = `${CAPTURE_WIDTH_PX}px`;
 
-      let cursorY = y;
+      captureHost.style.maxWidth = `${CAPTURE_WIDTH_PX}px`;
 
+      captureHost.style.minWidth = `${CAPTURE_WIDTH_PX}px`;
+
+      captureHost.style.background = "#ffffff";
+
+      captureHost.style.zIndex = "-1";
 
       /**
-       * New page.
+       * Clone UI.
        */
-      const ensureNewPage =
-        () => {
-          if (!isFirstPage) {
-            drawPageBorder();
+      const captureNode = element.cloneNode(true);
 
-            pdf.addPage();
+      captureNode.style.width = `${CAPTURE_WIDTH_PX}px`;
+
+      captureNode.style.maxWidth = `${CAPTURE_WIDTH_PX}px`;
+
+      captureNode.style.minWidth = `${CAPTURE_WIDTH_PX}px`;
+
+      captureNode.style.boxSizing = "border-box";
+
+      captureNode.style.background = "#ffffff";
+
+      captureHost.appendChild(captureNode);
+
+      document.body.appendChild(captureHost);
+
+      try {
+        /**
+         * Add PDF-only CSS.
+         */
+        injectPdfStyles(captureNode);
+
+        /**
+         * Fix Store Summary.
+         */
+        fixStoreSummaryTables(captureNode);
+
+        /**
+         * Fix Customers Shares.
+         */
+        fixCustomerShareTable(captureNode);
+
+        /**
+         * Fix Pincode Summary.
+         */
+        fixPdfPincodeTable(captureNode);
+
+        /**
+         * Fix PDF fonts.
+         */
+        applyPdfTableFonts(captureNode);
+
+        /**
+         * Fix map.
+         */
+        fixPdfMap(captureNode);
+
+        /**
+         * Fix conclusion.
+         */
+        fixPdfConclusion(captureNode);
+
+        /**
+         * Wait for browser layout.
+         *
+         * Two animation frames make sure table widths,
+         * fonts and layout have been calculated before
+         * html2canvas starts.
+         */
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(resolve);
+          });
+        });
+
+        /**
+         * ====================================================
+         * HTML2CANVAS
+         * ====================================================
+         */
+        const canvas = await html2canvas(captureNode, {
+          useCORS: true,
+
+          scale: CAPTURE_SCALE,
+
+          width: CAPTURE_WIDTH_PX,
+
+          windowWidth: CAPTURE_WIDTH_PX,
+
+          scrollX: 0,
+
+          scrollY: 0,
+
+          backgroundColor: "#ffffff",
+
+          /**
+           * Final layout enforcement.
+           */
+          onclone: (clonedDocument) => {
+            /*
+             * Force all PDF tables to standard
+             * HTML table layout.
+             */
+            const tables = clonedDocument.querySelectorAll(
+              ".pdf-capture-root table",
+            );
+
+            tables.forEach((table) => {
+              table.style.display = "table";
+
+              table.style.width = "100%";
+
+              table.style.maxWidth = "100%";
+
+              table.style.tableLayout = "fixed";
+
+              table.style.borderCollapse = "collapse";
+
+              table.style.borderSpacing = "0";
+
+              /*
+               * KEEP BORDER.
+               */
+              table.style.border = "1px solid #233044";
+
+              const rows = table.querySelectorAll("tr");
+
+              rows.forEach((row) => {
+                row.style.display = "table-row";
+              });
+
+              const cells = table.querySelectorAll("th, td");
+
+              cells.forEach((cell) => {
+                cell.style.display = "table-cell";
+
+                cell.style.boxSizing = "border-box";
+
+                cell.style.verticalAlign = "middle";
+
+                cell.style.lineHeight = "1.25";
+
+                /*
+                 * KEEP BORDER.
+                 */
+                cell.style.border = "1px solid #233044";
+              });
+            });
+
+            /**
+             * Store Summary header.
+             */
+            const storeHeaders = clonedDocument.querySelectorAll(
+              ".pdf-store-summary th",
+            );
+
+            storeHeaders.forEach((th) => {
+              th.style.background = "#e9ecef";
+
+              th.style.color = "#000000";
+
+              th.style.border = "1px solid #233044";
+
+              th.style.textAlign = "left";
+
+              th.style.verticalAlign = "middle";
+
+              th.style.fontFamily = "Arial, Helvetica, sans-serif";
+
+              th.style.fontSize = "11px";
+
+              th.style.fontWeight = "600";
+
+              th.style.lineHeight = "1.25";
+            });
+
+            /**
+             * Customers Shares header.
+             */
+            const customerHeaders = clonedDocument.querySelectorAll(
+              ".pdf-customer-share th",
+            );
+
+            customerHeaders.forEach((th) => {
+              /*
+               * LIGHT GRAY.
+               */
+              th.style.background = "#e9ecef";
+
+              th.style.color = "#000000";
+
+              /*
+               * KEEP BORDER.
+               */
+              th.style.border = "1px solid #233044";
+
+              th.style.textAlign = "left";
+
+              th.style.verticalAlign = "middle";
+
+              th.style.fontFamily = "Arial, Helvetica, sans-serif";
+
+              th.style.fontSize = "11px";
+
+              th.style.fontWeight = "600";
+
+              th.style.lineHeight = "1.25";
+            });
+          },
+        });
+
+        const sourceWidth = canvas.width;
+
+        const sourceHeight = canvas.height;
+
+        const fullImgHeight = (sourceHeight * imgWidth) / sourceWidth;
+
+        /**
+         * ====================================================
+         * SECTION FITS ON ONE PAGE
+         * ====================================================
+         */
+        if (fullImgHeight <= usableHeight) {
+          const canFitInCurrentPage =
+            !isFirstPage && cursorY + fullImgHeight <= pageBottomY;
+
+          if (isFirstPage || !canFitInCurrentPage) {
+            ensureNewPage();
           }
 
-          isFirstPage =
-            false;
+          const imgData = canvas.toDataURL("image/jpeg", 0.92);
 
-          cursorY = y;
-        };
-
-
-      const CAPTURE_WIDTH_PX =
-        1100;
-
-      const CAPTURE_SCALE =
-        2;
-
-
-      /**
-       * Process sections.
-       */
-      for (
-        let i = 0;
-        i < PDF_SECTIONS.length;
-        i++
-      ) {
-        const element =
-          document.querySelector(
-            `.${PDF_SECTIONS[i]}`
+          pdf.addImage(
+            imgData,
+            "JPEG",
+            x,
+            cursorY,
+            imgWidth,
+            fullImgHeight,
+            undefined,
+            "FAST",
           );
 
-        if (!element) {
+          cursorY += fullImgHeight;
+
           continue;
         }
 
-
         /**
-         * Temporary PDF host.
+         * ====================================================
+         * SECTION REQUIRES MULTIPLE PAGES
+         * ====================================================
          */
-        const captureHost =
-          document.createElement(
-            "div"
-          );
+        const maxSliceHeightPxFloat = (usableHeight * sourceWidth) / imgWidth;
 
-        captureHost.style.position =
-          "fixed";
-
-        captureHost.style.left =
-          "-20000px";
-
-        captureHost.style.top =
-          "0";
-
-        captureHost.style.width =
-          `${CAPTURE_WIDTH_PX}px`;
-
-        captureHost.style.maxWidth =
-          `${CAPTURE_WIDTH_PX}px`;
-
-        captureHost.style.minWidth =
-          `${CAPTURE_WIDTH_PX}px`;
-
-        captureHost.style.background =
-          "#ffffff";
-
-        captureHost.style.zIndex =
-          "-1";
-
-
-        /**
-         * Clone UI.
-         */
-        const captureNode =
-          element.cloneNode(
-            true
-          );
-
-        captureNode.style.width =
-          `${CAPTURE_WIDTH_PX}px`;
-
-        captureNode.style.maxWidth =
-          `${CAPTURE_WIDTH_PX}px`;
-
-        captureNode.style.minWidth =
-          `${CAPTURE_WIDTH_PX}px`;
-
-        captureNode.style.boxSizing =
-          "border-box";
-
-        captureNode.style.background =
-          "#ffffff";
-
-
-        captureHost.appendChild(
-          captureNode
+        const pageSliceHeightPx = Math.max(
+          1,
+          Math.round(maxSliceHeightPxFloat),
         );
 
-        document.body.appendChild(
-          captureHost
-        );
+        let offsetY = 0;
 
-
-        try {
-          /**
-           * Add PDF-only CSS.
-           */
-          injectPdfStyles(
-            captureNode
+        while (offsetY < sourceHeight) {
+          const sliceHeight = Math.min(
+            pageSliceHeightPx,
+            sourceHeight - offsetY,
           );
 
+          const sliceCanvas = document.createElement("canvas");
 
-          /**
-           * Fix Store Summary.
-           */
-          fixStoreSummaryTables(
-            captureNode
-          );
+          sliceCanvas.width = sourceWidth;
 
+          sliceCanvas.height = sliceHeight;
 
-          /**
-           * Fix Customers Shares.
-           */
-          fixCustomerShareTable(
-            captureNode
-          );
+          const ctx = sliceCanvas.getContext("2d");
 
-
-          /**
-           * Fix Pincode Summary.
-           */
-          fixPdfPincodeTable(
-            captureNode
-          );
-
-
-          /**
-           * Fix PDF fonts.
-           */
-          applyPdfTableFonts(
-            captureNode
-          );
-
-
-          /**
-           * Fix map.
-           */
-          fixPdfMap(
-            captureNode
-          );
-
-
-          /**
-           * Fix conclusion.
-           */
-          fixPdfConclusion(
-            captureNode
-          );
-
-
-          /**
-           * Wait for browser layout.
-           *
-           * Two animation frames make sure table widths,
-           * fonts and layout have been calculated before
-           * html2canvas starts.
-           */
-          await new Promise(
-            (resolve) => {
-              requestAnimationFrame(
-                () => {
-                  requestAnimationFrame(
-                    resolve
-                  );
-                }
-              );
-            }
-          );
-
-
-          /**
-           * ====================================================
-           * HTML2CANVAS
-           * ====================================================
-           */
-          const canvas =
-            await html2canvas(
-              captureNode,
-              {
-                useCORS: true,
-
-                scale:
-                  CAPTURE_SCALE,
-
-                width:
-                  CAPTURE_WIDTH_PX,
-
-                windowWidth:
-                  CAPTURE_WIDTH_PX,
-
-                scrollX: 0,
-
-                scrollY: 0,
-
-                backgroundColor:
-                  "#ffffff",
-
-
-                /**
-                 * Final layout enforcement.
-                 */
-                onclone: (
-                  clonedDocument
-                ) => {
-                  /*
-                   * Force all PDF tables to standard
-                   * HTML table layout.
-                   */
-                  const tables =
-                    clonedDocument.querySelectorAll(
-                      ".pdf-capture-root table"
-                    );
-
-                  tables.forEach(
-                    (table) => {
-                      table.style.display =
-                        "table";
-
-                      table.style.width =
-                        "100%";
-
-                      table.style.maxWidth =
-                        "100%";
-
-                      table.style.tableLayout =
-                        "fixed";
-
-                      table.style.borderCollapse =
-                        "collapse";
-
-                      table.style.borderSpacing =
-                        "0";
-
-                      /*
-                       * KEEP BORDER.
-                       */
-                      table.style.border =
-                        "1px solid #233044";
-
-
-                      const rows =
-                        table.querySelectorAll(
-                          "tr"
-                        );
-
-                      rows.forEach(
-                        (row) => {
-                          row.style.display =
-                            "table-row";
-                        }
-                      );
-
-
-                      const cells =
-                        table.querySelectorAll(
-                          "th, td"
-                        );
-
-                      cells.forEach(
-                        (cell) => {
-                          cell.style.display =
-                            "table-cell";
-
-                          cell.style.boxSizing =
-                            "border-box";
-
-                          cell.style.verticalAlign =
-                            "middle";
-
-                          cell.style.lineHeight =
-                            "1.25";
-
-                          /*
-                           * KEEP BORDER.
-                           */
-                          cell.style.border =
-                            "1px solid #233044";
-                        }
-                      );
-                    }
-                  );
-
-
-                  /**
-                   * Store Summary header.
-                   */
-                  const storeHeaders =
-                    clonedDocument.querySelectorAll(
-                      ".pdf-store-summary th"
-                    );
-
-                  storeHeaders.forEach(
-                    (th) => {
-                      th.style.background =
-                        "#e9ecef";
-
-                      th.style.color =
-                        "#000000";
-
-                      th.style.border =
-                        "1px solid #233044";
-
-                      th.style.textAlign =
-                        "left";
-
-                      th.style.verticalAlign =
-                        "middle";
-
-                      th.style.fontFamily =
-                        "Arial, Helvetica, sans-serif";
-
-                      th.style.fontSize =
-                        "11px";
-
-                      th.style.fontWeight =
-                        "600";
-
-                      th.style.lineHeight =
-                        "1.25";
-                    }
-                  );
-
-
-                  /**
-                   * Customers Shares header.
-                   */
-                  const customerHeaders =
-                    clonedDocument.querySelectorAll(
-                      ".pdf-customer-share th"
-                    );
-
-                  customerHeaders.forEach(
-                    (th) => {
-                      /*
-                       * LIGHT GRAY.
-                       */
-                      th.style.background =
-                        "#e9ecef";
-
-                      th.style.color =
-                        "#000000";
-
-                      /*
-                       * KEEP BORDER.
-                       */
-                      th.style.border =
-                        "1px solid #233044";
-
-                      th.style.textAlign =
-                        "left";
-
-                      th.style.verticalAlign =
-                        "middle";
-
-                      th.style.fontFamily =
-                        "Arial, Helvetica, sans-serif";
-
-                      th.style.fontSize =
-                        "11px";
-
-                      th.style.fontWeight =
-                        "600";
-
-                      th.style.lineHeight =
-                        "1.25";
-                    }
-                  );
-                },
-              }
-            );
-
-
-          const sourceWidth =
-            canvas.width;
-
-          const sourceHeight =
-            canvas.height;
-
-
-          const fullImgHeight =
-            (sourceHeight *
-              imgWidth) /
-            sourceWidth;
-
-
-          /**
-           * ====================================================
-           * SECTION FITS ON ONE PAGE
-           * ====================================================
-           */
-          if (
-            fullImgHeight <=
-            usableHeight
-          ) {
-            const canFitInCurrentPage =
-              !isFirstPage &&
-              cursorY +
-                fullImgHeight <=
-                pageBottomY;
-
-            if (
-              isFirstPage ||
-              !canFitInCurrentPage
-            ) {
-              ensureNewPage();
-            }
-
-
-            const imgData =
-              canvas.toDataURL(
-                "image/jpeg",
-                0.92
-              );
-
-
-            pdf.addImage(
-              imgData,
-              "JPEG",
-              x,
-              cursorY,
-              imgWidth,
-              fullImgHeight,
-              undefined,
-              "FAST"
-            );
-
-
-            cursorY +=
-              fullImgHeight;
-
-            continue;
+          if (!ctx) {
+            break;
           }
 
+          ctx.drawImage(
+            canvas,
 
-          /**
-           * ====================================================
-           * SECTION REQUIRES MULTIPLE PAGES
-           * ====================================================
-           */
-          const maxSliceHeightPxFloat =
-            (usableHeight *
-              sourceWidth) /
-            imgWidth;
+            0,
+            offsetY,
 
+            sourceWidth,
+            sliceHeight,
 
-          const pageSliceHeightPx =
-            Math.max(
-              1,
-              Math.round(
-                maxSliceHeightPxFloat
-              )
-            );
+            0,
+            0,
 
+            sourceWidth,
+            sliceHeight,
+          );
 
-          let offsetY = 0;
+          const sliceImgHeight = (sliceHeight * imgWidth) / sourceWidth;
 
+          const canFitSliceInCurrentPage =
+            !isFirstPage && cursorY + sliceImgHeight <= pageBottomY;
 
-          while (
-            offsetY <
-            sourceHeight
-          ) {
-            const sliceHeight =
-              Math.min(
-                pageSliceHeightPx,
-                sourceHeight -
-                  offsetY
-              );
-
-
-            const sliceCanvas =
-              document.createElement(
-                "canvas"
-              );
-
-
-            sliceCanvas.width =
-              sourceWidth;
-
-            sliceCanvas.height =
-              sliceHeight;
-
-
-            const ctx =
-              sliceCanvas.getContext(
-                "2d"
-              );
-
-
-            if (!ctx) {
-              break;
-            }
-
-
-            ctx.drawImage(
-              canvas,
-
-              0,
-              offsetY,
-
-              sourceWidth,
-              sliceHeight,
-
-              0,
-              0,
-
-              sourceWidth,
-              sliceHeight
-            );
-
-
-            const sliceImgHeight =
-              (sliceHeight *
-                imgWidth) /
-              sourceWidth;
-
-
-            const canFitSliceInCurrentPage =
-              !isFirstPage &&
-              cursorY +
-                sliceImgHeight <=
-                pageBottomY;
-
-
-            if (
-              isFirstPage ||
-              !canFitSliceInCurrentPage
-            ) {
-              ensureNewPage();
-            }
-
-
-            const sliceImg =
-              sliceCanvas.toDataURL(
-                "image/jpeg",
-                0.92
-              );
-
-
-            pdf.addImage(
-              sliceImg,
-              "JPEG",
-              x,
-              cursorY,
-              imgWidth,
-              sliceImgHeight,
-              undefined,
-              "FAST"
-            );
-
-
-            cursorY +=
-              sliceImgHeight;
-
-            offsetY +=
-              sliceHeight;
+          if (isFirstPage || !canFitSliceInCurrentPage) {
+            ensureNewPage();
           }
-        } finally {
-          /**
-           * Remove temporary clone.
-           */
-          if (
-            document.body.contains(
-              captureHost
-            )
-          ) {
-            document.body.removeChild(
-              captureHost
-            );
-          }
+
+          const sliceImg = sliceCanvas.toDataURL("image/jpeg", 0.92);
+
+          pdf.addImage(
+            sliceImg,
+            "JPEG",
+            x,
+            cursorY,
+            imgWidth,
+            sliceImgHeight,
+            undefined,
+            "FAST",
+          );
+
+          cursorY += sliceImgHeight;
+
+          offsetY += sliceHeight;
+        }
+      } finally {
+        /**
+         * Remove temporary clone.
+         */
+        if (document.body.contains(captureHost)) {
+          document.body.removeChild(captureHost);
         }
       }
+    }
 
-
-      /**
-       * Final page border.
-       */
-      if (!isFirstPage) {
-        drawPageBorder();
-      }
-    };
-
+    /**
+     * Final page border.
+     */
+    if (!isFirstPage) {
+      drawPageBorder();
+    }
+  };
 
   /**
    * ==========================================================
    * DOWNLOAD
    * ==========================================================
    */
-  const handleDownloadPdf =
-    async () => {
-      setShowDownloadLoader(
-        true
-      );
+  const handleDownloadPdf = async () => {
+    setShowDownloadLoader(true);
 
-      try {
-        const pdf =
-          new jsPDF(
-            "p",
-            "mm",
-            "a4"
-          );
+    try {
+      const pdf = new jsPDF("p", "mm", "a4");
 
+      await renderSectionsToPdf(pdf);
 
-        await renderSectionsToPdf(
-          pdf
-        );
+      const pdfBlob = pdf.output("blob");
 
+      const blobUrl = URL.createObjectURL(pdfBlob);
 
-        const pdfBlob =
-          pdf.output("blob");
+      const link = document.createElement("a");
 
+      link.href = blobUrl;
 
-        const blobUrl =
-          URL.createObjectURL(
-            pdfBlob
-          );
+      link.download = "StoreCatchment.pdf";
 
+      document.body.appendChild(link);
 
-        const link =
-          document.createElement(
-            "a"
-          );
+      link.click();
 
-        link.href =
-          blobUrl;
+      document.body.removeChild(link);
 
-        link.download =
-          "StoreCatchment.pdf";
-
-
-        document.body.appendChild(
-          link
-        );
-
-        link.click();
-
-        document.body.removeChild(
-          link
-        );
-
-
-        setTimeout(() => {
-          URL.revokeObjectURL(
-            blobUrl
-          );
-        }, 1000);
-      } catch (error) {
-        console.error(
-          "PDF download error:",
-          error
-        );
-      } finally {
-        setShowDownloadLoader(
-          false
-        );
-      }
-    };
-
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 1000);
+    } catch (error) {
+      console.error("PDF download error:", error);
+    } finally {
+      setShowDownloadLoader(false);
+    }
+  };
 
   /**
    * ==========================================================
@@ -2208,7 +1617,6 @@ const NewStoreCatchmentPdf = ({
    */
   return (
     <React.Fragment>
-
       {/* ======================================================
           BUTTONS
       ====================================================== */}
@@ -2217,50 +1625,30 @@ const NewStoreCatchmentPdf = ({
         style={{
           display: "flex",
 
-          justifyContent:
-            "end",
+          justifyContent: "end",
 
           alignItems: "center",
 
           marginBottom: "2px",
-        }}
-      >
+        }}>
         <div>
           <button
-            onClick={
-              handleDownloadPdf
-            }
-            className={
-              loading
-                ? "apply_btn_disabled"
-                : "CButton"
-            }
+            onClick={handleDownloadPdf}
+            className={loading ? "apply_btn_disabled" : "CButton"}
             disabled={loading}
             style={{
-              marginRight:
-                "5px",
-            }}
-          >
-            {loading
-              ? "Preparing PDF..."
-              : "Download"}
+              marginRight: "5px",
+            }}>
+            {loading ? "Preparing PDF..." : "Download"}
           </button>
 
-
-          <button
-            className="CButton"
-            onClick={close}
-          >
+          <button className='CButton' onClick={close}>
             Close
           </button>
         </div>
 
-
-        {showDownloadLoader && (
-          <PdfLoader />
-        )}
+        {showDownloadLoader && <PdfLoader />}
       </div>
-
 
       {/* ======================================================
           PDF CONTENT
@@ -2270,20 +1658,16 @@ const NewStoreCatchmentPdf = ({
         style={{
           marginTop: "2%",
         }}
-        ref={storeCatchment}
-      >
+        ref={storeCatchment}>
         <div
-          className="first_page_separation"
+          className='first_page_separation'
           style={{
             padding: "10px",
 
-            border:
-              "1px solid #000",
+            border: "1px solid #000",
 
             background: "#fff",
-          }}
-        >
-
+          }}>
           {/* ==================================================
               THIRD EYE LOGO
           ================================================== */}
@@ -2292,46 +1676,39 @@ const NewStoreCatchmentPdf = ({
             style={{
               display: "flex",
 
-              justifyContent:
-                "center",
+              justifyContent: "center",
 
-              alignItems:
-                "center",
+              alignItems: "center",
 
-              marginBottom:
-                "5px",
-            }}
-          >
+              marginBottom: "5px",
+            }}>
             <img
               src={third_eye}
               style={{
                 height: "30px",
               }}
-              alt="third_eye"
+              alt='third_eye'
             />
           </div>
-
 
           {/* ==================================================
               HEADER
           ================================================== */}
 
-          <div className="pdf_top_header">
+          <div className='pdf_top_header'>
             <img
               src={logo}
               style={{
                 height: "30px",
               }}
-              alt="logo"
+              alt='logo'
             />
-
 
             <div
               style={{
                 display: "flex",
 
-                flexDirection:
-                  "column",
+                flexDirection: "column",
 
                 alignItems: "end",
 
@@ -2339,36 +1716,24 @@ const NewStoreCatchmentPdf = ({
 
                 gap: "4px",
 
-                fontWeight:
-                  "bold",
-              }}
-            >
-              <span>
-                History ID: N/A
-              </span>
+                fontWeight: "bold",
+              }}>
+              <span>History ID: N/A</span>
 
-              <div>
-                Date:{" "}
-                {currentDate}
-              </div>
+              <div>Date: {currentDate}</div>
             </div>
           </div>
 
-
           <br />
-
 
           {/* ==================================================
               STORE TYPE
           ================================================== */}
 
           <StoreTypePdfDetails
-            storeTypeData={
-              storeTypeData
-            }
+            storeTypeData={storeTypeData}
             channel={channel}
           />
-
 
           {/* ==================================================
               MAP + CATCHMENT ACTION
@@ -2382,21 +1747,18 @@ const NewStoreCatchmentPdf = ({
 
               display: "flex",
 
-              alignItems:
-                "stretch",
-            }}
-          >
+              alignItems: "stretch",
+            }}>
             <div
               style={{
                 width: "70%",
 
                 flexShrink: 0,
-              }}
-            >
+              }}>
               <img
                 src={map_img}
-                alt="Map Screenshot"
-                className="pdf-map-screenshot"
+                alt='Map Screenshot'
+                className='pdf-map-screenshot'
                 style={{
                   width: "100%",
 
@@ -2404,124 +1766,88 @@ const NewStoreCatchmentPdf = ({
 
                   display: "block",
 
-                  objectFit:
-                    "cover",
+                  objectFit: "cover",
 
-                  border:
-                    "1px solid #233044",
+                  border: "1px solid #233044",
                 }}
               />
             </div>
-
 
             <div
               style={{
                 width: "30%",
 
-                boxSizing:
-                  "border-box",
+                boxSizing: "border-box",
 
-                border:
-                  "1px solid #233044",
+                border: "1px solid #233044",
 
-                borderLeft:
-                  "none",
+                borderLeft: "none",
 
-                background:
-                  "#fff",
-              }}
-            >
+                background: "#fff",
+              }}>
               <div
                 style={{
-                  borderBottom:
-                    "1px solid #233044",
-                }}
-              >
-                <CatchmentLevelAction
-                  StoreColorSet={
-                    StoreColorSet
-                  }
-                />
+                  borderBottom: "1px solid #233044",
+                }}>
+                <CatchmentLevelAction StoreColorSet={StoreColorSet} />
               </div>
             </div>
           </div>
 
-
           <br />
-
 
           {/* ==================================================
               STORE SUMMARY
           ================================================== */}
 
           <div
-            className="pdf-font-up-table"
+            className='pdf-font-up-table'
             style={{
               width: "100%",
 
-              marginBottom:
-                "15px",
+              marginBottom: "15px",
 
-              paddingBottom:
-                "8px",
-            }}
-          >
+              paddingBottom: "8px",
+            }}>
             <StoreSummary
-              storeSummary={
-                storeSummary
-              }
-              populationList={
-                population_list
-              }
+              storeSummary={storeSummary}
+              populationList={population_list}
               channel={channel}
-              maxHeight="100%"
+              maxHeight='100%'
             />
           </div>
-
 
           {/* ==================================================
               CUSTOMERS SHARES
           ================================================== */}
 
           <div
-            className="pdf-font-up-table pdf-customer-share"
+            className='pdf-font-up-table pdf-customer-share'
             style={{
               width: "100%",
 
-              marginBottom:
-                "20px",
-            }}
-          >
-            <CustomersShares
-              custStrPerc={
-                custStrPerc
-              }
-            />
+              marginBottom: "20px",
+            }}>
+            <CustomersShares custStrPerc={custStrPerc} />
           </div>
-
 
           {/* ==================================================
               PINCODE SUMMARY
           ================================================== */}
 
           <Table
-            className="custom_table pdf-font-up-table pdf-pincode-table"
+            className='custom_table pdf-font-up-table pdf-pincode-table'
             style={{
-              textAlign:
-                "start",
+              textAlign: "start",
 
-              fontSize:
-                "10px",
+              fontSize: "10px",
 
               width: "100%",
 
-              borderCollapse:
-                "collapse",
+              borderCollapse: "collapse",
 
-              border:
-                "1px solid #233044",
-            }}
-          >
+              border: "1px solid #233044",
+            }}>
             <colgroup>
               <col
                 style={{
@@ -2535,236 +1861,107 @@ const NewStoreCatchmentPdf = ({
                 }}
               />
 
-              <col
-                style={{
-                  width: "23%",
-                }}
-              />
-
-              <col
-                style={{
-                  width: "12%",
-                }}
-              />
-
-              <col
-                style={{
-                  width: "17%",
-                }}
-              />
-
-              <col
-                style={{
-                  width: "13%",
-                }}
-              />
+              <col style={{ width: "23%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "17%" }} />
+              <col style={{ width: "13%" }} />
             </colgroup>
-
 
             <Thead
               style={{
-                background:
-                  "#2e4861",
-
+                background: "#2e4861",
                 color: "#fff",
-
-                textAlign:
-                  "start",
-
-                fontSize:
-                  "10px",
-              }}
-            >
+                textAlign: "start",
+                fontSize: "10px",
+              }}>
               <Tr>
-                {t_header.map(
-                  (head, i) => (
-                    <Th
-                      key={i}
-                      style={{
-                        padding:
-                          "6px 8px",
-
-                        textAlign:
-                          "start",
-
-                        verticalAlign:
-                          "middle",
-
-                        fontSize:
-                          "10px",
-
-                        fontWeight:
-                          "600",
-
-                        border:
-                          "1px solid #233044",
-                      }}
-                    >
-                      {head}
-                    </Th>
-                  )
-                )}
+                {t_header.map((head, i) => (
+                  <Th
+                    key={i}
+                    style={{
+                      padding: "6px 8px",
+                      textAlign: "start",
+                      verticalAlign: "middle",
+                      fontSize: "10px",
+                      fontWeight: "600",
+                      border: "1px solid #233044",
+                    }}>
+                    {head}
+                  </Th>
+                ))}
               </Tr>
             </Thead>
 
-
             <Tbody>
-              {pincodeSummary?.map(
-                (item, i) => (
-                  <Tr key={i}>
+              {pincodeSummary?.map((item, i) => (
+                <Tr key={i}>
+                  <Td
+                    style={{
+                      padding: "5px 8px",
+                      fontSize: "10px",
+                      verticalAlign: "middle",
+                      border: "1px solid #233044",
+                    }}>
+                    {item?.pincode}
+                  </Td>
 
-                    <Td
-                      style={{
-                        padding:
-                          "5px 8px",
+                  <Td
+                    style={{
+                      padding: "5px 8px",
+                      fontSize: "10px",
+                      verticalAlign: "middle",
+                      border: "1px solid #233044",
+                    }}>
+                    {item?.encircleBase?.toLocaleString("en-IN")} (
+                    {parseFloat(item?.encircleBaseCagr * 100).toFixed(1)}
+                    %)
+                  </Td>
 
-                        fontSize:
-                          "10px",
+                  <Td
+                    style={{
+                      padding: "5px 8px",
+                      fontSize: "10px",
+                      verticalAlign: "middle",
+                      border: "1px solid #233044",
+                    }}>
+                    {item?.channelBase?.toLocaleString("en-IN")} (
+                    {parseFloat(item?.channelBaseCagr * 100).toFixed(1)}
+                    %)
+                  </Td>
 
-                        verticalAlign:
-                          "middle",
+                  <Td
+                    style={{
+                      padding: "5px 8px",
+                      fontSize: "10px",
+                      verticalAlign: "middle",
+                      border: "1px solid #233044",
+                    }}>
+                    {(item?.arpc / 100000).toFixed(2)} L
+                  </Td>
 
-                        border:
-                          "1px solid #233044",
-                      }}
-                    >
-                      {
-                        item?.pincode
-                      }
-                    </Td>
+                  <Td
+                    style={{
+                      padding: "5px 8px",
+                      fontSize: "10px",
+                      verticalAlign: "middle",
+                      border: "1px solid #233044",
+                    }}>
+                    {item?.dormantBase?.toLocaleString("en-IN")}
+                  </Td>
 
-
-                    <Td
-                      style={{
-                        padding:
-                          "5px 8px",
-
-                        fontSize:
-                          "10px",
-
-                        verticalAlign:
-                          "middle",
-
-                        border:
-                          "1px solid #233044",
-                      }}
-                    >
-                      {item?.encircleBase?.toLocaleString(
-                        "en-IN"
-                      )}{" "}
-                      (
-                      {parseFloat(
-                        item?.encircleBaseCagr *
-                          100
-                      ).toFixed(
-                        1
-                      )}
-                      %)
-                    </Td>
-
-
-                    <Td
-                      style={{
-                        padding:
-                          "5px 8px",
-
-                        fontSize:
-                          "10px",
-
-                        verticalAlign:
-                          "middle",
-
-                        border:
-                          "1px solid #233044",
-                      }}
-                    >
-                      {item?.channelBase?.toLocaleString(
-                        "en-IN"
-                      )}{" "}
-                      (
-                      {parseFloat(
-                        item?.channelBaseCagr *
-                          100
-                      ).toFixed(
-                        1
-                      )}
-                      %)
-                    </Td>
-
-
-                    <Td
-                      style={{
-                        padding:
-                          "5px 8px",
-
-                        fontSize:
-                          "10px",
-
-                        verticalAlign:
-                          "middle",
-
-                        border:
-                          "1px solid #233044",
-                      }}
-                    >
-                      {(
-                        item?.arpc /
-                        100000
-                      ).toFixed(
-                        2
-                      )}{" "}
-                      L
-                    </Td>
-
-
-                    <Td
-                      style={{
-                        padding:
-                          "5px 8px",
-
-                        fontSize:
-                          "10px",
-
-                        verticalAlign:
-                          "middle",
-
-                        border:
-                          "1px solid #233044",
-                      }}
-                    >
-                      {item?.dormantBase?.toLocaleString(
-                        "en-IN"
-                      )}
-                    </Td>
-
-
-                    <Td
-                      style={{
-                        padding:
-                          "5px 8px",
-
-                        fontSize:
-                          "10px",
-
-                        verticalAlign:
-                          "middle",
-
-                        border:
-                          "1px solid #233044",
-                      }}
-                    >
-                      {
-                        item?.dormancyRate
-                      }
-                      %
-                    </Td>
-
-                  </Tr>
-                )
-              )}
+                  <Td
+                    style={{
+                      padding: "5px 8px",
+                      fontSize: "10px",
+                      verticalAlign: "middle",
+                      border: "1px solid #233044",
+                    }}>
+                    {item?.dormancyRate}%
+                  </Td>
+                </Tr>
+              ))}
             </Tbody>
           </Table>
-
         </div>
       </div>
     </React.Fragment>
