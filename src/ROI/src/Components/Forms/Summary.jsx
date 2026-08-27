@@ -4,9 +4,12 @@ import { BASE_URL } from "./data/baseUrl";
 const YEARS = ["Yr 0", "Yr 1", "Yr 2", "Yr 3", "Yr 4", "Yr 5", "Yr 6"];
 
 const r2 = (n) => Math.round((n ?? 0) * 100) / 100;
+// sum all non-null values across Yr0–Yr6
+const sum6y = (vals) => r2((vals ?? []).filter(v => v !== null && v !== undefined).reduce((s, v) => s + (v ?? 0), 0));
 
 // Bisection IRR — guaranteed convergence when sign changes within [-99.99%, 5000%]
 function computeIRR(cashFlows, maxIter = 400, tol = 1e-10) {
+  console.log(cashFlows)
   if (!cashFlows.length || cashFlows[0] >= 0) return null;
   const npvAt = (r) =>
     cashFlows.reduce((s, cf, i) => s + cf / Math.pow(1 + r, i), 0);
@@ -35,9 +38,9 @@ function parseApiRows(rows, opts = {}) {
 
   const yrs = (name) => {
     const r = by[name];
-    if (!r) return [null, 0, 0, 0, 0, 0, 0];
+    if (!r) return [0, 0, 0, 0, 0, 0, 0];
     return [
-      null,
+      r.Yr0 ?? 0,
       r.Yr1 ?? 0,
       r.Yr2 ?? 0,
       r.Yr3 ?? 0,
@@ -55,9 +58,9 @@ function parseApiRows(rows, opts = {}) {
   const toLakh = (arr) => arr.map((v) => (v !== null ? r2((v ?? 0) / LAKH) : null));
 
   const gross = yrs("Gross earnings/Commission"); // already in Lakhs
-  const totExp = toLakh(yrs("Total expenses"));    // Rupees → Lakhs
   const ucpSales = yrs("UCP Sales");
   const customerDiscount = yrs("Customer Discount");
+
 
   // NSV: prefer the API row, fall back to UCP − Customer Discount
   const nsvFromApi = yrs("NSV Sales");
@@ -65,118 +68,208 @@ function parseApiRows(rows, opts = {}) {
     ? nsvFromApi
     : [null, ...ucpSales.slice(1).map((u, i) => r2((u ?? 0) - (customerDiscount[i + 1] ?? 0)))];
 
+  const stockTotal = yrs("Stock_Total")
+  const bgCost = YEARS.map((_, i) => {
+    if ((by["ROI New Store"]?.Header ?? "") === "L2" || (by["ROI New Store"]?.Header ?? "") === "L4") {
+      return (stockTotal[i] * 0.2 * (0.75 / 100))
+    }
+    else return 0
+  })
+
+  // Build expense line items first — totExp is derived from these
+  const expenses = [
+    { label: "Rent", values: toLakh(yrs("Rent")) },
+    { label: "Staff Salaries", values: toLakh(yrs("Staff Salaries")) },
+    { label: "Security & Housekeeping", values: toLakh(yrs("Security & Housekeeping")) },
+    { label: "Electricity", values: toLakh(yrs("Electricity")) },
+    { label: "Repairs & Maintenance", values: toLakh(yrs("Repairs & Maintenance")) },
+    { label: "Insurance", values: toLakh(yrs("Insurance")) },
+    { label: "BTL", values: toLakh(yrs("BTL")) },
+    { label: "Travel & Conveyance", values: toLakh(yrs("Travel & Conveyance")) },
+    { label: "Telephone / Internet", values: toLakh(yrs("Telephone/Internet")) },
+    { label: "Credit Card Commission", values: toLakh(yrs("Credit Card Commission")) },
+    { label: "GST (primarily rental)", values: toLakh(yrs("GST (primarily rental)")) },
+    { label: "Store \u2014 Printing / Pantry etc", values: toLakh(yrs("Store - Printing/Pantry etc")) },
+    { label: "Consumables, Safety, Cust Exp", values: toLakh(yrs("Consumables, Safety, Cust experience")) },
+    { label: "Other \u2014 Staff welfare/Uniforms", values: toLakh(yrs("Other - Staff welfare/Uniforms etc")) },
+    { label: "BG cost", values: bgCost },
+    { label: "Regn Charges / Temp Store Cost", values: toLakh(yrs("Registeration Charges/Temporary Store Cost")) },
+  ];
+
+  // Total expenses — Excel formula:
+  // L2.5 → 0; Yr0 = Elec×20% + Staff×20% + Insurance×30% + RegnCharges_Yr0; Yr1–6 = Σ all items
+  const isL2_5 = (by["ROI New Store"]?.Header ?? "") === "L2.5";
+  const _elec = expenses.find(e => e.label === "Electricity")?.values ?? Array(7).fill(0);
+  const _staff = expenses.find(e => e.label === "Staff Salaries")?.values ?? Array(7).fill(0);
+  const _ins = expenses.find(e => e.label === "Insurance")?.values ?? Array(7).fill(0);
+  const _regn = expenses.find(e => e.label === "Regn Charges / Temp Store Cost")?.values ?? Array(7).fill(0);
+  const totExp = Array.from({ length: 7 }, (_, i) => {
+    if (isL2_5) return i === 0 ? null : 0;
+    if (i === 0) return r2((_elec[1] ?? 0) * 0.2 + (_staff[1] ?? 0) * 0.2 + (_ins[1] ?? 0) * 0.3 + (_regn[0] ?? 0));
+    return r2(expenses.reduce((s, e) => s + (e.values[i] ?? 0), 0));
+  });
+  const storeInteriors = toLakh(yrs("Store Interiors value on Set Up"))[0]; // Rupees → Lakhs
   const ebitda = [
     null,
     ...Array.from({ length: 6 }, (_, i) =>
       r2((gross[i + 1] ?? 0) - (totExp[i + 1] ?? 0)),
     ),
   ];
-  const deprn = [null, 0, 0, 0, 0, 0, 0];
-  const pbt = [null, ...ebitda.slice(1).map((e) => r2((e ?? 0) - 0))];
 
-  const storeInteriors = scalar("Store Interiors value on Set Up") / LAKH; // Rupees → Lakhs
-  const secDep = scalar("Security Deposit") / LAKH;
-  const totalInv = r2(storeInteriors + secDep);
-  const roiPct = [
-    null,
-    ...pbt
-      .slice(1)
-      .map((p) => (totalInv > 0 ? r2(((p ?? 0) / totalInv) * 100) : null)),
-  ];
+  const deprn = Array(7).fill(0);
+
+  const cummDepIncYr = YEARS?.map((_, i) => {
+    if (i === 0) return 0;
+    if (i === 1) {
+      deprn.fill(storeInteriors * 0.2, 1, 6);
+      return (storeInteriors * 0.2)
+    };
+    if (i === 2) return deprn[2] + (storeInteriors * 0.2);
+    if (i === 3) return deprn[3] + (deprn[2] + (storeInteriors * 0.2));
+    if (i === 4) return deprn[4] + (deprn[3] + deprn[2] + (storeInteriors * 0.2));
+    if (i === 5) return deprn[5] + (deprn[4] + deprn[3] + deprn[2] + (storeInteriors * 0.2));
+    if (i === 6) return deprn[6] + (deprn[5] + deprn[4] + deprn[3] + deprn[2] + (storeInteriors * 0.2));
+  })
+
+  const pbt = [...ebitda.map((e, i) => r2((e ?? 0) - deprn[i]))];
+
+  const currentValueOfInteriors = Array(7).fill(0)
+  currentValueOfInteriors[0] = storeInteriors - deprn[0];
+  for (let i = 1; i <= 6; i++) {
+    currentValueOfInteriors[i] = currentValueOfInteriors[i - 1] - deprn[i]
+  }
+
+  const workingCapital_atRate_1per = YEARS.map((_, i) => {
+    if ((by["ROI New Store"]?.Header ?? "") === "L2.5" || (by["ROI New Store"]?.Header ?? "") === "L3") {
+      return (stockTotal[i] + (ucpSales[i] * 0.01) / 12)
+    }
+    else return (ucpSales[i] * 0.01) / 12
+  })
+
+  const secDep = toLakh(yrs("Security Deposit"));
+  const totalInv = YEARS.map((_, i) => {
+    return r2(workingCapital_atRate_1per[i] + currentValueOfInteriors[i] + secDep[i])
+  });
+
+  // Capital expenditure
+  const calCapex = Array(7).fill(0);
+  calCapex[0] = -currentValueOfInteriors[0];
+  calCapex[6] = calCapex[0] + calCapex[0] * 0.05;
+
+  // Sigin
+  const calSigningFee = Array(7).fill(0)
+  calSigningFee[0] = (by["ROI New Store"]?.Header ?? "") === "L1" ? 0 : -10;
+
+  const calAdvanceRent = Array(7).fill(0)
+  calAdvanceRent[0] = secDep[0]
+  for (let i = 0; i <= 5; i++) {
+    calAdvanceRent[6] = calAdvanceRent[6] + calAdvanceRent[i]
+  }
+
+  // Working Capital cash outflow
+  const calIncWorkingCapitalCashOutflow = Array(7).fill(0)
+  // Formula : Yr0
+  calIncWorkingCapitalCashOutflow[0] = -workingCapital_atRate_1per[1];
+  // Formula : Yr 1 -> Yr 5 => (workingCap[currYr] - workingCap[nextYr])
+  for (let i = 1; i <= 5; i++) {
+    calIncWorkingCapitalCashOutflow[i] = (workingCapital_atRate_1per[i] - workingCapital_atRate_1per[i + 1])
+  }
+  // Formula : Yr 6 => sum of Yr0 till Yr5
+  calIncWorkingCapitalCashOutflow[6] = calIncWorkingCapitalCashOutflow.slice(0, 5).reduce((sum, val) => (sum + val), 0);
+
+  // Net Cash Flow
+  const calCapexTotal = Array(7).fill(0)
+  for (let i = 0; i <= 6; i++) {
+    calCapexTotal[i] = calCapex[i] + calSigningFee[i] + calAdvanceRent[i] + calIncWorkingCapitalCashOutflow[i] + ebitda[i]
+  }
+
+  // ROI %
+  const roiPct = Array(7).fill(0)
+  for (let i = 1; i <= 5; i++) {
+    roiPct[i] = ebitda[i] / (-calCapexTotal[i] - (roiPct[i - 1] / 2))
+  }
+  roiPct[6] = (ebitda[6] + calCapex[6] + calSigningFee[6] + calAdvanceRent[6]) / (-(calCapexTotal.slice(0, 5).reduce((s, v) => s + v, 0)))
 
   const pbtYrs = pbt.slice(1).map((v) => v ?? 0);
   const grossYrs = gross.slice(1).map((v) => v ?? 0);
 
-  // NPV @ 11%
-  let npv = -totalInv;
-  pbtYrs.forEach((v, i) => {
-    npv += v / Math.pow(1.11, i + 1);
-  });
-  npv = r2(npv);
-
-  // IRR
-  const irrCashFlows = [-totalInv, ...pbtYrs];
-  const irr = totalInv > 0 ? computeIRR(irrCashFlows) : null;
-
-  // Payback period
-  let cum = -totalInv,
-    payback = null;
-  for (let i = 0; i < pbtYrs.length; i++) {
-    cum += pbtYrs[i];
-    if (cum >= 0 && payback === null) {
-      payback = i + 1;
-      break;
-    }
-  }
-
-  // Revenue CAGR Yr1 → Yr6
-  const g1 = grossYrs[0],
-    g6 = grossYrs[5];
-  const cagr = g1 > 0 && g6 > 0 ? r2((Math.pow(g6 / g1, 0.2) - 1) * 100) : null;
 
   // Rent / Revenue (5yr) — both sides must be in Lakhs
   const rentR = by["Rent"];
   const rent5 = rentR
-    ? [rentR.Yr1, rentR.Yr2, rentR.Yr3, rentR.Yr4, rentR.Yr5].reduce(
-      (s, v) => s + ((v ?? 0) / LAKH),
-      0,
-    )
-    : 0;
-  const rev5 = grossYrs.slice(0, 5).reduce((s, v) => s + v, 0);
-  const rentRev5 = rev5 > 0 ? r2((rent5 / rev5) * 100) : null;
+    ? [rentR.Yr1, rentR.Yr2, rentR.Yr3, rentR.Yr4, rentR.Yr5].reduce((s, v) => s + v, 0) : 0;
+  const rev5 = ucpSales.slice(0, 6).reduce((s, v) => s + v, 0);
+  const rentRev5 = rev5 > 0 ? r2(((rent5 / 100000) / rev5) * 100) : null;
 
   // Rev per sqft — requires retailArea passed via opts
   const retailArea = opts.retailArea ?? 0;
-  const avgGross = grossYrs.reduce((s, v) => s + v, 0) / 6;
-  const revPerSqft = retailArea > 0 ? Math.round(avgGross / retailArea * 100000) : 0;
+  const totalUCP = ucpSales.slice(0, 7).reduce((s, v) => s + v, 0);
+  const revPerSqft = retailArea > 0 ? (totalUCP / (retailArea * 6)) : 0;
+
+  // Revenue CAGR Yr1 → Yr6
+  const cagr = ucpSales[1] > 0 && ucpSales[6] > 0 ? r2((Math.pow(ucpSales[6] / ucpSales[1], 0.2) - 1) * 100) : null;
+
+  // Payout % (5 yr)
+  const grossEarning5 = gross.slice(0, 6).reduce((s, v) => s + v, 0);
+  const grossUCPSales5 = ucpSales.slice(0, 6).reduce((s, v) => s + v, 0);
+  const payOutPer = (grossEarning5 / grossUCPSales5) * 100
+
+  // IRR
+  const hasPositive = calCapexTotal.some(v => v > 0);
+  const hasNegative = calCapexTotal.some(v => v < 0);
+  const irr = (hasPositive & hasNegative) > 0 ? computeIRR(calCapexTotal) : null;
+
+  // NPV @ 11%
+  let npv = calCapexTotal[0] + calCapexTotal.slice(1).reduce((sum, cf, i) => sum + cf / Math.pow(1.11, i + 1), 0)
+
+  // Payback period
+  const calculatePaybackPeriod = (initialCapex,cashFlows)=>{
+    const investment = Math.abs(initialCapex)
+    let cummulativeCashFlow = 0
+    for( let i = 0;i<cashFlows.length;i++){
+      cummulativeCashFlow += cashFlows[i];
+      if(cummulativeCashFlow >= investment) return i+1
+    }
+    return 6
+  }
+
+  const payback = calculatePaybackPeriod(calCapex[0],calCapexTotal.slice(1));
 
   return {
-    roiType: by["ROI New Store"]?.Header ?? "—",
-    cityName: by["City Name"]?.Header ?? "—",
+    roiType: by["ROI New Store"]?.Header ?? "0.0",
+    cityName: by["City Name"]?.Header ?? "0.0",
     ucpSales,
     customerDiscount,
     nsvSales,
     grossEarnings: gross,
     totalExpenses: totExp,
-    expenses: [
-      { label: "Rent",                            values: toLakh(yrs("Rent")) },
-      { label: "Staff Salaries",                  values: toLakh(yrs("Staff Salaries")) },
-      { label: "Security & Housekeeping",         values: toLakh(yrs("Security & Housekeeping")) },
-      { label: "Electricity",                     values: toLakh(yrs("Electricity")) },
-      { label: "Repairs & Maintenance",           values: toLakh(yrs("Repairs & Maintenance")) },
-      { label: "Insurance",                       values: toLakh(yrs("Insurance")) },
-      { label: "BTL",                             values: toLakh(yrs("BTL")) },
-      { label: "Travel & Conveyance",             values: toLakh(yrs("Travel & Conveyance")) },
-      { label: "Telephone / Internet",            values: toLakh(yrs("Telephone/Internet")) },
-      { label: "Credit Card Commission",          values: toLakh(yrs("Credit Card Commission")) },
-      { label: "GST (primarily rental)",          values: toLakh(yrs("GST (primarily rental)")) },
-      { label: "Store \u2014 Printing / Pantry etc",  values: toLakh(yrs("Store - Printing/Pantry etc")) },
-      { label: "Consumables, Safety, Cust Exp",   values: toLakh(yrs("Consumables, Safety, Cust experience")) },
-      { label: "Other \u2014 Staff welfare/Uniforms", values: toLakh(yrs("Other - Staff welfare/Uniforms etc")) },
-      { label: "BG cost",                         values: [null, 0, 0, 0, 0, 0, 0] },
-      { label: "Regn Charges / Temp Store Cost",  values: [0, 0, 0, 0, 0, 0, 0] },
-    ],
+    expenses,
     ebitda,
     depreciation: deprn,
     pbt,
     roiPct,
     storeInteriors,
-    totalInvestment: Array(7).fill(totalInv),
-    cumDeprn: [0, 0, 0, 0, 0, 0, 0],
-    currentInteriors: Array(7).fill(storeInteriors),
-    workingCapital: [null, 0, 0, 0, 0, 0, 0],
-    securityDeposit: Array(7).fill(secDep),
-    capex: [-storeInteriors, null, null, null, null, null, secDep],
-    capexTotal: [-totalInv, 0, 0, 0, 0, 0, secDep],
+    totalInvestment: totalInv,
+    cumDeprn: cummDepIncYr,
+    currentInteriors: currentValueOfInteriors,
+    workingCapital: workingCapital_atRate_1per,
+    securityDeposit: secDep,
+    capex: calCapex,
+    signingFee: calSigningFee,
+    advRent: calAdvanceRent,
+    cashOutflow: calIncWorkingCapitalCashOutflow,
+    capexTotal: calCapexTotal,
     kpis: {
       rentRevenue5yr: rentRev5,
       revPerSqft,
       revenueCAGR: cagr,
-      payout5yr: null,
+      payout5yr: payOutPer,
       irr,
       npv,
       paybackCapex: payback,
     },
+    hasNegative,
+    hasPositive,
   };
 }
 
@@ -215,9 +308,9 @@ function buildSubmitPayload(d) {
     row("Working Capital / Petty cash @ 1% sale", d.workingCapital),
     row("Security deposit", d.securityDeposit),
     row("Capital Expenditure", d.capex),
-    row("Signing Fee", Array(7).fill(0)),
-    row("Advance paid ( Rent )", Array(7).fill(0)),
-    row("Incremental Working capital - Cash outflow", Array(7).fill(0)),
+    row("Signing Fee", d.signingFee),
+    row("Advance paid ( Rent )", d.advRent),
+    row("Incremental Working capital - Cash outflow", d.cashOutflow),
     row("Operating profit (Before Interest & Deprn)", d.ebitda),
     row("Total", d.capexTotal),
     {
@@ -247,14 +340,14 @@ function buildSubmitPayload(d) {
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (n) => {
-  if (n === null || n === undefined) return "—";
+  if (n === null || n === undefined) return "0.0";
   if (n === 0) return " - ";
   const abs = Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return n < 0 ? `(${abs})` : abs;
 };
 
 const fmtPct = (n, decimals = 1) => {
-  if (n === null || n === undefined) return "—";
+  if (n === null || n === undefined) return "0.0";
   return `${Number(n).toFixed(decimals)}%`;
 };
 
@@ -287,7 +380,7 @@ function Label({ children, indent = false, bold = false, muted = false }) {
   );
 }
 
-function SectionHead({ children, colSpan = 8 }) {
+function SectionHead({ children, colSpan = 9 }) {
   return (
     <tr>
       <td
@@ -299,7 +392,7 @@ function SectionHead({ children, colSpan = 8 }) {
   );
 }
 
-function TotalRow({ label, values, color = "amber" }) {
+function TotalRow({ label, values, color = "amber", total }) {
   const palette = {
     amber: "bg-amber-100 font-bold text-amber-900 border-amber-300",
     green: "bg-green-100 font-bold text-green-900 border-green-300",
@@ -319,10 +412,14 @@ function TotalRow({ label, values, color = "amber" }) {
             key={i}
             className={`border px-3 py-2 text-xs text-right tabular-nums whitespace-nowrap ${cls} ${isNeg ? "text-red-700" : ""
               }`}>
-            {label ==="NSV Sales"?fmt(v/10):fmt(v)}
+            {fmt(v)}
           </td>
         );
       })}
+      <td className={`border px-3 py-2 text-xs text-right tabular-nums whitespace-nowrap font-bold ${total != null ? cls : "bg-gray-100 text-gray-500 border-gray-200"
+        } ${typeof total === "number" && total < 0 ? "!text-red-700" : ""}`}>
+        {total != null ? fmt(total) : "0.0"}
+      </td>
     </tr>
   );
 }
@@ -371,7 +468,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
       if (!historyId) return;
       (async () => {
         try {
-          const res = await fetch(`https://d6oojw29okpcs.cloudfront.net/ThirdEye//history/${encodeURIComponent(historyId).replace(' ','_')}`);
+          const res = await fetch(`https://d6oojw29okpcs.cloudfront.net/ThirdEye//history/${encodeURIComponent(historyId).replace(' ', '_')}`);
           if (!res.ok) throw new Error("Failed to fetch history details.");
           const json = await res.json();
           const d = json.data?.[0] ?? {};
@@ -438,15 +535,28 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
     }
     (async () => {
       try {
+        const roiid = roiContext.roiId
         const res = await fetch(
-          `${BASE_URL}/summary_screen_5/${roiContext.roiId}`,
+          `${BASE_URL}/summary_screen_5/${roiid}`,
         );
         if (!res.ok) throw new Error("Failed to load summary data.");
         const json = await res.json();
-        const retailArea = parseFloat(
-          roiContext?.historyRetailArea || roiContext?.existingRetailArea
-        ) || 0;
-        setApiData(parseApiRows(json.data, { retailArea }));
+        const retailArea = parseFloat(roiContext?.historyRetailArea || roiContext?.existingRetailArea) || 0;
+        const res2 = await fetch(`${BASE_URL}/sales_planning`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ screen: 3, roiid }),
+        });
+        if (!res.ok) throw new Error("Failed to load Stock data.");
+        const json2 = await res2.json();
+        let stockTotal = json2?.data.filter((it) => it.Header === 'Stock_Total')
+        stockTotal[0].Yr0 = 0
+        stockTotal[0].Particulars = stockTotal[0].Header
+        stockTotal[0].Header = ''
+        delete stockTotal[0].roiid
+        delete stockTotal[0].status
+        let finalDataToParse = [...json?.data, ...stockTotal]
+        setApiData(parseApiRows(finalDataToParse, { retailArea }));
       } catch (e) {
         setFetchError(e.message);
       } finally {
@@ -459,8 +569,8 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
 
   // ── Submission validation rules ─────────────────────────────────────────
   const storeFormat = d?.roiType ?? "";
-  const irr         = d?.kpis?.irr;
-  const payback     = d?.kpis?.paybackCapex;
+  const irr = d?.kpis?.irr;
+  const payback = d?.kpis?.paybackCapex;
   const validationWarnings = d ? (() => {
     const w = [];
     if (storeFormat === "L1" && irr !== null && irr < 17.95)
@@ -475,6 +585,10 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
       w.push("The CAPEX Payback period is very high for an L1 Store. Please rework the projections.");
     if (storeFormat !== "L1" && storeFormat !== "" && payback !== null && payback > 5)
       w.push("The CAPEX Payback period is very high for the Store. Please rework the projections.");
+    if(!d.hasNegative & irr === null)
+      w.push("IRR cannot be calculated Please make sure an intial investment is neagtive")
+    if(!d.hasPositive & irr === null)
+      w.push("IRR cannot be calculated Please make sure at least one future ccash flow/return is positive")
     return w;
   })() : [];
   const canSubmit = validationWarnings.length === 0;
@@ -588,20 +702,19 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
         <div className='grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm'>
           {[
             ["Project Type", roiContext?.projectType ?? "New Store", false],
-            ["City", roiContext?.city ?? "—", false],
-            ["Region", roiContext?.region ?? "—", false],
+            ["City", roiContext?.city ?? "0.0", false],
+            ["Region", roiContext?.region ?? "0.0", false],
             roiContext?.projectType === "New Store"
-              ? ["History ID", roiContext?.historyId ?? "—", true]
-              : ["Store Code", roiContext?.existingStoreCode || "—", true],
+              ? ["History ID", roiContext?.historyId ?? "0.0", true]
+              : ["Store Code", roiContext?.existingStoreCode || "0.0", true],
           ].map(([label, value, mono]) => (
             <div key={label} className='min-w-0'>
               <p className='text-xs text-gray-400 font-semibold uppercase tracking-wide'>
                 {label}
               </p>
               <p
-                className={`font-bold text-gray-800 mt-0.5 truncate ${
-                  mono ? "font-mono text-xs" : ""
-                }`}
+                className={`font-bold text-gray-800 mt-0.5 truncate ${mono ? "font-mono text-xs" : ""
+                  }`}
                 title={String(value)}>
                 {value}
               </p>
@@ -621,20 +734,20 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
         <KpiCard
           label='Payback Period'
           value={
-            d.kpis.paybackCapex !== null ? `${d.kpis.paybackCapex} yr` : "—"
+            d.kpis.paybackCapex !== null ? `${d.kpis.paybackCapex} yr` : "0.0"
           }
           sub='For Capex only'
           color='blue'
         />
         <KpiCard
           label='IRR'
-          value={d.kpis.irr !== null ? fmtPct(d.kpis.irr) : "—"}
+          value={d.kpis.irr !== null ? fmtPct(d.kpis.irr) : "0.0"}
           sub='Internal Rate of Return'
           color='indigo'
         />
         <KpiCard
           label='Rev / Sq.Ft'
-          value={d.kpis.revPerSqft !== null ? `₹ ${d.kpis.revPerSqft}` : "—"}
+          value={d.kpis.revPerSqft !== null ? `₹ ${d.kpis.revPerSqft.toFixed(2)}` : "0.0"}
           sub='Average across 6 years'
           color='amber'
         />
@@ -649,7 +762,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
               ROI Summary — {roiContext?.projectType ?? "New Store"}
             </h3>
             <p className='text-xs text-gray-400 mt-0.5'>
-              All figures in ₹ Lacs &nbsp;·&nbsp; Category L1
+              All figures in ₹ Lacs &nbsp;·&nbsp; Category {d.roiType}
             </p>
           </div>
           <span className='text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full'>
@@ -672,11 +785,13 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                     {yr}
                   </th>
                 ))}
+                <th className='border border-amber-500 px-3 py-3 text-center min-w-[100px] bg-amber-600'>
+                  6Y Total
+                </th>
               </tr>
             </thead>
-
             <tbody>
-              {/* ── INCOME ────────────────────────────────────────────── */}
+              {/* ── INCOME ── */}
               <SectionHead>Income</SectionHead>
 
               <tr>
@@ -684,31 +799,39 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                 {d.ucpSales.map((v, i) => (
                   <Num key={i} v={v} />
                 ))}
+                <Num v={sum6y(d.ucpSales)} bold />
               </tr>
               <tr>
                 <Label indent>Customer Discount</Label>
                 {d.customerDiscount.map((v, i) => (
                   <Num key={i} v={v} />
                 ))}
+                <Num v={sum6y(d.customerDiscount)} />
               </tr>
-              <TotalRow label='NSV Sales' values={d.nsvSales} color='blue' />
+              <TotalRow label='NSV Sales' values={d.nsvSales} color='blue' total={sum6y(d.nsvSales)} />
               <TotalRow
                 label='2. Gross Earnings / Commission'
                 values={d.grossEarnings}
                 color='green'
+                total={sum6y(d.grossEarnings)}
               />
               {/* UI-only: Gross Earnings as % of UCP Sales per year */}
               <tr>
                 <Label indent muted>%</Label>
-                {d.grossEarnings.map((g, i) => {
+                {YEARS.map((y, i) => {
                   const u = d.ucpSales[i];
+                  const g = d.grossEarnings[i];
                   const pct = g && u ? r2((g / u) * 100) : null;
                   return (
                     <td key={i} className='border border-gray-200 px-3 py-2 text-right text-xs tabular-nums text-indigo-600 bg-indigo-50'>
-                      {pct !== null ? `${pct.toFixed(2)}%` : "—"}
+                      {pct !== null ? `${pct.toFixed(2)}%` : "-"}
                     </td>
                   );
+
                 })}
+                <td className='border border-gray-200 px-3 py-2 text-right text-xs tabular-nums text-indigo-600 bg-indigo-50'>
+                  {r2((sum6y(d.grossEarnings) / sum6y(d.ucpSales)) * 100)}%
+                </td>
               </tr>
 
               {/* ── EXPENSES ──────────────────────────────────────────── */}
@@ -725,6 +848,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                 label='3. Total Expenses'
                 values={d.totalExpenses}
                 color='amber'
+                total={sum6y(d.totalExpenses)}
               />
 
               {expExpanded &&
@@ -734,6 +858,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                     {values.map((v, i) => (
                       <Num key={i} v={v} />
                     ))}
+                    <Num v={sum6y(values)} />
                   </tr>
                 ))}
 
@@ -744,6 +869,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                 label='4. EBITDA / Cash Profit / Operating Profit'
                 values={d.ebitda}
                 color='green'
+                total={sum6y(d.ebitda)}
               />
               <tr>
                 <Label indent muted>
@@ -752,11 +878,13 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                 {d.depreciation.map((v, i) => (
                   <Num key={i} v={v} />
                 ))}
+                <Num v={sum6y(d.depreciation)} />
               </tr>
               <TotalRow
                 label='5. PBT (Profit Before Tax)'
                 values={d.pbt}
                 color='green'
+                total={sum6y(d.pbt)}
               />
 
               <tr>
@@ -764,6 +892,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                 {d.roiPct.map((v, i) => (
                   <Num key={i} v={v} />
                 ))}
+                <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
               </tr>
 
               {/* ── INVESTMENT ────────────────────────────────────────── */}
@@ -790,9 +919,10 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                       <td
                         key={i}
                         className='border border-gray-200 px-3 py-2 text-right text-xs text-gray-600 bg-white'>
-                        {i === 0 ? fmt(d.storeInteriors) : "—"}
+                        {i === 0 ? fmt(d.storeInteriors) : "0.0"}
                       </td>
                     ))}
+                    <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
                   </tr>
                   <tr>
                     <Label indent>
@@ -801,24 +931,28 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                     {d.cumDeprn.map((v, i) => (
                       <Num key={i} v={v} />
                     ))}
+                    <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
                   </tr>
                   <tr>
                     <Label indent>Current Value of Interiors</Label>
                     {d.currentInteriors.map((v, i) => (
                       <Num key={i} v={v} />
                     ))}
+                    <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
                   </tr>
                   <tr>
                     <Label indent>Working Capital / Petty Cash @ 1% sale</Label>
                     {d.workingCapital.map((v, i) => (
                       <Num key={i} v={v} />
                     ))}
+                    <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
                   </tr>
                   <tr>
                     <Label indent>Security Deposit</Label>
                     {d.securityDeposit.map((v, i) => (
                       <Num key={i} v={v} />
                     ))}
+                    <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
                   </tr>
                 </>
               )}
@@ -846,32 +980,43 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                     {d.capex.map((v, i) => (
                       <Num key={i} v={v} />
                     ))}
+                    <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
                   </tr>
                   <tr>
                     <Label indent muted>
                       Signing Fee
                     </Label>
-                    {YEARS.map((_, i) => (
-                      <td
-                        key={i}
-                        className='border border-gray-200 px-3 py-2 text-right text-xs text-gray-400 bg-white'>
-                        {" "}
-                        -{" "}
-                      </td>
+                    {d.signingFee.map((v, i) => (
+                      <Num key={i} v={v} />
                     ))}
+                    <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
                   </tr>
                   <tr>
                     <Label indent muted>
                       Advance paid (Rent)
                     </Label>
-                    {YEARS.map((_, i) => (
-                      <td
-                        key={i}
-                        className='border border-gray-200 px-3 py-2 text-right text-xs text-gray-400 bg-white'>
-                        {" "}
-                        -{" "}
-                      </td>
+                    {d.advRent.map((v, i) => (
+                      <Num key={i} v={v} />
                     ))}
+                    <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
+                  </tr>
+                  <tr>
+                    <Label indent muted>
+                      Incremental Working capital - Cash outflow
+                    </Label>
+                    {d.cashOutflow.map((v, i) => (
+                      <Num key={i} v={v} />
+                    ))}
+                    <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
+                  </tr>
+                  <tr>
+                    <Label indent muted>
+                      Operating profit (Before Interest & Deprn)
+                    </Label>
+                    {d.ebitda?.map((v, i) => (
+                      <Num key={i} v={v} />
+                    ))}
+                    <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
                   </tr>
                 </>
               )}
@@ -894,38 +1039,38 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
               value:
                 d.kpis.rentRevenue5yr !== null
                   ? fmtPct(d.kpis.rentRevenue5yr)
-                  : "—",
+                  : "0.0",
             },
             {
               label: "Revenue per Sq. Ft. (Average)",
               value:
                 d.kpis.revPerSqft !== null
                   ? `₹ ${d.kpis.revPerSqft.toFixed(2)}`
-                  : "—",
+                  : "0.0",
             },
             {
               label: "Revenue — CAGR",
               value:
-                d.kpis.revenueCAGR !== null ? fmtPct(d.kpis.revenueCAGR) : "—",
+                d.kpis.revenueCAGR !== null ? fmtPct(d.kpis.revenueCAGR) : "0.0",
             },
             {
               label: "Payout % (5 yr)",
-              value: d.kpis.payout5yr !== null ? fmtPct(d.kpis.payout5yr) : "—",
+              value: d.kpis.payout5yr !== null ? fmtPct(d.kpis.payout5yr) : "0.0",
             },
             {
               label: "IRR",
-              value: d.kpis.irr !== null ? fmtPct(d.kpis.irr) : "—",
+              value: d.kpis.irr !== null ? fmtPct(d.kpis.irr) : "0.0",
             },
             {
               label: "NPV @ 11% Cost of Capital",
-              value: d.kpis.npv !== null ? `₹ ${fmt(d.kpis.npv)} L` : "—",
+              value: d.kpis.npv !== null ? `₹ ${fmt(d.kpis.npv)} L` : "0.0",
             },
             {
               label: "Payback Period (Capex)",
               value:
                 d.kpis.paybackCapex !== null
                   ? `${d.kpis.paybackCapex} years`
-                  : "—",
+                  : "0.0",
             },
           ].map(({ label, value }) => (
             <div key={label} className='px-6 py-4'>
@@ -933,7 +1078,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                 {label}
               </p>
               <p
-                className={`text-lg font-extrabold mt-1 ${value === "—" ? "text-gray-300" : "text-gray-900"
+                className={`text-lg font-extrabold mt-1 ${value === "0.0" ? "text-gray-300" : "text-gray-900"
                   }`}>
                 {value}
               </p>
@@ -956,7 +1101,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
         </div>
       )}
       <div className='bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-5 flex items-center justify-start gap-4'>
-              <div className='flex items-center gap-3'>
+        <div className='flex items-center gap-3'>
           <p className='text-xs text-gray-400 hidden sm:block'>
             All sections are complete. Submit your ROI request for approval.
           </p>
@@ -974,8 +1119,8 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
             onClick={handleSubmit}
             disabled={submitting || !canSubmit}
             className={`px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition ${submitting || !canSubmit
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-green-600 hover:bg-green-700 text-white"
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-green-600 hover:bg-green-700 text-white"
               }`}>
             {submitting ? "Submitting…" : "Submit for Approval ✓"}
           </button>

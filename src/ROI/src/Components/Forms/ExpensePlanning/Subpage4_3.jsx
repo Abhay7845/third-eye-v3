@@ -130,22 +130,19 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   // ── Rent inputs (6 years) ─────────────────────────────────────────────────
   const [revenueSharing, setRevenueSharing] = useState("No");
   const selected_sba = storeData?.project_type === "Store Expansion" ||
-      storeData?.project_type === "New Store" ||
-      storeData?.project_type === "Relocation"
-      ? parseFloat(storeData?.new_over_all_area_SBA)
-      : parseFloat(storeData?.existing_overall_area_SBA);
+    storeData?.project_type === "New Store" ||
+    storeData?.project_type === "Relocation"
+    ? parseFloat(storeData?.new_over_all_area_SBA)
+    : parseFloat(storeData?.existing_overall_area_SBA);
 
-  console.log('selected_sba',selected_sba)
-  console.log('store Data',storeData)
-    
+
+
   const [sba, setSba] = useState(Array(6).fill(selected_sba));
   // initialized to empty; seeded by the sync effect below once subpage4_2Data loads
   const [ratePerSqft, setRatePerSqft] = useState(
     Array(6).fill(subpage4_2Data?.salaries?.sqftPerEmp ?? null),
   );
-  const [revSharePct, setRevSharePct] = useState([
-    2.0, 2.0, 2.0, 2.3, 2.3, 2.3,
-  ]);
+  const [revSharePct, setRevSharePct] = useState([2.0, 2.0, 2.0, 2.3, 2.3, 2.3]);
   const [minGuaranteeMth, setMinGuaranteeMth] = useState(
     Array(6).fill(5500000),
   );
@@ -237,8 +234,6 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     setLockedRowYr1({ salaries: sal ?? 0, secHk: sec ?? 0, electricity: elec ?? 0 });
   }, [subpage4_2Data?.salaries?.totalAnnualTotal, subpage4_2Data?.securityHousekeeping?.totalAnnual, subpage4_2Data?.electricity?.total]);
 
-
-    console.log(subpage4_2Data)
   // Seed ratePerSqft from upstream salary data when context loads after a resume
   useEffect(() => {
     const sqft = subpage4_2Data?.salaries?.sqftPerEmp;
@@ -327,6 +322,29 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen1Expenses]);
 
+  // Getting NSV value
+  useEffect(() => {
+    const fetchNSV = async () => {
+      try {
+        const roiid = storeData?.roiid
+        const res = await fetch(
+          `${BASE_URL}/summary_screen_5/${roiid}`,
+        );
+        if (!res.ok) throw new Error("Failed to Fetch NSV data.");
+        const json = await res.json();
+        const nsvRaw = json?.data.filter(it => it.Particulars === 'NSV Sales')
+        const nsv = YEARS?.map((y)=>{
+          let newY = y.replace(". ","")
+          return nsvRaw[0][`${newY}`]
+        })
+        setNsv(nsv)
+      } catch (e) {
+        toast.error(e.message);
+      }
+    }
+    fetchNSV()
+  }, [])
+
   // Pull year-1 data — lockedRowYr1 is authoritative (restored from SUMMARY on resume, or synced from subpage4_2Data live)
   const salaryYr1 = lockedRowYr1.salaries;
   const secHkYr1 = lockedRowYr1.secHk;
@@ -354,20 +372,20 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
 
   // Expense summary rows — locked=true rows are read-only; others expose Yr1 + escalation% inputs
   const expenseRows = [
-    { key: null,         locked: true,  escKey: null,          escEditable: false, yr1Editable: false, label: "Rent",                          basis: "as under",             escalation: "—",  values: annualRent },
-    { key: null,         locked: true,  escKey: "salaries",    escEditable: true,  yr1Editable: false, label: "Salaries",                      basis: "as under",             escalation: "",   values: salaryEscalated },
-    { key: null,         locked: true,  escKey: "secHk",       escEditable: true,  yr1Editable: false, label: "Security & Housekeeping",        basis: "as under",             escalation: "",   values: secHkEscalated },
-    { key: null,         locked: true,  escKey: "electricity", escEditable: true,  yr1Editable: false, label: "Electricity",                   basis: "as under",             escalation: "",   values: electricityEscalated },
-    { key: "repairs",    locked: false, escKey: null,          escEditable: false, yr1Editable: false, label: "Repairs & Maintenance",          basis: "1%–3% initial capex",   escalation: "",   values: escalate(editableRows.repairs.yr1,    editableRows.repairs.esc) },
-    { key: "insurance",  locked: false, escKey: null,          escEditable: false, yr1Editable: false, label: "Insurance",                     basis: "1% interiors",         escalation: "",   values: escalate(editableRows.insurance.yr1,  editableRows.insurance.esc) },
-    { key: "btl",        locked: false, escKey: null,          escEditable: false, yr1Editable: false, label: "BTL",                           basis: "0.3% sale",            escalation: "",   values: escalate(editableRows.btl.yr1,        editableRows.btl.esc) },
-    { key: "travel",     locked: false, escKey: null,          escEditable: true,  yr1Editable: true,  label: "Travel & Conveyance",           basis: "17.5k p.m",            escalation: "",   values: escalate(editableRows.travel.yr1,     editableRows.travel.esc) },
-    { key: "telephone",  locked: false, escKey: null,          escEditable: true,  yr1Editable: true,  label: "Telephone/Internet",            basis: "11k p.m",              escalation: "",   values: escalate(editableRows.telephone.yr1,  editableRows.telephone.esc) },
-    { key: "creditCard", locked: false, escKey: null,          escEditable: false, yr1Editable: false, label: "Credit Card Commission",        basis: "30% sale @ 1.2%",      escalation: "",   values: escalate(editableRows.creditCard.yr1, editableRows.creditCard.esc) },
-    { key: "gst",        locked: false, escKey: null,          escEditable: false, yr1Editable: false, label: "GST (primarily rental)",        basis: "0.1% sale",            escalation: "",   values: escalate(editableRows.gst.yr1,        editableRows.gst.esc) },
-    { key: "printing",   locked: false, escKey: null,          escEditable: true,  yr1Editable: false, label: "Store — Printing/Pantry etc",    basis: "17.5k p.m",            escalation: "",   values: escalate(editableRows.printing.yr1,   editableRows.printing.esc) },
-    { key: "consumables",locked: false, escKey: null,          escEditable: true,  yr1Editable: false, label: "Consumables, Safety, Cust Exp", basis: "20k p.m",              escalation: "",   values: escalate(editableRows.consumables.yr1,editableRows.consumables.esc) },
-    { key: "staffWelfare",locked: false, escKey: null,         escEditable: true,  yr1Editable: false, label: "Other — Staff welfare/Uniforms", basis: "3.5k/person/month",    escalation: "",   values: escalate(editableRows.staffWelfare.yr1,editableRows.staffWelfare.esc) },
+    { key: null, locked: true, escKey: null, escEditable: false, yr1Editable: false, label: "Rent", basis: "as under", escalation: "—", values: annualRent },
+    { key: null, locked: true, escKey: "salaries", escEditable: true, yr1Editable: false, label: "Salaries", basis: "as under", escalation: "", values: salaryEscalated },
+    { key: null, locked: true, escKey: "secHk", escEditable: true, yr1Editable: false, label: "Security & Housekeeping", basis: "as under", escalation: "", values: secHkEscalated },
+    { key: null, locked: true, escKey: "electricity", escEditable: true, yr1Editable: false, label: "Electricity", basis: "as under", escalation: "", values: electricityEscalated },
+    { key: "repairs", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Repairs & Maintenance", basis: "1%–3% initial capex", escalation: "", values: escalate(editableRows.repairs.yr1, editableRows.repairs.esc) },
+    { key: "insurance", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Insurance", basis: "1% interiors", escalation: "", values: escalate(editableRows.insurance.yr1, editableRows.insurance.esc) },
+    { key: "btl", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "BTL", basis: "0.3% sale", escalation: "", values: escalate(editableRows.btl.yr1, editableRows.btl.esc) },
+    { key: "travel", locked: false, escKey: null, escEditable: true, yr1Editable: true, label: "Travel & Conveyance", basis: "17.5k p.m", escalation: "", values: escalate(editableRows.travel.yr1, editableRows.travel.esc) },
+    { key: "telephone", locked: false, escKey: null, escEditable: true, yr1Editable: true, label: "Telephone/Internet", basis: "11k p.m", escalation: "", values: escalate(editableRows.telephone.yr1, editableRows.telephone.esc) },
+    { key: "creditCard", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Credit Card Commission", basis: "30% sale @ 1.2%", escalation: "", values: escalate(editableRows.creditCard.yr1, editableRows.creditCard.esc) },
+    { key: "gst", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "GST (primarily rental)", basis: "0.1% sale", escalation: "", values: escalate(editableRows.gst.yr1, editableRows.gst.esc) },
+    { key: "printing", locked: false, escKey: null, escEditable: true, yr1Editable: false, label: "Store — Printing/Pantry etc", basis: "17.5k p.m", escalation: "", values: escalate(editableRows.printing.yr1, editableRows.printing.esc) },
+    { key: "consumables", locked: false, escKey: null, escEditable: true, yr1Editable: false, label: "Consumables, Safety, Cust Exp", basis: "20k p.m", escalation: "", values: escalate(editableRows.consumables.yr1, editableRows.consumables.esc) },
+    { key: "staffWelfare", locked: false, escKey: null, escEditable: true, yr1Editable: false, label: "Other — Staff welfare/Uniforms", basis: "3.5k/person/month", escalation: "", values: escalate(editableRows.staffWelfare.yr1, editableRows.staffWelfare.esc) },
   ];
 
   const totalExpenses = YEARS.map((_, i) =>
@@ -567,7 +585,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
                       key={i}
                       value={v}
                       onChange={(e) => setNsv(Array(6).fill(e.target.value))}
-                      disabled={isSaved}
+                      disabled={true}
                     />
                   ))}
                   <td className='border border-gray-200 px-3 py-2 bg-gray-50' />

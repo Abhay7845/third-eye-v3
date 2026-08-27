@@ -554,9 +554,15 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
                     Discounts Saved
                   </h2>
                   <p className='text-green-100 text-sm mt-0.5'>
-                    Sales Planning complete
+                    Sales Planning complete — TOT sheet calculation initiated
                   </p>
                 </div>
+              </div>
+            </div>
+            <div className='px-8 pt-5 pb-2'>
+              <div className='flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700'>
+                <span className='mt-0.5'>ℹ️</span>
+                <span>The TOT (Table of Totals) sheet is being computed in the background based on your sales planning data.</span>
               </div>
             </div>
             <div className='p-8'>

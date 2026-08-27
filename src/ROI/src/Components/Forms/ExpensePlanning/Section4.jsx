@@ -163,55 +163,55 @@ export default function Section4({
           if (d1) { setSubpage4_1Data(d1); markStepSaved(0); }
         }
         if (r2.ok) {
+          // RESOURCE returns a flat array of rows (one per role), not a nested object
           const j2 = await r2.json();
-          let d2 = j2?.data?.[0];
-          if (d2) {
-            // Parse OTHER once — used for sqftPerEmp, electricity total, etc.
-            let d3 = {};
-            if (r3.ok) {
-              const j3 = await r3.json();
-              d3 = j3?.data?.[0] ?? {};
-            }
+          const allRows = j2?.data ?? [];
+          let d3 = {};
+          if (r3.ok) { const j3 = await r3.json(); d3 = j3?.data?.[0] ?? {}; }
 
-            // sqftPerEmp: saved to OTHER table
-            if (!d2.salaries?.sqftPerEmp) {
-              const sqft = d3['Sqft/emp'] ?? d3.sqftPerEmp ?? d3.p_sqft_emp;
-              if (sqft != null)
-                d2 = { ...d2, salaries: { ...(d2.salaries ?? {}), sqftPerEmp: sqft } };
-            }
+          if (allRows.length > 0) {
+            const SEC_HK = ["security", "housekeeping", "house keeping"];
+            const salRows = allRows.filter(r => !SEC_HK.includes((r.Role ?? "").toLowerCase()));
+            const secRows = allRows.filter(r =>  SEC_HK.includes((r.Role ?? "").toLowerCase()));
 
-            // totalAnnualTotal: SP stores one row per role — recompute the aggregate here
-            if (!d2.salaries?.totalAnnualTotal) {
-              const rawRows = d2.salaries?.rows ?? {};
-              const vals = Array.isArray(rawRows) ? rawRows : Object.values(rawRows);
-              const fixed = vals.reduce((s, r) => s + (parseFloat(r.monthly) || 0) * 12 * (parseFloat(r.nos) || 0), 0);
-              const variable = vals.reduce((s, r) => {
-                const base = (parseFloat(r.monthly) || 0) * 12 * (parseFloat(r.nos) || 0);
-                return s + base * ((parseFloat(r.variablePct) || 0) / 100);
-              }, 0);
-              const totalAnnualTotal = fixed + variable;
-              if (totalAnnualTotal > 0)
-                d2 = { ...d2, salaries: { ...(d2.salaries ?? {}), totalAnnualTotal } };
-            }
+            const salaryRowsObj = Object.fromEntries(
+              salRows.map(r => [r.Role, {
+                level:       r.Level ?? "",
+                refSalary:   parseFloat(r["Commercial Ref salary"]) || 0,
+                monthly:     parseFloat(r["Monthly Fixed"]) || 0,
+                variablePct: parseFloat(r["Variable Component"]) || 15,
+                nos:         parseInt(r.No_of_Resource) || 0,
+                annualFixed:    parseFloat(r["Annual Fixed"]) || 0,
+                annualVariable: parseFloat(r["Annual Variable"]) || 0,
+                annualTotal:    parseFloat(r["Annual Total"]) || 0,
+              }])
+            );
 
-            // securityHousekeeping.totalAnnual: recompute from rows
-            if (!d2.securityHousekeeping?.totalAnnual) {
-              const secRows = d2.securityHousekeeping?.rows ?? [];
-              const totalAnnual = secRows.reduce((s, r) => s + (parseInt(r.nos) || 0) * (parseFloat(r.monthly) || 0) * 12, 0);
-              if (totalAnnual > 0)
-                d2 = { ...d2, securityHousekeeping: { ...(d2.securityHousekeeping ?? {}), totalAnnual } };
-            }
+            const totalAnnualTotal = salRows.reduce((s, r) => s + (parseFloat(r["Annual Total"]) || 0), 0);
+            const totalNos         = salRows.reduce((s, r) => s + (parseInt(r.No_of_Resource) || 0), 0);
+            const secTotalAnnual   = secRows.reduce((s, r) => s + (parseFloat(r["Annual Total"]) || 0), 0);
 
-            // electricity.total: same formula Subpage4_2 uses (ratePerSqft × carpetArea)
-            if (!d2.electricity?.total) {
-              const rps = parseFloat(d2.electricity?.ratePerSqft) || 0;
-              const isNewOrReno = storeData?.project_type === "Renovation" || storeData?.project_type === "New Store";
-              const area = parseFloat(isNewOrReno ? storeData?.new_retail_area : storeData?.existing_retail_area) || 0;
-              const total = (rps > 0 && area > 0) ? rps * area
-                : parseFloat(d3.electricity_total ?? d3.electricityTotal ?? d3.p_electricity_total) || 0;
-              if (total > 0)
-                d2 = { ...d2, electricity: { ...(d2.electricity ?? {}), total } };
-            }
+            const d2 = {
+              salaries: {
+                rows: salaryRowsObj,
+                totalAnnualTotal,
+                totalNos,
+                sqftPerEmp: d3["Sqft/emp"] ?? null,
+                costPerEmp: d3["Cost/emp"] ?? null,
+              },
+              securityHousekeeping: {
+                rows: secRows.map(r => ({ role: r.Role, nos: parseInt(r.No_of_Resource) || 0, monthly: parseFloat(r["Monthly Fixed"]) || 0 })),
+                totalAnnual: secTotalAnnual,
+              },
+              electricity: {
+                ratePerSqft: d3["Electricity_Rate/sqft"] ?? null,
+                total: parseFloat(d3["Electricity_Total"]) || 0,
+              },
+              otherExpenses: {
+                registrationCharges: d3["Registration Charges"] ?? 500000,
+                relocCost:           d3["Temp_cost"] ?? 0,
+              },
+            };
 
             setSubpage4_2Data(d2);
             markStepSaved(1);
