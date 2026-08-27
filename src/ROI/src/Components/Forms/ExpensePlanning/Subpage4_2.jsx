@@ -124,25 +124,56 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  // Mark as saved if resource data already exists when resuming
+  // Restore salary rows, sec/HK, electricity and other expenses on resume
   useEffect(() => {
     const roiid = storeData?.roiid;
     if (!roiid || isSaved) return;
     (async () => {
       try {
-        const res = await fetch(
-          `${BASE_URL}/expense_details/${roiid}?expense_type=RESOURCE`,
+        const [resR, resO] = await Promise.all([
+          fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=RESOURCE`),
+          fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=OTHER`),
+        ]);
+        if (!resR.ok) return;
+        const json = await resR.json();
+        const allRows = json?.data ?? [];
+        if (!allRows.length) return;
+
+        const SEC_HK = ["security", "housekeeping", "house keeping"];
+        const salRows = allRows.filter(r => !SEC_HK.includes((r.Role ?? "").toLowerCase()));
+        const secRows = allRows.filter(r =>  SEC_HK.includes((r.Role ?? "").toLowerCase()));
+
+        const restoredSalaryRows = Object.fromEntries(
+          salRows.map(r => [r.Role, {
+            level:       r.Level ?? "",
+            refSalary:   parseFloat(r["Commercial Ref salary"]) || 0,
+            monthly:     parseFloat(r["Monthly Fixed"]) || 0,
+            variablePct: parseFloat(r["Variable Component"]) || 15,
+            nos:         parseInt(r.No_of_Resource) || 0,
+          }])
         );
-        if (!res.ok) return;
-        const json = await res.json();
-        const row = json?.data?.[0];
-        if (!row) return;
-        if (row.salaries?.rows) setSalaryRows(row.salaries.rows);
-        if (row.electricity?.ratePerSqft != null)
-          setElectricity({ ratePerSqft: row.electricity.ratePerSqft });
-        if (row.otherExpenses) setOtherExpenses(row.otherExpenses);
-        if (row.securityHousekeeping?.rows)
-          setSecHousekeeping(row.securityHousekeeping.rows);
+
+        setSalaryRows((prev) =>
+          Object.values(prev).some(r => r.monthly > 0) ? prev : restoredSalaryRows
+        );
+        if (secRows.length)
+          setSecHousekeeping(secRows.map(r => ({
+            role:    r.Role,
+            nos:     parseInt(r.No_of_Resource) || 0,
+            monthly: parseFloat(r["Monthly Fixed"]) || 0,
+          })));
+
+        if (resO.ok) {
+          const jo = await resO.json();
+          const o  = jo?.data?.[0] ?? {};
+          if (o["Electricity_Rate/sqft"] != null)
+            setElectricity({ ratePerSqft: o["Electricity_Rate/sqft"] });
+          setOtherExpenses({
+            registrationCharges: o["Registration Charges"] ?? 500000,
+            relocCost:           o["Temp_cost"] ?? 0,
+          });
+        }
+
         setIsSaved(true);
       } catch (e) {
         console.error("Failed to load saved resource data:", e);
@@ -320,9 +351,10 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
     });
   };
 
+
   // ── Derived totals ────────────────────────────────────────────────────────
   const carpetArea =
-    storeData?.project_type === "Relocation" ||
+    storeData?.project_type === "Relocation" || storeData?.project_type === "Renovation" ||
     storeData?.project_type === "New Store" || storeData?.project_type === "Store Expansion" 
       ? parseFloat(storeData?.new_retail_area)
       : parseFloat(storeData?.existing_retail_area);

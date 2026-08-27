@@ -370,8 +370,6 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
     solitaireD: 0,
   });
 
-  console.log(forwardDetail)
-
   useEffect(() => {
     const region = forwardDetail?.region;
     const fmt = forwardDetail?.storeFormat;

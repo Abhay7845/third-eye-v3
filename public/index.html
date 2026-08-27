@@ -1,30 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="/ThirdEye/3rdeye_logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="ThirdEye, Explore the Tanishq Digital Merch portal for store expansion, analytics, and decision-making tools." />
-    <meta name="robots" content="index, follow" />
-    <!-- Cache busting: tell browsers never to cache this HTML file.
+
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="/ThirdEye/3rdeye_logo.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="description"
+    content="ThirdEye, Explore the Tanishq Digital Merch portal for store expansion, analytics, and decision-making tools." />
+  <meta name="robots" content="index, follow" />
+  <!-- Cache busting: tell browsers never to cache this HTML file.
          Hashed JS/CSS assets are safe to cache long-term via web.config. -->
-    <meta
-      http-equiv="Cache-Control"
-      content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <meta id="csp-meta" http-equiv="Content-Security-Policy" content="" />
-    <title>ThirdEye</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script nonce="RbuQC4Hrsky4YHmhE6LK2R==" type="text/javascript">
-      const nonce = "RbuQC4Hrsky4YHmhE6LK2R==";
-      document.currentScript.setAttribute("nonce", nonce);
-      const csp = `
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta id="csp-meta" http-equiv="Content-Security-Policy" content="" />
+  <title>ThirdEye</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script nonce="RbuQC4Hrsky4YHmhE6LK2R==" type="text/javascript">
+    const nonce = "RbuQC4Hrsky4YHmhE6LK2R==";
+    document.currentScript.setAttribute("nonce", nonce);
+    const csp = `
   default-src 'self';
   base-uri 'none';
 
@@ -48,6 +47,8 @@
 
   connect-src
     'self'
+    http://127.0.0.1:8000
+      http://localhost:8000
     https://uat-tanishqdigitalmerch.titan.in
     https://maps.googleapis.com
     https://login.microsoftonline.com
@@ -73,9 +74,10 @@
     'self'
     https://uat-tanishqdigitalmerch.titan.in:8443;
 `
-        .replace(/\s+/g, " ")
-        .trim();
-      document.querySelector("#csp-meta").setAttribute("content", csp);
-    </script>
-  </body>
+      .replace(/\s+/g, " ")
+      .trim();
+    document.querySelector("#csp-meta").setAttribute("content", csp);
+  </script>
+</body>
+
 </html>

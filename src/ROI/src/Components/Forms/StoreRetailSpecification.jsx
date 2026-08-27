@@ -128,6 +128,7 @@ export default function StoreRetailSpecifications({
 
   const STORE_TYPE_MAP = {
     standalone_store: "Mall Store",
+    "Stand-Alone Store": "Mall Store",
   };
 
   const formatStoreType = (raw) => {

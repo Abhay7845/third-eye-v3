@@ -258,25 +258,33 @@ export default function Subpage3_1({ handleNext }) {
     <div>
       <div className='subpage3_1 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen'>
         {/* Header */}
-        <div className='mb-6'>
-          <h2 className='text-xl font-bold text-gray-800 mb-1'>
-            Store Details 
-          </h2>
-          <p className='text-gray-500 text-sm'>
-            View store particulars and enter key monthly expenses
-          </p>
+        <div className='mb-6 flex items-center gap-4'>
+          <div className='flex-1'>
+            <div className='flex items-center gap-2.5 mb-1'>
+              <span className='w-1 h-7 bg-blue-600 rounded-full block' />
+              <h2 className='text-2xl font-extrabold text-gray-800 tracking-tight'>Store Details</h2>
+              <span className='text-xs font-semibold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full ml-1'>Step 1 of 4</span>
+            </div>
+            <p className='text-gray-400 text-sm ml-3.5'>View reference store particulars and enter key monthly expenses for this ROI</p>
+          </div>
         </div>
 
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
           {/* ── Left — Store Particulars ─────────────────────────── */}
           <div className='bg-white rounded-xl shadow-lg overflow-hidden h-full flex flex-col'>
-            <div className='px-5 py-4 border-b border-gray-100'>
-              <h3 className='text-base font-bold text-gray-800'>
-                📊 Store Particulars [The fields value are based on RefStore]
-              </h3>
-              <p className='text-xs text-gray-400 mt-0.5'>
-                Reference data — read only
-              </p>
+            <div className='px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50/60 to-white'>
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-lg'>📊</span>
+                  <div>
+                    <h3 className='text-base font-bold text-gray-800 leading-tight'>Store Particulars</h3>
+                    <p className='text-xs text-gray-400 mt-0.5'>Values sourced from the reference store</p>
+                  </div>
+                </div>
+                <span className='inline-flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full whitespace-nowrap'>
+                  🔒 Read only
+                </span>
+              </div>
             </div>
 
             {/* Column headers */}
@@ -311,25 +319,30 @@ export default function Subpage3_1({ handleNext }) {
 
           {/* ── Right — Key Expenses ─────────────────────────────── */}
           <div className='bg-white rounded-xl shadow-lg overflow-hidden h-full flex flex-col'>
-            <div className='px-5 py-4 border-b border-gray-100 flex items-start justify-between'>
-              <div>
-                <h3 className='text-base font-bold text-gray-800'>
-                  💰 Key Expenses [The Value of Expenses are on the basis of Ref store, you can edit accordingly]
-                </h3>
-                <p className='text-xs text-gray-400 mt-0.5'>
-                  Enter monthly values — annual is auto-calculated
-                </p>
+            <div className='border-b border-gray-100 bg-gradient-to-r from-green-50/60 to-white'>
+              <div className='px-5 pt-4 pb-3 flex items-start justify-between gap-4'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-lg'>💰</span>
+                  <div>
+                    <h3 className='text-base font-bold text-gray-800 leading-tight'>Key Expenses</h3>
+                    <p className='text-xs text-gray-400 mt-0.5'>Enter monthly values — annual is auto-calculated (×12)</p>
+                  </div>
+                </div>
+                {/* Legend */}
+                <div className='flex gap-2.5 text-xs text-gray-500 shrink-0 mt-0.5'>
+                  <span className='inline-flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded px-2 py-0.5'>
+                    <span className='w-2.5 h-2.5 rounded-sm bg-blue-200 inline-block' />
+                    Monthly
+                  </span>
+                  <span className='inline-flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded px-2 py-0.5'>
+                    <span className='w-2.5 h-2.5 rounded-sm bg-gray-300 inline-block' />
+                    Annual ×12
+                  </span>
+                </div>
               </div>
-              {/* Legend */}
-              <div className='flex gap-3 text-xs text-gray-500 mt-0.5'>
-                <span className='inline-flex items-center gap-1'>
-                  <span className='w-2.5 h-2.5 rounded-sm bg-blue-50 border border-blue-300 inline-block' />
-                  Monthly
-                </span>
-                <span className='inline-flex items-center gap-1'>
-                  <span className='w-2.5 h-2.5 rounded-sm bg-gray-100 border border-gray-300 inline-block' />
-                  Annual ×12
-                </span>
+              <div className='mx-5 mb-3 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2'>
+                <span className='text-amber-500 text-sm'>ℹ️</span>
+                <p className='text-xs text-amber-700 font-medium'>Pre-filled from reference store — adjust values to match this store's profile</p>
               </div>
             </div>
 
