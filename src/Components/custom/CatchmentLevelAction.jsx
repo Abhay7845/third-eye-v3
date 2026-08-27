@@ -15,10 +15,7 @@ const CatchmentLevelAction = ({ StoreColorSet }) => {
         Catchment Level Action
       </div>
 
-      <div
-        style={{
-          padding: "5px",
-        }}>
+      <div style={{ padding: "4px" }}>
         {StoreColorSet?.map((item, index) => (
           <div
             key={index}

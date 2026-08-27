@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import Sidebar from "../custom/Sidebar";
 import { Select } from "antd";
-import { Modal } from "@mui/material";
 import html2canvas from "html2canvas";
+import { Modal } from "@mui/material";
 import DarkCatchmentGoogleView from "../map/DarkCatchmentGoogleView";
 import { toast } from "react-toastify";
 import Loader from "../custom/Loader";
+import StoreSummary from "../custom/StoreSummary";
+import CustomersShares from "../custom/CustomersShares";
 import { axiosInstance } from "../../HostManger/API/Authorization";
 import ThirdEyeHeader from "../custom/ThirdEyeHeader";
 import { useSelector, useDispatch } from "react-redux";
@@ -16,66 +18,42 @@ import { PolygonCentroid, StoreColorSet } from "../Data/PolygonCentroid";
 import StoreAnlTabel from "../../Mainpages/StoreAnlTabel";
 import StoreTypeDetails from "../custom/StoreTypeDetails";
 import { channel_list } from "../Data/Data";
-import { FilePopStyle } from "./NewStoreProjection";
 import NewStoreCatchmentPdf from "../pdf/NewStoreCatchmentPdf";
-import StoreSummary from "../custom/StoreSummary";
-import CustomersShares from "../custom/CustomersShares";
+import { FilePopStyle } from "./NewStoreProjection";
 import CatchmentLevelAction from "../custom/CatchmentLevelAction";
+// import { channel_list } from "../Data/Data";
 
 const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
   const userLog = useSelector((state) => state?.user?.user);
   const dispatch = useDispatch();
   const [modalOpen, setModalOpen] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [slideOut, setSlideOut] = useState(false);
   const [showTable, setShowTable] = useState(true);
-
   const [channelval, setChannelval] = useState(userLog?.channel);
   const [channelList, setChannelList] = useState([]);
-
   const [store, setStore] = useState(null);
   const [storeList, setStoreList] = useState([]);
-
   const [momStoreTrend, setMomStoreTrend] = useState([]);
   const [pincodeSummary, setPincodeSummary] = useState([]);
   const [storeSummary, setStoreSummary] = useState(null);
   const [custStrPerc, setCustStrPerc] = useState([]);
   const [storeTypeData, setStoreTypeData] = useState(null);
-
-  // MAP
+  // -----------------------------------------MAP RELATED STATES ---------------------------------
   const [mapCenter, setMapCenter] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
   const [googleMapInstance, setGoogleMapInstance] = useState(null);
-
   const polygonRefs = useRef([]);
-  const polygonLabels = useRef([]);
   const map_img = useRef(null);
 
+  const [polygonLabels, setPolygonLabels] = useState([]);
   const [storeAnlMapImg, setStoreAnlMapImg] = useState(null);
-  console.log("storeAnlMapImg==>", storeAnlMapImg);
 
   useEffect(() => {
     dispatch(clearNewStoreInputs());
     dispatch(clearNewCityInputs());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const handleScreenshot = async (map_img) => {
-    if (!map_img.current) return null;
-
-    try {
-      const canvas = await html2canvas(map_img.current, {
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-      });
-      const imgData = canvas.toDataURL("image/png");
-      setStoreAnlMapImg(imgData);
-    } catch (error) {
-      return null;
-    }
-  };
 
   const population_list = pincodeSummary.map((item) => item.population);
 
@@ -87,7 +65,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
           lng: position.coords.longitude,
         });
       },
-      () => {
+      (err) => {
         setUserLocation({
           lat: 12.841069307534518,
           lng: 77.67311083062808,
@@ -101,12 +79,10 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
     );
   }, []);
 
-  // ============================================================
-  // CHANNEL LIST
-  // ============================================================
   const GetChannelList = () => {
     return axiosInstance
       .get(`/api/fetch/channel/list`)
+      .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
           const filteredBrands = response?.data?.value
@@ -116,27 +92,25 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                 (ch) => ch.toUpperCase() === brand.toUpperCase(),
               ),
             );
-
-          const list = filteredBrands?.map((item) => ({
-            value: item?.toUpperCase(),
-            label: item?.toUpperCase(),
-          }));
-
-          setChannelList(list || []);
+          const channelList = filteredBrands?.map((item) => {
+            return {
+              value: item?.toUpperCase(),
+              label: item?.toUpperCase(),
+            };
+          });
+          setChannelList(channelList);
         }
       })
       .catch(() => {});
   };
 
-  // ============================================================
-  // STORE LIST
-  // ============================================================
   const GetStoreList = (chl) => {
     return axiosInstance
       .get(`/api/fetch/dark/store/codes?channel=${chl}`)
+      .then((res) => res)
       .then((response) => {
         if (response.data.code === "1000") {
-          const list = response?.data?.value
+          const storeList = response?.data?.value
             .filter(
               (item) =>
                 item &&
@@ -146,103 +120,85 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
             )
             .map((item) => {
               const cleanItem = item.replace(/\(.*?\)/g, "").trim();
-
               if (cleanItem.includes("-")) {
                 const parts = cleanItem.split("-").map((p) => p.trim());
-
                 return {
                   value: parts[0],
                   label: `${parts[0]}-${parts[1]}`,
                 };
+              } else {
+                return {
+                  value: cleanItem,
+                  label: cleanItem,
+                };
               }
-
-              return {
-                value: cleanItem,
-                label: cleanItem,
-              };
             });
-
-          setStoreList(list);
+          setStoreList(storeList);
         } else {
           toast.error("Similar Store Not Available", {
             theme: "colored",
             autoClose: 2000,
             position: "bottom-right",
           });
-
           setStoreList([]);
         }
       })
       .catch(() => {});
   };
 
+  // Single effect: show loader until BOTH channel list and store list respond
   useEffect(() => {
     if (!channelval) return;
-
     setLoading(true);
-
     Promise.allSettled([GetChannelList(), GetStoreList(channelval)]).finally(
       () => setLoading(false),
     );
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelval]);
 
-  // ============================================================
-  // MOM TREND
-  // ============================================================
   const GetMomTrendData = async (chl, str) => {
     try {
       const response = await axiosInstance.get(
         `/api/fetch/mom/trend/store?channel=${chl}&storecode=${str}`,
       );
-
       if (response.data.code === "1000") {
-        return response?.data?.value.map((item) => ({
+        const mom_data = response?.data?.value.map((item) => ({
           customers: item?.customers,
           month: item?.month,
           revenueByCustomer: parseFloat(item?.revenueByCustomer),
         }));
+        return mom_data;
+      } else {
+        return [];
       }
-
-      return [];
-    } catch {
+    } catch (err) {
       return [];
     }
   };
 
-  // ============================================================
-  // STORE TYPE
-  // ============================================================
   const GetStoreType = async (str) => {
     try {
       const response = await axiosInstance.get(
         `/api/get/store/type/details?storecode=${str}`,
       );
-
       if (response.data.code === "1000") {
         return response.data.value;
+      } else {
+        return null;
       }
-
-      return null;
-    } catch {
+    } catch (err) {
       return null;
     }
   };
 
-  // ============================================================
-  // STORE SUMMARY
-  // ============================================================
   const GetStoreSummary = async (chl, adjcentPin) => {
     try {
       const response = await axiosInstance.get(
         `/api/fetch/catch/analysis/str/summary?channel=${chl}&pincodes=${adjcentPin}`,
       );
-
       if (response?.data?.code === "1000") {
         const data = response?.data?.value;
-
-        return {
+        const store_data = {
           encircleBase: Number(parseFloat(data.encircleBase).toFixed(2)),
           channelBase: Number(parseFloat(data.channelBase).toFixed(2)),
           encircleBaseCagr: Number(
@@ -256,32 +212,28 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
           dormancyRate: Number(parseFloat(data.dormancyRate * 100).toFixed(2)),
           fillRate: Number(parseFloat(data.fillRate).toFixed(2)),
         };
+        return store_data;
+      } else {
+        return [];
       }
-
-      return null;
-    } catch {
-      return null;
+    } catch (err) {
+      setLoading(false);
+      return [];
     }
   };
 
-  // ============================================================
-  // CITY DORMANCY
-  // ============================================================
   const GetCityDormancyData = async (chl, city) => {
     try {
       const res = await axiosInstance.get(
         `/api/dark/catch/analysis?channel=${chl}&city=${city}`,
       );
-
       if (res.data.code === "1000") {
         const colorMap = Object.fromEntries(
           StoreColorSet.map((item) => [item.action.trim(), item.color]),
         );
-
-        const grouped = res.data.value.reduce((acc, item) => {
+        const grouped_by_catchment = res.data.value.reduce((acc, item) => {
           const action = item.action?.trim();
           const color = colorMap[action] || "#000";
-
           if (!acc[action]) {
             acc[action] = {
               action,
@@ -289,71 +241,56 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
               data: [],
             };
           }
-
           acc[action].data.push(item);
-
           return acc;
         }, {});
-
-        return Object.values(grouped);
+        return Object.values(grouped_by_catchment);
+      } else {
+        toast.error("No data found for this Store!", {
+          theme: "colored",
+          autoClose: 2000,
+        });
+        return [];
       }
-
-      toast.error("No data found for this Store!", {
-        theme: "colored",
-        autoClose: 2000,
-      });
-
-      return [];
-    } catch {
+    } catch (err) {
       toast.error("Something went wrong!", {
         theme: "colored",
         autoClose: 2000,
       });
-
       return [];
     }
   };
 
-  // ============================================================
-  // CITY NAME
-  // ============================================================
   const GetCityName = async (t_pin) => {
     try {
       const res = await axiosInstance.get(
         `/api/projection/fetch/city/by/pin?pincodes=${t_pin}`,
       );
-
       if (res.data.code === "1000") {
         return res.data.value.toString() || null;
+      } else {
+        toast.warn("City not found for given pincode", {
+          theme: "colored",
+          autoClose: 2000,
+        });
+        return null;
       }
-
-      toast.warn("City not found for given pincode", {
-        theme: "colored",
-        autoClose: 2000,
-      });
-
-      return null;
-    } catch {
+    } catch (err) {
       toast.error("Something went wrong!", {
         theme: "colored",
         autoClose: 2000,
       });
-
       return null;
     }
   };
 
-  // ============================================================
-  // PINCODE SUMMARY
-  // ============================================================
   const GetPincodeSummary = async (chl, adjcentPin) => {
     try {
       const response = await axiosInstance.get(
         `/api/fetch/catch/analysis/pincode/summary?channel=${chl}&pincodes=${adjcentPin}`,
       );
-
       if (response?.data?.code === "1000") {
-        return response?.data?.value?.map((item) => ({
+        const pin_summary = response?.data?.value?.map((item) => ({
           arpc: Number(parseFloat(item.arpc).toFixed(2)),
           channelBase: Number(parseFloat(item.channelBase).toFixed(2)),
           channelBaseCagr: Number(parseFloat(item.channelBaseCagr).toFixed(2)),
@@ -366,93 +303,130 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
           fillRate: Number(parseFloat(item.fillRate).toFixed(2)),
           pincode: item.pincode,
         }));
+        return pin_summary;
+      } else {
+        return [];
       }
-
-      return [];
-    } catch {
+    } catch (err) {
+      setLoading(false);
       return [];
     }
   };
 
-  // ============================================================
-  // CUSTOMER SHARE
-  // ============================================================
   const GetCustStrPerc = async (str, pri_pins, sec_pins) => {
     try {
       const response = await axiosInstance.get(
         `/api/fetch/share/perc/cust/store?storecode=${str}&primaryPins=${pri_pins}&secondryPins=${sec_pins}`,
       );
-
       if (response?.data?.code === "1000") {
-        return response?.data?.value?.map((item) => ({
+        const result = response?.data?.value?.map((item) => ({
           ...item,
           percentShareType: item.percentShareType
             .split("_")
             .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
             .join(" "),
         }));
+        return result;
+      } else {
+        return [];
       }
-
-      return [];
-    } catch {
+    } catch (err) {
+      setLoading(false);
       return [];
     }
   };
 
-  // ============================================================
-  // POPULATION
-  // ============================================================
   const GetPopulation = async (adjcentPin) => {
     try {
       const response = await axiosInstance.get(
         `/api/fetch/population/data?pincodes=${adjcentPin}`,
       );
-
       if (response?.data?.code === "1000") {
         return response?.data?.value;
+      } else {
+        return [];
       }
-
-      return [];
-    } catch {
+    } catch (err) {
+      setLoading(false);
       return [];
     }
   };
 
-  // ============================================================
-  // CLEAR POLYGONS
-  // ============================================================
   const clearPolygons = () => {
-    polygonRefs.current.forEach((polygon) => {
-      polygon.setMap(null);
-    });
-
+    polygonRefs.current.forEach((p) => p.setMap(null));
     polygonRefs.current = [];
-
-    polygonLabels.current.forEach((label) => {
-      label.setMap(null);
-    });
-
-    polygonLabels.current = [];
+    polygonLabels.forEach((l) => l.setMap(null));
+    setPolygonLabels([]);
   };
 
-  // ============================================================
-  // FETCH ALL DATA
-  // ============================================================
+  const handleScreenshot = (map_img, mapInstance) => {
+    return new Promise((resolve) => {
+      if (!map_img?.current) {
+        resolve(null);
+        return;
+      }
+
+      if (!mapInstance) {
+        resolve(null);
+        return;
+      }
+
+      window.google.maps.event.addListenerOnce(
+        mapInstance,
+        "idle",
+        async () => {
+          try {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
+            const mapElement = map_img.current;
+
+            if (!mapElement) {
+              resolve(null);
+              return;
+            }
+
+            const canvas = await html2canvas(mapElement, {
+              useCORS: true,
+              allowTaint: false,
+              logging: false,
+              backgroundColor: "#ffffff",
+
+              // High quality
+              scale: Math.max(2, window.devicePixelRatio || 1),
+
+              // Don't clone unnecessarily
+              removeContainer: false,
+            });
+
+            const imgData = canvas.toDataURL("image/png", 1.0);
+            setStoreAnlMapImg(imgData);
+            resolve(imgData);
+          } catch (error) {
+            resolve(null);
+          }
+        },
+      );
+    });
+  };
+
   const GetAdjusentPin = async (data) => {
     try {
       setLoading(true);
 
+      // Clear previous store results
       setPincodeSummary([]);
       setStoreSummary(null);
       setCustStrPerc([]);
       setMomStoreTrend([]);
       setStoreTypeData(null);
-      setStoreAnlMapImg(null);
 
+      // --------------------------------------------------
+      // STEP 1: Get adjacent pincodes
+      // --------------------------------------------------
       const res = await axiosInstance.get(
         `/ThirdEye/get/adjacent/pincodes/db?pincode=${data?.pincode}`,
       );
-      console.log("res123==>", res);
+
       if (res?.data?.code !== "1000") {
         toast.info("Data not found.", {
           theme: "colored",
@@ -464,10 +438,21 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
         return;
       }
 
-      const { pincode, primaryPincode, secondaryPincode } = res?.data?.value;
+      const {
+        pincode,
+        primaryPincode = [],
+        secondaryPincode = [],
+      } = res?.data?.value || {};
 
-      const AdjacentPins = [pincode, ...primaryPincode, ...secondaryPincode];
+      const AdjacentPins = [
+        pincode,
+        ...primaryPincode,
+        ...secondaryPincode,
+      ].filter(Boolean);
 
+      // --------------------------------------------------
+      // STEP 2: Get city & dormancy data
+      // --------------------------------------------------
       const cityName = await GetCityName(AdjacentPins);
 
       const str_details = await GetStoreType(store);
@@ -483,6 +468,9 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
         return;
       }
 
+      // --------------------------------------------------
+      // STEP 3: Get summaries
+      // --------------------------------------------------
       const pincode_summary = await GetPincodeSummary(channelval, AdjacentPins);
 
       const store_summary = await GetStoreSummary(channelval, AdjacentPins);
@@ -499,15 +487,18 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
 
       const get_pin_population = await GetPopulation(AdjacentPins);
 
-      // ========================================================
-      // MAP COORDINATES
-      // ========================================================
+      // --------------------------------------------------
+      // STEP 4: Get polygon data
+      // --------------------------------------------------
       const polygonRes = await axiosInstance.get(
         `/ThirdEye/get/pincode/cords/db?pincodes=${AdjacentPins}`,
       );
 
       const MapCoordinates = polygonRes?.data;
 
+      // --------------------------------------------------
+      // STEP 5: Merge summary + coordinates
+      // --------------------------------------------------
       function getMergeSummary(resp1 = [], resp2 = [], resp3 = []) {
         const normalize = (val) =>
           val !== null && val !== undefined ? String(val) : "";
@@ -547,12 +538,18 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
 
       setPincodeSummary(mergedData);
 
+      // --------------------------------------------------
+      // STEP 6: Create Google Maps bounds
+      // --------------------------------------------------
       const overallBounds = new window.google.maps.LatLngBounds();
 
+      // --------------------------------------------------
+      // STEP 7: Create pincode information map
+      // --------------------------------------------------
       const pincodeInfoMap = {};
 
       grouped_cachment.forEach((group) => {
-        group.data.forEach((item) => {
+        group?.data?.forEach((item) => {
           pincodeInfoMap[item.pincode] = {
             color: group.color,
             action: group.action,
@@ -560,10 +557,16 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
         });
       });
 
+      // --------------------------------------------------
+      // STEP 8: InfoWindow
+      // --------------------------------------------------
       const infoWindow = new window.google.maps.InfoWindow();
 
       let activePolygon = null;
 
+      // --------------------------------------------------
+      // STEP 9: Draw polygons
+      // --------------------------------------------------
       if (mergedData.length > 0) {
         mergedData.forEach((item) => {
           const {
@@ -581,28 +584,40 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
 
           const pinInfo = pincodeInfoMap[pincode] || {};
 
-          const fillColor = pinInfo.color;
-          const action_level = pinInfo.action;
+          const fillColor = pinInfo.color || "#808080";
+
+          const action_level = pinInfo.action || "No Action";
 
           const drawPolygons = (coordinates) => {
-            if (!coordinates) return;
+            if (!coordinates?.length) return;
 
             coordinates.forEach((poly) => {
-              const isMultiPolygon = Array.isArray(poly[0][0]);
+              if (!poly?.length) return;
+
+              const isMultiPolygon =
+                Array.isArray(poly[0]) && Array.isArray(poly[0][0]);
 
               const pathsArray = isMultiPolygon ? poly : [poly];
 
               pathsArray.forEach((ring) => {
+                if (!ring?.length) return;
+
                 const path = ring.map(([lng, lat]) => {
-                  const latLng = { lat, lng };
+                  const latLng = {
+                    lat: Number(lat),
+                    lng: Number(lng),
+                  };
 
                   overallBounds.extend(latLng);
 
                   return latLng;
                 });
 
-                if (path.length === 0) return;
+                if (!path.length) return;
 
+                // ------------------------------------------
+                // Polygon
+                // ------------------------------------------
                 const polygon = new window.google.maps.Polygon({
                   paths: path,
                   strokeColor: "blue",
@@ -617,6 +632,9 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
 
                 polygonRefs.current.push(polygon);
 
+                // ------------------------------------------
+                // Mouse over
+                // ------------------------------------------
                 polygon.addListener("mouseover", () => {
                   if (polygon !== activePolygon) {
                     polygon.setOptions({
@@ -628,6 +646,9 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                   }
                 });
 
+                // ------------------------------------------
+                // Mouse out
+                // ------------------------------------------
                 polygon.addListener("mouseout", () => {
                   polygon.setOptions({
                     strokeColor: "blue",
@@ -639,6 +660,9 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                   infoWindow.close();
                 });
 
+                // ------------------------------------------
+                // Centroid marker
+                // ------------------------------------------
                 const centroid = PolygonCentroid(path);
 
                 const label = new window.google.maps.Marker({
@@ -650,9 +674,14 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                   },
                 });
 
-                polygonLabels.current.push(label);
+                setPolygonLabels((prev) => [...prev, label]);
 
+                // ------------------------------------------
+                // Click
+                // ------------------------------------------
                 polygon.addListener("click", (e) => {
+                  activePolygon = polygon;
+
                   polygon.setOptions({
                     strokeColor: "red",
                     strokeWeight: 2,
@@ -660,11 +689,11 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                     fillOpacity: 0.5,
                   });
 
-                  const currentMapCenter = googleMapInstance.getCenter();
+                  const mapCenter = googleMapInstance.getCenter();
 
                   const clickLng = e.latLng.lng();
 
-                  const centerLng = currentMapCenter.lng();
+                  const centerLng = mapCenter.lng();
 
                   const offsetX = clickLng < centerLng ? -180 : 150;
 
@@ -673,113 +702,121 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                   });
 
                   infoWindow.setContent(`
+                    <div
+                      class="map_catchment_box"
+                      style="
+                        font-size:12px;
+                        border:1px solid #ccc;
+                        border-radius:6px;
+                        padding:4px;
+                        max-width:300px;
+                        background:#fff;
+                      "
+                    >
+
                       <div
-                        class="map_catchment_box"
                         style="
                           font-size:12px;
-                          border:1px solid #ccc;
-                          border-radius:6px;
-                          padding:4px;
-                          max-width:300px;
+                          margin-bottom:3px;
+                          border-bottom:1px solid #ddd;
+                          padding-bottom:2px;
                         "
                       >
-                        <div
-                          style="
-                            font-size:12px;
-                            margin-bottom:3px;
-                            border-bottom:1px solid #ddd;
-                            padding-bottom:2px;
-                          "
-                        >
-                          Catchment Level Action:
-                          <span style="color:${fillColor};">
-                            ${action_level || "No Action"}
-                          </span>
-                        </div>
-
-                        <table
-                          style="
-                            width:100%;
-                            border-collapse:collapse;
-                            font-size:12px;
-                          "
-                        >
-                          <tbody>
-                            <tr>
-                              <td
-                                colspan="2"
-                                style="
-                                  padding:3px 0;
-                                  text-align:center;
-                                  color:blue;
-                                  font-weight:bold;
-                                "
-                              >
-                                ${pincode}
-                              </td>
-                            </tr>
-
-                            <tr>
-                              <td style="padding:2px 4px;">
-                                Encircle Base:
-                              </td>
-                              <td style="padding:2px 4px;">
-                                ${encircleBase.toLocaleString()}
-                                (CAGR:
-                                ${(encircleBaseCagr * 100).toFixed(1)}%)
-                              </td>
-                            </tr>
-
-                            <tr>
-                              <td style="padding:2px 4px;">
-                                ${channelval} Base:
-                              </td>
-                              <td style="padding:2px 4px;">
-                                ${channelBase.toLocaleString()}
-                                (CAGR:
-                                ${(channelBaseCagr * 100).toFixed(1)}%)
-                              </td>
-                            </tr>
-
-                            <tr>
-                              <td style="padding:2px 4px;">
-                                Dormant Base:
-                              </td>
-                              <td style="padding:2px 4px;">
-                                ${dormantBase.toLocaleString()}
-                              </td>
-                            </tr>
-
-                            <tr>
-                              <td style="padding:2px 4px;">
-                                Dormancy (%):
-                              </td>
-                              <td style="padding:2px 4px;">
-                                ${dormancyRate.toLocaleString()}%
-                              </td>
-                            </tr>
-
-                            <tr>
-                              <td style="padding:2px 4px;">
-                                ARPC:
-                              </td>
-                              <td style="padding:2px 4px;">
-                                ${(arpc / 100000).toFixed(2)}L
-                              </td>
-                            </tr>
-
-                            <tr>
-                              <td style="padding:2px 4px;">
-                                Fill Rate:
-                              </td>
-                              <td style="padding:2px 4px;">
-                                ${parseFloat(fillRate * 100).toFixed(1)}%
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
+                        Catchment Level Action:
+                        <span style="color:${fillColor};">
+                          ${action_level}
+                        </span>
                       </div>
-                    `);
+
+                      <table
+                        style="
+                          width:100%;
+                          border-collapse:collapse;
+                          font-size:12px;
+                        "
+                      >
+                        <tbody>
+
+                          <tr>
+                            <td
+                              colspan="2"
+                              style="
+                                padding:3px 0;
+                                text-align:center;
+                                color:blue;
+                                font-weight:bold;
+                              "
+                            >
+                              ${pincode}
+                            </td>
+                          </tr>
+
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              Encircle Base:
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${Number(encircleBase || 0).toLocaleString()}
+                              (CAGR:
+                              ${(Number(encircleBaseCagr || 0) * 100).toFixed(
+                                1,
+                              )}%)
+                            </td>
+                          </tr>
+
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              ${channelval} Base:
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${Number(channelBase || 0).toLocaleString()}
+                              (CAGR:
+                              ${(Number(channelBaseCagr || 0) * 100).toFixed(
+                                1,
+                              )}%)
+                            </td>
+                          </tr>
+
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              Dormant Base:
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${Number(dormantBase || 0).toLocaleString()}
+                            </td>
+                          </tr>
+
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              Dormancy (%):
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${Number(dormancyRate || 0).toFixed(1)}%
+                            </td>
+                          </tr>
+
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              ARPC:
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${(Number(arpc || 0) / 100000).toFixed(2)}L
+                            </td>
+                          </tr>
+
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              Fill Rate:
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${(Number(fillRate || 0) * 100).toFixed(1)}%
+                            </td>
+                          </tr>
+
+                        </tbody>
+                      </table>
+                    </div>
+                  `);
 
                   infoWindow.setPosition(e.latLng);
 
@@ -802,12 +839,17 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
           drawPolygons(geometryJson?.coordinates);
         });
 
-        // FIT MAP
+        // --------------------------------------------------
+        // STEP 10: Fit map to polygons
+        // --------------------------------------------------
         googleMapInstance.fitBounds(overallBounds);
+
+        // --------------------------------------------------
+        // STEP 11: WAIT FOR MAP + TAKE SCREENSHOT
+        // --------------------------------------------------
+        await handleScreenshot(map_img, googleMapInstance);
+
         setShowTable(true);
-        setTimeout(async () => {
-          await handleScreenshot(map_img);
-        }, 1000);
       } else {
         toast.error("Data Not Available", {
           theme: "colored",
@@ -817,39 +859,33 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
 
       setLoading(false);
     } catch (err) {
-      toast.error("Somthing went wrong!", {
+      toast.error("Something went wrong!", {
         theme: "colored",
         autoClose: 2000,
       });
+
       setPincodeSummary([]);
       setLoading(false);
     }
   };
 
-  // ============================================================
-  // STORE DETAILS
-  // ============================================================
   const GetStoreDetails = async (chl, str) => {
     try {
       const res = await axiosInstance.get(
         `/api/fetch/store/details?channel=${chl}&storecode=${str}`,
       );
-      console.log("res==>", res);
       if (res?.data?.code === "1000") {
+        GetAdjusentPin(res?.data?.value);
         setMapCenter([
           {
             lat: res?.data?.value?.lat,
             lng: res?.data?.value?.longi,
           },
         ]);
-
         setUserLocation({
           lat: res?.data?.value?.lat,
           lng: res?.data?.value?.longi,
         });
-
-        // FETCH DATA
-        await GetAdjusentPin(res?.data?.value);
       } else {
         toast.info("Data not found for seleted Channel & Store.", {
           theme: "colored",
@@ -857,56 +893,43 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
           position: "bottom-right",
         });
       }
-    } catch {
+    } catch (err) {
       setLoading(false);
     }
   };
 
-  // ============================================================
-  // FETCH BUTTON
-  // ============================================================
   const OnHandelGoogleMap = async () => {
     clearPolygons();
-
     if (!channelval) {
       toast.error("Please Select Channel", {
         theme: "colored",
         autoClose: 2000,
         position: "bottom-right",
       });
-
       return;
     }
-
     if (!store) {
       toast.error("Please Select Store", {
         theme: "colored",
         autoClose: 2000,
         position: "bottom-right",
       });
-
       return;
     }
-
-    // SCREENSHOT HAPPENS INSIDE GetAdjusentPin
-    // ONLY WHEN THIS FETCH BUTTON IS CLICKED.
-    await GetStoreDetails(channelval, store);
+    GetStoreDetails(channelval, store);
   };
 
   return (
     <React.Fragment>
       {loading && <Loader />}
-
       <Sidebar
         toggle_open={toggle_open}
         toggle={toggle}
         setSlideOut={setSlideOut}
       />
-
       <div
         className={`main_container ${slideOut ? "slide_animation_back" : ""}`}>
         <ThirdEyeHeader chl={channelval} />
-
         <div
           style={{
             border: "1.5px solid #233044",
@@ -920,10 +943,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
               padding: "5px",
             }}>
             <div style={{ width: "70%" }}>
-              <div
-                style={{
-                  border: "1px solid #233044",
-                }}>
+              <div style={{ border: "1px solid #233044" }}>
                 {storeTypeData && (
                   <div
                     style={{
@@ -932,7 +952,11 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                       width: "100%",
                       background: "#233044",
                     }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                      }}>
                       <StoreTypeDetails storeTypeData={storeTypeData} />
                     </div>
 
@@ -956,11 +980,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                   </div>
                 )}
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                  }}>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
                   <div className='target_chatchment_data'>
                     <GraphAccordion
                       title='Last 12 Months Trends'
@@ -968,8 +988,6 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                     />
                   </div>
                 </div>
-
-                {/* MAP IMAGE AREA */}
                 <div ref={map_img}>
                   <DarkCatchmentGoogleView
                     setGoogleMapInstance={setGoogleMapInstance}
@@ -980,13 +998,15 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                 </div>
               </div>
             </div>
-
             <div
               style={{
                 width: "29.5%",
                 border: "1px solid #233044",
               }}>
-              <div style={{ padding: "1%" }}>
+              <div
+                style={{
+                  padding: "1%",
+                }}>
                 <div
                   style={{
                     border: "1px solid #233044",
@@ -1000,11 +1020,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                       flexWrap: "nowrap",
                       overflowX: "auto",
                     }}>
-                    <div
-                      style={{
-                        flex: "1",
-                        maxWidth: "25%",
-                      }}>
+                    <div style={{ flex: "1", maxWidth: "25%" }}>
                       <div
                         style={{
                           fontSize: "12px",
@@ -1013,7 +1029,6 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                         }}>
                         Channel
                       </div>
-
                       <Select
                         showSearch
                         style={{ width: "100%" }}
@@ -1028,12 +1043,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                         disabled={userLog?.role === "ADMIN"}
                       />
                     </div>
-
-                    <div
-                      style={{
-                        flex: "1",
-                        minWidth: "20%",
-                      }}>
+                    <div style={{ flex: "1", minWidth: "20%" }}>
                       <div
                         style={{
                           fontSize: "12px",
@@ -1042,7 +1052,6 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                         }}>
                         Store
                       </div>
-
                       <Select
                         showSearch
                         style={{ width: "100%" }}
@@ -1053,7 +1062,6 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                         onChange={(value) => setStore(value)}
                       />
                     </div>
-
                     <div style={{ flexShrink: 0 }}>
                       <button className='apply_btn' onClick={OnHandelGoogleMap}>
                         FETCH
@@ -1079,7 +1087,6 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                         maxHeight='86px'
                       />
                     </div>
-
                     <div
                       style={{
                         border: "1px solid #233044",
@@ -1091,19 +1098,13 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                     </div>
                   </div>
                 )}
-
-                <div
-                  style={{
-                    border: "1px solid #233044",
-                    marginTop: "5px",
-                  }}>
+                <div style={{ border: "1px solid #233044" }}>
                   <CatchmentLevelAction StoreColorSet={StoreColorSet} />
                 </div>
               </div>
             </div>
           </div>
         </div>
-
         {pincodeSummary.length > 0 && (
           <StoreAnlTabel
             data={pincodeSummary}
@@ -1112,23 +1113,22 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
             channel={channelval}
           />
         )}
+        <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
+          <div style={FilePopStyle} className='scrollable_container'>
+            <NewStoreCatchmentPdf
+              close={() => setModalOpen(false)}
+              storeTypeData={storeTypeData}
+              channel={channelval}
+              map_img={storeAnlMapImg}
+              storeSummary={storeSummary}
+              population_list={population_list}
+              custStrPerc={custStrPerc}
+              StoreColorSet={StoreColorSet}
+              pincodeSummary={pincodeSummary}
+            />
+          </div>
+        </Modal>
       </div>
-
-      <Modal open={modalOpen}>
-        <div style={FilePopStyle} className='scrollable_container'>
-          <NewStoreCatchmentPdf
-            close={() => setModalOpen(false)}
-            storeTypeData={storeTypeData}
-            channel={channelval}
-            map_img={storeAnlMapImg}
-            storeSummary={storeSummary}
-            population_list={population_list}
-            custStrPerc={custStrPerc}
-            StoreColorSet={StoreColorSet}
-            pincodeSummary={pincodeSummary}
-          />
-        </div>
-      </Modal>
     </React.Fragment>
   );
 };

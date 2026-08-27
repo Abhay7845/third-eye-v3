@@ -415,7 +415,9 @@ const NewStoreCatchmentPdf = ({
                 borderLeft: "none",
                 background: "#fff",
               }}>
-              <CatchmentLevelAction StoreColorSet={StoreColorSet} />
+              <div style={{ borderBottom: "1px solid #233044" }}>
+                <CatchmentLevelAction StoreColorSet={StoreColorSet} />
+              </div>
             </div>
           </div>
 
