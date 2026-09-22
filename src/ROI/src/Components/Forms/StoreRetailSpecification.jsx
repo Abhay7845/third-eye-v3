@@ -84,6 +84,7 @@ export default function StoreRetailSpecifications({
   });
 
   const [isSaved, setIsSaved] = useState(false);
+  const [isEditingLocked, setIsEditingLocked] = useState(false);
   const [showRemarks, setShowRemarks] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [savedSummary, setSavedSummary] = useState(null);
@@ -405,6 +406,7 @@ export default function StoreRetailSpecifications({
       }
 
       setIsSaved(true);
+      setIsEditingLocked(false);
       setSavedSummary(payload);
       setExpandedSections((prev) => ({ ...prev, arch: false }));
       setShowSummaryModal(true);
@@ -416,6 +418,23 @@ export default function StoreRetailSpecifications({
 
   return (
     <div className='space-y-8 p-8'>
+      {/* Retail area warning — shown first so it's seen immediately on landing */}
+      {isRetailAreaTooLow && (
+        <div className='flex items-start gap-3 bg-amber-50 border border-amber-400 rounded-xl px-5 py-4'>
+          <span className='text-amber-500 text-xl mt-0.5'>⚠️</span>
+          <div>
+            <p className='font-semibold text-amber-800 text-sm'>
+              New Retail Area too low ({roiContext.historyRetailArea} sq ft)
+            </p>
+            <p className='text-amber-700 text-sm mt-1'>
+              The retail area from History ID must be at least{" "}
+              <strong>2500 sq ft</strong> to proceed. Please update the
+              retail area in <strong>Third Eye History ID</strong> and
+              reload the form.
+            </p>
+          </div>
+        </div>
+      )}
       {/* ROI Context Banner */}
       {roiContext?.roiId && (
         <div className='bg-indigo-50 border border-indigo-200 rounded-xl px-6 py-4'>
@@ -457,6 +476,9 @@ export default function StoreRetailSpecifications({
         </div>
       )}
 
+      {/* Once saved, every field below is locked until "Edit Details" is clicked
+          (Store Type / New Overall Area / New Retail Area stay locked even then). */}
+      <fieldset disabled={isSaved && !isEditingLocked} className='contents'>
       {/* SECTION 1: Store Specification */}
       <Section
         title='🏪 Store Specification Details'
@@ -479,6 +501,7 @@ export default function StoreRetailSpecifications({
               label='Store Type *'
               name='storeType'
               register={register}
+              disabled={isSaved}
               rules={{ required: "Store Type is required" }}>
               <option value=''>Select</option>
               {storeTypes?.map((it) => {
@@ -543,6 +566,7 @@ export default function StoreRetailSpecifications({
                 name='newOverallArea'
                 type='number'
                 register={register}
+                disabled={isSaved}
                 rules={{
                   required: "New Overall Area is required",
                   validate: (v) =>
@@ -574,7 +598,7 @@ export default function StoreRetailSpecifications({
             type='number'
             register={register}
             rules={{ required: "New Retail Area is required" }}
-            disabled={isNewStore && !!roiContext?.historyRetailArea}
+            disabled={isSaved || (isNewStore && !!roiContext?.historyRetailArea)}
           />
           {errors?.newRetailArea && (
             <p className='text-red-500 text-xs mt-1'>
@@ -824,6 +848,7 @@ export default function StoreRetailSpecifications({
           )}
         </div>
       </Section>
+      </fieldset>
 
       {/* FOOTER */}
       {specCompleted && archCompleted && !isSaved && (
@@ -840,6 +865,35 @@ export default function StoreRetailSpecifications({
             className='px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition'>
             Save Details
           </button>
+        </div>
+      )}
+
+      {/* FOOTER — already saved: edit (other fields) or continue */}
+      {isSaved && (
+        <div className='flex gap-3 justify-start px-8 py-6 bg-gray-50 rounded-lg border border-gray-200 mt-8'>
+          {isEditingLocked ? (
+            <button
+              type='button'
+              onClick={handleSubmit(onSubmitSpecifications)}
+              className='px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition'>
+              💾 Save Changes
+            </button>
+          ) : (
+            <>
+              <button
+                type='button'
+                onClick={() => setIsEditingLocked(true)}
+                className='px-6 py-2 bg-white text-indigo-700 border border-indigo-200 rounded-lg font-medium hover:bg-indigo-50 transition'>
+                ✎ Edit Details
+              </button>
+              <button
+                type='button'
+                onClick={onNext}
+                className='px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition'>
+                Next →
+              </button>
+            </>
+          )}
         </div>
       )}
 

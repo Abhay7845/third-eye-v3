@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSection3Context } from "./Section3Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
@@ -23,8 +23,16 @@ function computeValues(subpage3_2Data, customerDiscount) {
   let cdCoins = Array(6).fill("-");
   let cdTotal = Array(6).fill("-");
   let cdPctOfUCP = Array(6).fill("-");
-  let ghsPlain = Array(6).fill("-");
-  let ghsStudded = Array(6).fill("-");
+  let ghsLCG = Array(6).fill("-");
+  let ghsMCG = Array(6).fill("-");
+  let ghsHCG = Array(6).fill("-");
+  let ghsGIS = Array(6).fill("-");
+  let ghsRegular = Array(6).fill("-");
+  let ghsColorStones = Array(6).fill("-");
+  let ghsSolitaireA = Array(6).fill("-");
+  let ghsSolitaireB = Array(6).fill("-");
+  let ghsSolitaireC = Array(6).fill("-");
+  let ghsSolitaireD = Array(6).fill("-");
   let ghsCoins = Array(6).fill("-");
   let ghsTotal = Array(6).fill("-");
   let ghsPctOfUCP = Array(6).fill("-");
@@ -48,46 +56,21 @@ function computeValues(subpage3_2Data, customerDiscount) {
     const solitaireD = subpage3_2Data?.solitaireD?.[i] ?? 0;
 
     // Customer Discount
-    const cdLCGVal =
-      totalSales * (plainShare/100) * (lcg/100) * (customerDiscount["LCG"]/100 ?? 0);
-    const cdMCGVal =
-      totalSales * (plainShare/100) * (mcg/100) * (customerDiscount["MCG"]/100 ?? 0);
-    const cdHCGVal =
-      totalSales * (plainShare/100) * (hcg/100) * (customerDiscount["HCG"]/100 ?? 0);
+    const cdLCGVal = totalSales * (plainShare / 100) * (lcg / 100) * (customerDiscount["LCG"] / 100 ?? 0);
+    const cdMCGVal = totalSales * (plainShare / 100) * (mcg / 100) * (customerDiscount["MCG"] / 100 ?? 0);
+    const cdHCGVal = totalSales * (plainShare / 100) * (hcg / 100) * (customerDiscount["HCG"] / 100 ?? 0);
+    const cdColorStonesVal = totalSales * (plainShare / 100) * (colorStones / 100) * (customerDiscount["Gemstones"] / 100 ?? 0);
 
-    const cdGISVal =
-      totalSales * (studdedShare/100) * (gis/100) * (customerDiscount["GIS"]/100 ?? 0);
-    const cdRegularVal =
-      totalSales * (studdedShare/100) * (regular/100) * (customerDiscount["Regular"]/100 ?? 0);
-    const cdColorStonesVal =
-      totalSales *
-      (studdedShare/100) *
-      (colorStones/100) *
-      (customerDiscount["Color Stones"]/100 ?? 0);
+    const cdGISVal = totalSales * (studdedShare / 100) * (gis / 100) * (customerDiscount["GIS"] / 100 ?? 0);
+    const cdRegularVal = totalSales * (studdedShare / 100) * (regular / 100) * (customerDiscount["Regular"] / 100 ?? 0);
 
-    const cdSolitaireAVal =
-      totalSales *
-      (studdedShare/100) *
-      (solitaireA/100) *
-      (customerDiscount["Solitaire A(<70C)"]/100 ?? 0);
-    const cdSolitaireBVal =
-      totalSales *
-      (studdedShare/100) *
-      (solitaireB/100) *
-      (customerDiscount["Solitaire B(70-100C)"]/100 ?? 0);
-    const cdSolitaireCVal =
-      totalSales *
-      (studdedShare/100) *
-      (solitaireC/100) *
-      (customerDiscount["Solitaire C(1CRT+)"]/100 ?? 0);
-    const cdSolitaireDVal =
-      totalSales *
-      (studdedShare/100) *
-      (solitaireD/100) *
-      (customerDiscount["Solitaire D(2CRT+)"]/100 ?? 0);
 
-    const cdCoinsVal =
-      totalSales * (coinsShare/100) * (customerDiscount["Coins"]/100 ?? 0);
+    const cdSolitaireAVal = totalSales * (studdedShare / 100) * (solitaireA / 100) * (customerDiscount["Solitaire A(<70C)"] / 100 ?? 0);
+    const cdSolitaireBVal = totalSales * (studdedShare / 100) * (solitaireB / 100) * (customerDiscount["Solitaire B(70-100C)"] / 100 ?? 0);
+    const cdSolitaireCVal = totalSales * (studdedShare / 100) * (solitaireC / 100) * (customerDiscount["Solitaire C(1CRT+)"] / 100 ?? 0);
+    const cdSolitaireDVal = totalSales * (studdedShare / 100) * (solitaireD / 100) * (customerDiscount["Solitaire D(2CRT+)"] / 100 ?? 0);
+
+    const cdCoinsVal = totalSales * (coinsShare / 100) * (customerDiscount["Coins"] / 100 ?? 0);
 
     const cdTotalVal =
       cdLCGVal +
@@ -102,29 +85,35 @@ function computeValues(subpage3_2Data, customerDiscount) {
       cdSolitaireDVal +
       cdCoinsVal;
 
-    const cdPctOfUCPVal =
-      totalSales !== 0 ? (cdTotalVal / totalSales) * 100 : 0;
+    const cdPctOfUCPVal = totalSales !== 0 ? (cdTotalVal / totalSales) * 100 : 0;
 
-    // GHS
-    const ghsPlainVal =
-      totalSales *
-      (plainShare/100) *
-      (customerDiscount["GHS-Plain Disc % on UCP"]/100 ?? 0);
+    // GHS Discount
 
-    const ghsStuddedVal =
-      totalSales *
-      (studdedShare/100) *
-      (customerDiscount["GHS-Studded Disc % on UCP"]/100 ?? 0);
+    const ghsLCGVal = totalSales * (plainShare / 100) * (lcg / 100) * (customerDiscount["GHS_LCG"] / 100 ?? 0);
+    const ghsMCGVal = totalSales * (plainShare / 100) * (mcg / 100) * (customerDiscount["GHS_MCG"] / 100 ?? 0);
+    const ghsHCGVal = totalSales * (plainShare / 100) * (hcg / 100) * (customerDiscount["GHS_HCG"] / 100 ?? 0);
+    const ghsColorStonesVal = totalSales * (plainShare / 100) * (colorStones / 100) * (customerDiscount["GHS_Gemstones"] / 100 ?? 0);
+    const ghsGISVal = totalSales * (studdedShare / 100) * (gis / 100) * (customerDiscount["GHS_GIS"] / 100 ?? 0);
+    const ghsRegularVal = totalSales * (studdedShare / 100) * (regular / 100) * (customerDiscount["GHS_Regular"] / 100 ?? 0);
+    const ghsSolitaireAVal = totalSales * (studdedShare / 100) * (solitaireA / 100) * (customerDiscount["GHS_Solitaire A(<70C)"] / 100 ?? 0);
+    const ghsSolitaireBVal = totalSales * (studdedShare / 100) * (solitaireB / 100) * (customerDiscount["GHS_Solitaire B(70-100C)"] / 100 ?? 0);
+    const ghsSolitaireCVal = totalSales * (studdedShare / 100) * (solitaireC / 100) * (customerDiscount["GHS_Solitaire C(1CRT+)"] / 100 ?? 0);
+    const ghsSolitaireDVal = totalSales * (studdedShare / 100) * (solitaireD / 100) * (customerDiscount["GHS_Solitaire D(2CRT+)"] / 100 ?? 0);
+    const ghsCoinsVal = totalSales * (coinsShare / 100) * (customerDiscount["GHS_Coins"] / 100 ?? 0);
 
-    const ghsCoinsVal =
-      totalSales *
-      (coinsShare/100) *
-      (customerDiscount["GHS-Coins Disc % on UCP"]/100 ?? 0);
+    const ghsTotalVal = ghsLCGVal 
+    + ghsMCGVal 
+    + ghsHCGVal 
+    + ghsColorStonesVal 
+    + ghsGISVal 
+    + ghsRegularVal 
+    + ghsSolitaireAVal 
+    + ghsSolitaireBVal
+    + ghsSolitaireCVal
+    + ghsSolitaireDVal
+    + ghsCoinsVal;
 
-    const ghsTotalVal = ghsPlainVal + ghsStuddedVal + ghsCoinsVal;
-
-    const ghsPctOfUCPVal =
-      totalSales !== 0 ? (ghsTotalVal / totalSales) * 100 : 0;
+    const ghsPctOfUCPVal = totalSales !== 0 ? (ghsTotalVal / totalSales) * 100 : 0;
 
     // Store formatted values
     cdLCG[i] = cdLCGVal.toFixed(2);
@@ -141,9 +130,17 @@ function computeValues(subpage3_2Data, customerDiscount) {
     cdTotal[i] = cdTotalVal.toFixed(2);
     cdPctOfUCP[i] = cdPctOfUCPVal.toFixed(2);
 
-    ghsPlain[i] = ghsPlainVal.toFixed(2);
-    ghsStudded[i] = ghsStuddedVal.toFixed(2);
-    ghsCoins[i] = ghsCoinsVal.toFixed(2);
+    ghsLCG[i] = ghsLCGVal.toFixed(2);
+    ghsMCG[i] = ghsMCGVal.toFixed(2);
+    ghsHCG[i] = ghsHCGVal.toFixed(2);
+    ghsGIS[i] = ghsGISVal.toFixed(2);
+    ghsRegular[i] = ghsRegularVal.toFixed(2);
+    ghsColorStones[i] = ghsColorStonesVal.toFixed(2);
+    ghsSolitaireA[i] = ghsSolitaireAVal.toFixed(2);
+    ghsSolitaireB[i] = ghsSolitaireBVal.toFixed(2);
+    ghsSolitaireC[i] = ghsSolitaireCVal.toFixed(2);
+    ghsSolitaireD[i] = ghsSolitaireDVal.toFixed(2);
+    ghsCoins[i] = cdCoinsVal.toFixed(2);
     ghsTotal[i] = ghsTotalVal.toFixed(2);
     ghsPctOfUCP[i] = ghsPctOfUCPVal.toFixed(2);
   }
@@ -162,8 +159,16 @@ function computeValues(subpage3_2Data, customerDiscount) {
     cdCoins,
     cdTotal,
     cdPctOfUCP,
-    ghsPlain,
-    ghsStudded,
+    ghsLCG,
+    ghsMCG,
+    ghsHCG,
+    ghsGIS,
+    ghsRegular,
+    ghsColorStones,
+    ghsSolitaireA,
+    ghsSolitaireB,
+    ghsSolitaireC,
+    ghsSolitaireD,
     ghsCoins,
     ghsTotal,
     ghsPctOfUCP,
@@ -177,8 +182,8 @@ function AutoCell({ value = "—" }) {
     value === null || value === undefined || value === "—"
       ? "—"
       : typeof value === "number"
-      ? value.toLocaleString("en-IN", { maximumFractionDigits: 2 })
-      : value;
+        ? value.toLocaleString("en-IN", { maximumFractionDigits: 2 })
+        : value;
   return (
     <td className='border border-gray-200 px-3 py-2 bg-gray-50 text-right text-sm text-gray-700 tabular-nums'>
       {display}
@@ -189,9 +194,8 @@ function AutoCell({ value = "—" }) {
 function LabelCell({ label, bold = false }) {
   return (
     <td
-      className={`border border-gray-200 px-3 py-2 text-sm text-gray-800 bg-white${
-        bold ? " font-semibold" : ""
-      }`}>
+      className={`border border-gray-200 px-3 py-2 text-sm text-gray-800 bg-white${bold ? " font-semibold" : ""
+        }`}>
       <strong>{label}</strong>
     </td>
   );
@@ -254,6 +258,24 @@ function SectionHeader({ label }) {
   );
 }
 
+function AccordionSection({ title, isOpen, onToggle, children }) {
+  return (
+    <div className='bg-white rounded-lg shadow-md overflow-hidden'>
+      <button
+        type='button'
+        onClick={onToggle}
+        className='w-full flex items-center justify-between px-4 py-3 bg-indigo-700 hover:bg-indigo-800 transition text-white font-semibold text-sm'>
+        <span>{title}</span>
+        <span
+          className={`transform transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+          ▼
+        </span>
+      </button>
+      {isOpen && <div className='overflow-x-auto'>{children}</div>}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Subpage3_4({ handleNext, handlePrevious }) {
@@ -261,7 +283,9 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isLoading, setLoading] = useState(false);
-  const { markStepSaved, subpage3_2Data, forwardDetail } = useSection3Context();
+  const [isCDOpen, setIsCDOpen] = useState(false);
+  const [isGHSOpen, setIsGHSOpen] = useState(false);
+  const { markStepSaved, subpage3_2Data, forwardDetail, salesSummaryVersion, discountSavedAtVersion, markDiscountSavedVersion } = useSection3Context();
   const [customerDiscount, setCustomerDiscount] = useState([]);
   const computed = computeValues(subpage3_2Data, customerDiscount);
   const userLog = useSelector((state) => state?.user?.user);
@@ -275,16 +299,32 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
         const res = await fetch(`${BASE_URL}/sales_planning`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ screen: 4, roiid }),
+          body: JSON.stringify({ screen: 5, roiid }),
         });
         if (!res.ok) return;
         const json = await res.json();
-        if (json?.data?.[0]) setIsSaved(true);
+        if (json?.data?.[0]) {
+          setIsSaved(true);
+          if (discountSavedAtVersion === null) markDiscountSavedVersion();
+        }
       } catch (e) {
         console.error("Failed to check saved discount data:", e);
       }
     })();
   }, [forwardDetail?.roiid]);
+
+  // Staleness guard: Sales Mix (Subpage3_2) drives every computed discount
+  // value here — if it was edited & re-saved after Discounts was last saved,
+  // force the user to review & re-save instead of leaving a stale DB row.
+  const staleVersionHandledRef = useRef(null);
+  useEffect(() => {
+    if (!isSaved) return;
+    if (discountSavedAtVersion === null || discountSavedAtVersion >= salesSummaryVersion) return;
+    if (staleVersionHandledRef.current === salesSummaryVersion) return;
+    staleVersionHandledRef.current = salesSummaryVersion;
+    setIsSaved(false);
+    toast.info("Sales Mix was updated — discounts were recalculated. Please review and re-save.");
+  }, [salesSummaryVersion, isSaved, discountSavedAtVersion]);
   const getCustomerDiscountData = async () => {
     try {
       setLoading(true);
@@ -320,32 +360,37 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
         roiid: forwardDetail?.roiid,
         username: userLog?.name,
         totalCustomerDiscount: {
-          plain: {
-            lcg: computed.cdLCG,
-            mcg: computed.cdMCG,
-            hcg: computed.cdHCG,
-          },
-          studded: {
-            gis: computed.cdGIS,
-            regular: computed.cdRegular,
-            colorStones: computed.cdColorStones,
-            solitaireA: computed.cdSolitaireA,
-            solitaireB: computed.cdSolitaireB,
-            solitaireC: computed.cdSolitaireC,
-            solitaireD: computed.cdSolitaireD,
-          },
+          lcg: computed.cdLCG,
+          mcg: computed.cdMCG,
+          hcg: computed.cdHCG,
+          gis: computed.cdGIS,
+          regular: computed.cdRegular,
+          gemstones: computed.cdColorStones,
+          solitaireA: computed.cdSolitaireA,
+          solitaireB: computed.cdSolitaireB,
+          solitaireC: computed.cdSolitaireC,
+          solitaireD: computed.cdSolitaireD,
           coins: computed.cdCoins,
           total: computed.cdTotal,
           pctOfUCP: computed.cdPctOfUCP,
         },
         totalGHSDiscount: {
-          plain: computed.ghsPlain,
-          studded: computed.ghsStudded,
+          lcg: computed.ghsLCG,
+          mcg: computed.ghsMCG,
+          hcg: computed.ghsHCG,
+          gemstones: computed.ghsColorStones,
+          gis: computed.ghsGIS,
+          regular: computed.ghsRegular,
+          solitaireA: computed.ghsSolitaireA,
+          solitaireB: computed.ghsSolitaireB,
+          solitaireC: computed.ghsSolitaireC,
+          solitaireD: computed.ghsSolitaireD,
           coins: computed.ghsCoins,
           total: computed.ghsTotal,
           pctOfUCP: computed.ghsPctOfUCP,
         },
       };
+      console.log(payload)
       const res = await fetch(`${BASE_URL}/sales_planning_page_4`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -359,6 +404,7 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
       setIsSaving(false);
       setIsSaved(true);
       markStepSaved(3);
+      markDiscountSavedVersion();
       setShowModal(true);
     } catch (e) {
       console.error(e);
@@ -390,9 +436,12 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
               {/* ──────────────────────────────────────────────────────
                         SECTION 1 — Total Customer Discount
                     ────────────────────────────────────────────────────── */}
-              <div className='bg-white rounded-lg shadow-md overflow-x-auto'>
+              <AccordionSection
+                title='Total Customer Discount'
+                isOpen={isCDOpen}
+                onToggle={() => setIsCDOpen((prev) => !prev)}>
                 <table className='min-w-full border-collapse'>
-                  <SectionHeader label='Total Customer Discount' />
+                  <SectionHeader label='Category' />
                   <tbody>
                     {/* Plain sub-group */}
                     <SubSectionRow label='Plain' />
@@ -414,6 +463,12 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
                         <AutoCell key={i} value={v} />
                       ))}
                     </tr>
+                    <tr>
+                      <LabelCell label='Gemstones' />
+                      {computed.cdColorStones.map((v, i) => (
+                        <AutoCell key={i} value={v} />
+                      ))}
+                    </tr>
 
                     {/* Studded sub-group */}
                     <SubSectionRow label='Studded' />
@@ -426,12 +481,6 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
                     <tr>
                       <LabelCell label='Regular' />
                       {computed.cdRegular.map((v, i) => (
-                        <AutoCell key={i} value={v} />
-                      ))}
-                    </tr>
-                    <tr>
-                      <LabelCell label='Color Stones' />
-                      {computed.cdColorStones.map((v, i) => (
                         <AutoCell key={i} value={v} />
                       ))}
                     </tr>
@@ -474,27 +523,86 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
                     <PctRow label='% of UCP' values={computed.cdPctOfUCP} />
                   </tbody>
                 </table>
-              </div>
+              </AccordionSection>
 
               {/* ──────────────────────────────────────────────────────
                         SECTION 2 — Total GHS Discount
                     ────────────────────────────────────────────────────── */}
-              <div className='bg-white rounded-lg shadow-md overflow-x-auto'>
+              <AccordionSection
+                title='Total GHS Discount'
+                isOpen={isGHSOpen}
+                onToggle={() => setIsGHSOpen((prev) => !prev)}>
                 <table className='min-w-full border-collapse'>
-                  <SectionHeader label='Total GHS Discount' />
+                  <SectionHeader label='Category' />
                   <tbody>
+                    {/* Plain sub-group */}
+                    <SubSectionRow label='Plain' />
                     <tr>
-                      <LabelCell label='Plain' />
-                      {computed.ghsPlain.map((v, i) => (
+                      <LabelCell label='LCG' />
+                      {computed.ghsLCG.map((v, i) => (
                         <AutoCell key={i} value={v} />
                       ))}
                     </tr>
                     <tr>
-                      <LabelCell label='Studded' />
-                      {computed.ghsStudded.map((v, i) => (
+                      <LabelCell label='MCG' />
+                      {computed.ghsMCG.map((v, i) => (
                         <AutoCell key={i} value={v} />
                       ))}
                     </tr>
+                    <tr>
+                      <LabelCell label='HCG' />
+                      {computed.ghsHCG.map((v, i) => (
+                        <AutoCell key={i} value={v} />
+                      ))}
+                    </tr>
+                    <tr>
+                      <LabelCell label='Gemstones' />
+                      {computed.ghsColorStones.map((v, i) => (
+                        <AutoCell key={i} value={v} />
+                      ))}
+                    </tr>
+
+                    {/* Studded sub-group */}
+                    <SubSectionRow label='Studded' />
+                    <tr>
+                      <LabelCell label='GIS' />
+                      {computed.ghsGIS.map((v, i) => (
+                        <AutoCell key={i} value={v} />
+                      ))}
+                    </tr>
+                    <tr>
+                      <LabelCell label='Regular' />
+                      {computed.ghsRegular.map((v, i) => (
+                        <AutoCell key={i} value={v} />
+                      ))}
+                    </tr>
+                    <tr>
+                      <LabelCell label='Solitaire A (<70C)' />
+                      {computed.ghsSolitaireA.map((v, i) => (
+                        <AutoCell key={i} value={v} />
+                      ))}
+                    </tr>
+                    <tr>
+                      <LabelCell label='Solitaire B (70–100C)' />
+                      {computed.ghsSolitaireB.map((v, i) => (
+                        <AutoCell key={i} value={v} />
+                      ))}
+                    </tr>
+                    <tr>
+                      <LabelCell label='Solitaire C (1 CRT+)' />
+                      {computed.ghsSolitaireC.map((v, i) => (
+                        <AutoCell key={i} value={v} />
+                      ))}
+                    </tr>
+                    <tr>
+                      <LabelCell label='Solitaire D (2 CRT+)' />
+                      {computed.ghsSolitaireD.map((v, i) => (
+                        <AutoCell key={i} value={v} />
+                      ))}
+                    </tr>
+
+                    {/* Coins */}
+                    <SubSectionRow label='Coins' />
                     <tr>
                       <LabelCell label='Coins' />
                       {computed.ghsCoins.map((v, i) => (
@@ -505,7 +613,7 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
                     <PctRow label='% of UCP' values={computed.ghsPctOfUCP} />
                   </tbody>
                 </table>
-              </div>
+              </AccordionSection>
             </div>
 
             {/* Navigation Buttons */}
@@ -522,11 +630,10 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
                   type='button'
                   onClick={handleSave}
                   disabled={isSaving}
-                  className={`font-semibold px-8 py-2 rounded-lg shadow transition ${
-                    isSaving
-                      ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                      : "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                  }`}>
+                  className={`font-semibold px-8 py-2 rounded-lg shadow transition ${isSaving
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                    }`}>
                   {isSaving ? "Saving..." : "Save"}
                 </button>
               ) : (

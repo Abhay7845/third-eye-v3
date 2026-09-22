@@ -174,6 +174,7 @@ export default function Subpage4_1({ handleNext }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
   // Stores user-entered amounts when selection is 'Enter Custom Value'
@@ -389,6 +390,7 @@ export default function Subpage4_1({ handleNext }) {
 
       setSubpage4_1Data(payload);
       setIsSaved(true);
+      setIsEditing(false);
       markStepSaved(0);
       setShowModal(true);
     } catch (err) {
@@ -489,7 +491,7 @@ export default function Subpage4_1({ handleNext }) {
                 value={selections[key]}
                 onChange={handleChange}
                 computedValue={computedAmounts[key]}
-                disabled={isSaved}
+                disabled={isSaved && !isEditing}
                 userValue={userEnteredAmounts[key]}
                 onUserValueChange={handleUserValueChange}
               />
@@ -503,7 +505,7 @@ export default function Subpage4_1({ handleNext }) {
               onChange={handleChange}
               options={artOptions}
               computedValue={computedAmounts.artAndCrafts}
-              disabled={isSaved}
+              disabled={isSaved && !isEditing}
             />
 
             {/* IT (Equipments and Installation) */}
@@ -524,10 +526,10 @@ export default function Subpage4_1({ handleNext }) {
                   min={0}
                   value={sectionAdditionalCost}
                   onChange={(e) => setSectionAdditionalCost(e.target.value)}
-                  disabled={isSaved}
+                  disabled={isSaved && !isEditing}
                   placeholder='₹ Enter amount'
                   className={`w-full px-2 py-1.5 border border-indigo-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
-                    isSaved
+                    isSaved && !isEditing
                       ? 'bg-gray-100 cursor-not-allowed text-gray-500'
                       : 'bg-white'
                   }`}
@@ -538,10 +540,10 @@ export default function Subpage4_1({ handleNext }) {
                     rows={2}
                     value={additionalCostDescription}
                     onChange={(e) => setAdditionalCostDescription(e.target.value)}
-                    disabled={isSaved}
+                    disabled={isSaved && !isEditing}
                     placeholder='Specify reason for this additional cost…'
                     className={`w-full px-2 py-1.5 border border-indigo-300 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
-                      isSaved
+                      isSaved && !isEditing
                         ? 'bg-gray-100 cursor-not-allowed text-gray-500'
                         : 'bg-white'
                     }`}
@@ -602,7 +604,7 @@ export default function Subpage4_1({ handleNext }) {
 
       {/* Navigation */}
       <div className='flex justify-start gap-4 mt-8'>
-        {!isSaved ? (
+        {!isSaved || isEditing ? (
           <button
             type='button'
             disabled={!isFormComplete || isSaving}
@@ -615,12 +617,20 @@ export default function Subpage4_1({ handleNext }) {
             {isSaving ? "Saving…" : "Save"}
           </button>
         ) : (
-          <button
-            type='button'
-            onClick={handleNext}
-            className='bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition transform hover:scale-105 cursor-pointer'>
-            Next →
-          </button>
+          <>
+            <button
+              type='button'
+              onClick={() => setIsEditing(true)}
+              className='px-6 py-3 bg-white text-amber-700 border border-amber-300 rounded-lg font-semibold text-sm hover:bg-amber-50 transition'>
+              ✎ Edit
+            </button>
+            <button
+              type='button'
+              onClick={handleNext}
+              className='bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition transform hover:scale-105 cursor-pointer'>
+              Next →
+            </button>
+          </>
         )}
       </div>
 

@@ -123,6 +123,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   // Restore salary rows, sec/HK, electricity and other expenses on resume
   useEffect(() => {
@@ -457,6 +458,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
 
       setSubpage4_2Data(payload);
       setIsSaved(true);
+      setIsEditing(false);
       markStepSaved(1);
       setShowModal(true);
     } catch (err) {
@@ -556,7 +558,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
                   }
                 }
                 onChange={handleSalaryChange}
-                disabled={isSaved}
+                disabled={isSaved && !isEditing}
               />
             ))}
 
@@ -637,9 +639,9 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
               min={0}
               value={electricity.ratePerSqft}
               onChange={(e) => setElectricity({ ratePerSqft: e.target.value })}
-              disabled={isSaved}
+              disabled={isSaved && !isEditing}
               className={`w-full text-xl font-bold text-blue-800 bg-transparent focus:outline-none ${
-                isSaved ? 'cursor-not-allowed' : ''
+                isSaved && !isEditing ? 'cursor-not-allowed' : ''
               }`}
             />
           </div>
@@ -669,9 +671,9 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
               onChange={(e) =>
                 setOtherExpenses((p) => ({ ...p, registrationCharges: e.target.value }))
               }
-              disabled={isSaved}
+              disabled={isSaved && !isEditing}
               className={`w-full text-xl font-bold text-blue-800 bg-transparent focus:outline-none ${
-                isSaved ? 'cursor-not-allowed' : ''
+                isSaved && !isEditing ? 'cursor-not-allowed' : ''
               }`}
             />
           </div>
@@ -686,9 +688,9 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
               onChange={(e) =>
                 setOtherExpenses((p) => ({ ...p, relocCost: e.target.value }))
               }
-              disabled={isSaved}
+              disabled={isSaved && !isEditing}
               className={`w-full text-xl font-bold text-blue-800 bg-transparent focus:outline-none ${
-                isSaved ? 'cursor-not-allowed' : ''
+                isSaved && !isEditing ? 'cursor-not-allowed' : ''
               }`}
             />
           </div>
@@ -744,9 +746,9 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
                       onChange={(e) =>
                         handleSecChange(idx, "nos", e.target.value)
                       }
-                      disabled={isSaved}
+                      disabled={isSaved && !isEditing}
                       className={`w-full px-2 py-1.5 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-400 ${
-                        isSaved ? "cursor-not-allowed" : ""
+                        isSaved && !isEditing ? "cursor-not-allowed" : ""
                       }`}
                     />
                   </td>
@@ -758,9 +760,9 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
                       onChange={(e) =>
                         handleSecChange(idx, "monthly", e.target.value)
                       }
-                      disabled={isSaved}
+                      disabled={isSaved && !isEditing}
                       className={`w-full px-2 py-1.5 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-400 ${
-                        isSaved ? "cursor-not-allowed" : ""
+                        isSaved && !isEditing ? "cursor-not-allowed" : ""
                       }`}
                     />
                   </td>
@@ -806,7 +808,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
           ← Previous
         </button> */}
 
-        {!isSaved ? (
+        {!isSaved || isEditing ? (
           <button
             type='button'
             disabled={!isFormComplete || isSaving}
@@ -819,12 +821,20 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
             {isSaving ? "Saving…" : "Save"}
           </button>
         ) : (
-          <button
-            type='button'
-            onClick={handleNext}
-            className='bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition transform hover:scale-105 cursor-pointer'>
-            Next →
-          </button>
+          <>
+            <button
+              type='button'
+              onClick={() => setIsEditing(true)}
+              className='px-6 py-3 bg-white text-amber-700 border border-amber-300 rounded-lg font-semibold text-sm hover:bg-amber-50 transition'>
+              ✎ Edit
+            </button>
+            <button
+              type='button'
+              onClick={handleNext}
+              className='bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition transform hover:scale-105 cursor-pointer'>
+              Next →
+            </button>
+          </>
         )}
       </div>
 

@@ -118,6 +118,12 @@ export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
   const [subpage3_2Data, setSubpage3_2Data] = useState(null);
   const [isFetched, setIsFetched] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  // Consistency tracking: bumped whenever an upstream step is (re-)saved so
+  // downstream steps can detect their already-saved data is now stale and
+  // must be reviewed/re-saved before the flow can be resumed to completion.
+  const [salesSummaryVersion, setSalesSummaryVersion] = useState(0);
+  const [phase1SavedAtVersion, setPhase1SavedAtVersion] = useState(null);
+  const [discountSavedAtVersion, setDiscountSavedAtVersion] = useState(null);
   const [storeParticulars, setStoreParticulars] = useState({
     "Super Built Up Area": 0,
     "Carpet area": 0,
@@ -145,6 +151,25 @@ export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
       return updated;
     });
   };
+
+  // Marks every step from `stepIndex` onward as not-saved again — used when an
+  // earlier step is edited/re-saved so the stepper (and the resume flow) force
+  // the user to walk back through and re-save each affected downstream step
+  // instead of silently leaving stale data behind.
+  const invalidateStepsFrom = (stepIndex) => {
+    setSavedSteps((prev) => {
+      const updated = [...prev];
+      for (let i = stepIndex; i < updated.length; i++) updated[i] = false;
+      return updated;
+    });
+  };
+
+  const bumpSalesSummaryVersion = () =>
+    setSalesSummaryVersion((v) => v + 1);
+  const markPhase1SavedVersion = () =>
+    setPhase1SavedAtVersion(salesSummaryVersion);
+  const markDiscountSavedVersion = () =>
+    setDiscountSavedAtVersion(salesSummaryVersion);
 
   const fetchRefStoreMixDetail = async (storeCode) => {
     const res = await fetch(`${BASE_URL}/refStore/${storeCode}`);
@@ -268,8 +293,9 @@ export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
             body: JSON.stringify({ screen, roiid }),
           });
 
-        const [r1, r2, r3, r4] = await Promise.all([
-          fetchScreen(1), fetchScreen(2), fetchScreen(3), fetchScreen(4),
+        // screen 3 = Stock Summary Phase 1, screen 4 = Phase 2, screen 5 = Discounts
+        const [r1, r2, , r4, r5] = await Promise.all([
+          fetchScreen(1), fetchScreen(2), fetchScreen(3), fetchScreen(4), fetchScreen(5),
         ]);
 
         if (r1.ok) {
@@ -298,7 +324,7 @@ export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
               stoneShareHCG: yrs("Sales Planning_Stoneshare(HCG only)"),
               gis:           yrs("Sales Planning_GIS"),
               regular:       yrs("Sales Planning_Regular"),
-              colorStones:   yrs("Sales Planning_Color Stones"),
+              colorStones:   yrs("Sales Planning_Gemstones"),
               solitaireA:    yrs("Sales Planning_Solitaire A(<70C)"),
               solitaireB:    yrs("Sales Planning_Solitaire B(70-100C)"),
               solitaireC:    yrs("Sales Planning_Solitaire C(1CRT+)"),
@@ -306,8 +332,11 @@ export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
             });
           }
         }
-        if (r3.ok) { const j3 = await r3.json(); if (j3?.data?.[0]) markStepSaved(2); }
-        if (r4.ok) { const j4 = await r4.json(); if (j4?.data?.[0]) markStepSaved(3); }
+        // Pricing Metrics (Subpage3_3) is only fully complete once Phase 2 (screen 4)
+        // is saved — Phase 1 alone (screen 3) means the user still has to resume
+        // into the Stock Turn / Phase 2 view, so it must not mark this step done.
+        if (r4.ok) { const j4 = await r4.json(); if (j4?.data?.[0]) { markStepSaved(2); setPhase1SavedAtVersion(0); } }
+        if (r5.ok) { const j5 = await r5.json(); if (j5?.data?.[0]) { markStepSaved(3); setDiscountSavedAtVersion(0); } }
       } catch (e) {
         console.error("Failed to restore saved sales planning steps:", e);
       }
@@ -331,6 +360,13 @@ export default function Section3({ roiContext, onNext, initialSubStep = 1 }) {
     setSubpage3_2Data,
     savedSteps,
     markStepSaved,
+    invalidateStepsFrom,
+    salesSummaryVersion,
+    bumpSalesSummaryVersion,
+    phase1SavedAtVersion,
+    markPhase1SavedVersion,
+    discountSavedAtVersion,
+    markDiscountSavedVersion,
   };
 
   return (

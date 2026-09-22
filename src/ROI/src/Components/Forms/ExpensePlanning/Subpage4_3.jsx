@@ -151,6 +151,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [screen1Expenses, setScreen1Expenses] = useState(null);
 
@@ -187,6 +188,12 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     setLockedRowEsc((prev) => ({ ...prev, [key]: Math.min(Math.max(parseFloat(value) || 0, 0), 99) }));
 
   // Restore previously saved rent & editable-row inputs when resuming
+  //
+  // NOTE: `/expense_details?expense_type=SUMMARY` does NOT return the nested
+  // `{rent, expenseSummary}` shape this page saves — it returns the raw
+  // `roi_expense_summary` rows, ONE ROW PER EXPENSE LABEL (columns: Header,
+  // "Annual cost escalation", Yr1..Yr6, "Security Deposit"; verified directly
+  // against the table). Must be re-assembled by Header below.
   useEffect(() => {
     const roiid = storeData?.roiid;
     if (!roiid || isSaved) return;
@@ -195,27 +202,73 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
         const res = await fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=SUMMARY`);
         if (!res.ok) return;
         const json = await res.json();
-        const row = json?.data?.[0];
-        if (!row) return;
-        const rent = row.rent ?? row;
-        if (rent.revenueSharing != null) setRevenueSharing(rent.revenueSharing);
-        if (rent.sba?.length) setSba(rent.sba);
-        if (rent.ratePerSqft?.length) setRatePerSqft(rent.ratePerSqft);
-        if (rent.revSharePct?.length) setRevSharePct(rent.revSharePct);
-        if (rent.minGuaranteeMth?.length) setMinGuaranteeMth(rent.minGuaranteeMth);
-        if (rent.securityDeposit != null) setSecurityDepositRate(rent.securityDeposit);
-        if (row.expenseSummary?.editableRowState)
-          setEditableRows(row.expenseSummary.editableRowState);
-        if (row.expenseSummary?.lockedRowEsc)
-          setLockedRowEsc(row.expenseSummary.lockedRowEsc);
-        // Restore Yr1 totals for locked rows from saved expense rows
-        const savedRows = row.expenseSummary?.rows ?? [];
-        const yr1 = (lbl) => savedRows.find((r) => r.label === lbl)?.values?.[0] ?? null;
-        const sal = yr1("Salaries");
-        const sHk = yr1("Security & Housekeeping");
-        const elec = yr1("Electricity");
-        if (sal != null || sHk != null || elec != null)
-          setLockedRowYr1({ salaries: sal ?? 0, secHk: sHk ?? 0, electricity: elec ?? 0 });
+        const rows = json?.data ?? [];
+        if (!rows.length) return;
+
+        // Normalize so minor label-string differences from the SP (hyphen vs
+        // em-dash, "Exp" vs "experience", etc.) don't break the lookup.
+        const norm = (s) =>
+          (s ?? "").toString().toLowerCase().replace(/[\u2014\u2013]/g, "-").replace(/\s+/g, " ").trim();
+        const byHeader = {};
+        rows.forEach((r) => { byHeader[norm(r.Header)] = r; });
+        const find = (label) => byHeader[norm(label)];
+        const yr1Of = (r) => (r ? parseFloat(r.Yr1) || 0 : 0);
+        const escOf = (r, fallback) => (r ? parseFloat(r["Annual cost escalation"]) || 0 : fallback);
+        const yearsOf = (r) => (r ? [1, 2, 3, 4, 5, 6].map((n) => parseFloat(r[`Yr${n}`]) || 0) : null);
+
+        const sbaRow = find("Square Foot - Super Built Area");
+        const rateRow = find("Rate per Square Foot");
+        const revShareRow = find("Revenue Sharing (% of Net Sales)");
+        const minGuaranteeRow = find("Min Gurantee / Monthly (?)");
+
+        if (yearsOf(sbaRow)) setSba(yearsOf(sbaRow));
+        if (yearsOf(rateRow)) setRatePerSqft(yearsOf(rateRow));
+        if (yearsOf(revShareRow)) setRevSharePct(yearsOf(revShareRow));
+        if (yearsOf(minGuaranteeRow)) setMinGuaranteeMth(yearsOf(minGuaranteeRow));
+        // No explicit Yes/No flag is persisted (main.py sends NULL for the
+        // revenue-share/min-guarantee params when "No") — infer it from
+        // whether a real revenue-share % was actually saved.
+        setRevenueSharing(yearsOf(revShareRow)?.some((v) => v > 0) ? "Yes" : "No");
+
+        const secDepVal = Math.max(0, ...rows.map((r) => parseFloat(r["Security Deposit"]) || 0));
+        setSecurityDepositRate(secDepVal);
+
+        // Editable rows — restore Yr1 base + escalation % from their own saved row
+        const EDITABLE_HEADERS = {
+          repairs: "Repairs & Maintenance",
+          insurance: "Insurance",
+          btl: "BTL",
+          travel: "Travel & Conveyance",
+          telephone: "Telephone/Internet",
+          creditCard: "Credit Card Commission",
+          gst: "GST (primarily rental)",
+          printing: "Store - Printing/Pantry etc",
+          consumables: "Consumables, Safety, Cust experience",
+          staffWelfare: "Other - Staff welfare/Uniforms etc",
+        };
+        setEditableRows((prev) => {
+          const updated = { ...prev };
+          Object.entries(EDITABLE_HEADERS).forEach(([key, label]) => {
+            const row = find(label);
+            if (!row) return;
+            updated[key] = { yr1: yr1Of(row), esc: escOf(row, updated[key]?.esc ?? 0) };
+          });
+          return updated;
+        });
+
+        // Locked rows (Salaries/Sec & HK/Electricity) — Yr1 base + escalation %
+        // restored straight from their saved rows.
+        const LOCKED_HEADERS = { salaries: "Salaries", secHk: "Security & Housekeeping", electricity: "Electricity" };
+        const lockedYr1 = {};
+        const lockedEsc = {};
+        Object.entries(LOCKED_HEADERS).forEach(([key, label]) => {
+          const row = find(label);
+          lockedYr1[key] = yr1Of(row);
+          lockedEsc[key] = escOf(row, 5);
+        });
+        setLockedRowYr1(lockedYr1);
+        setLockedRowEsc(lockedEsc);
+
         isRestoredRef.current = true;
         markStepSaved(2);
         setIsSaved(true);
@@ -227,6 +280,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
 
   // Sync locked-row Yr1 values from subpage4_2Data in the live (non-resume) flow
   useEffect(() => {
+    if (isRestoredRef.current) return; // don't clobber values restored from a saved SUMMARY row
     const sal = subpage4_2Data?.salaries?.totalAnnualTotal;
     const sec = subpage4_2Data?.securityHousekeeping?.totalAnnual;
     const elec = subpage4_2Data?.electricity?.total;
@@ -236,6 +290,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
 
   // Seed ratePerSqft from upstream salary data when context loads after a resume
   useEffect(() => {
+    if (isRestoredRef.current) return; // don't clobber values restored from a saved SUMMARY row
     const sqft = subpage4_2Data?.salaries?.sqftPerEmp;
     if (sqft == null) return; // guard null/undefined only — 0 is a valid (if uncommon) seed
     setRatePerSqft((prev) =>
@@ -449,6 +504,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
         return;
       }
       setIsSaved(true);
+      setIsEditing(false);
       markStepSaved(2);
       setShowModal(true);
     } catch (err) {
@@ -482,11 +538,11 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
           <select
             value={revenueSharing}
             onChange={(e) => setRevenueSharing(e.target.value)}
-            disabled={isSaved}
+            disabled={isSaved && !isEditing}
             className={`px-4 py-2 border-2 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-400 ${revenueSharing === "Yes"
               ? "border-green-400 bg-green-50 text-green-800"
               : "border-gray-300 bg-white text-gray-700"
-              } ${isSaved ? "cursor-not-allowed" : ""}`}>
+              } ${isSaved && !isEditing ? "cursor-not-allowed" : ""}`}>
             <option value='No'>No</option>
             <option value='Yes'>Yes</option>
           </select>
@@ -534,7 +590,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
                   key={i}
                   value={v}
                   onChange={(e) => setRatePerSqft(Array(6).fill(e.target.value))}
-                  disabled={isSaved}
+                  disabled={isSaved && !isEditing}
                 />
               ))}
               <td className='border border-gray-200 p-1 bg-blue-50'>
@@ -543,8 +599,8 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
                   min={0}
                   value={securityDepositRate}
                   onChange={(e) => setSecurityDepositRate(e.target.value)}
-                  disabled={isSaved}
-                  className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-400 ${isSaved ? "cursor-not-allowed" : ""
+                  disabled={isSaved && !isEditing}
+                  className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-400 ${isSaved && !isEditing ? "cursor-not-allowed" : ""
                     }`}
                 />
               </td>
@@ -565,7 +621,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
                       const clamped = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 99);
                       setRevSharePct(Array(6).fill(clamped));
                     }}
-                    disabled={isSaved}
+                    disabled={isSaved && !isEditing}
                   />
                 ))}
                 <td className='border border-gray-200 px-3 py-2 bg-gray-50' />
@@ -597,7 +653,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
                       key={i}
                       value={v}
                       onChange={(e) => setMinGuaranteeMth(Array(6).fill(e.target.value))}
-                      disabled={isSaved}
+                      disabled={isSaved && !isEditing}
                     />
                   ))}
                   <td className='border border-gray-200 px-3 py-2 bg-gray-50' />
@@ -699,8 +755,8 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
                             ? updateLockedEsc(escKey, e.target.value)
                             : updateEditableRow(key, "esc", e.target.value)
                         }
-                        disabled={isSaved}
-                        className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-400 ${isSaved ? "cursor-not-allowed text-gray-500" : ""}`}
+                        disabled={isSaved && !isEditing}
+                        className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-400 ${isSaved && !isEditing ? "cursor-not-allowed text-gray-500" : ""}`}
                       />
                       <span className='pr-2 text-xs text-blue-600'>%</span>
                     </div>
@@ -719,8 +775,8 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
                           type='number' min={0}
                           value={editableRows[key].yr1}
                           onChange={(e) => updateEditableRow(key, "yr1", e.target.value)}
-                          disabled={isSaved}
-                          className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-400 ${isSaved ? "cursor-not-allowed text-gray-500" : ""}`}
+                          disabled={isSaved && !isEditing}
+                          className={`w-full px-2 py-2 bg-transparent text-center text-sm text-blue-900 focus:outline-none focus:ring-1 focus:ring-inset focus:ring-blue-400 ${isSaved && !isEditing ? "cursor-not-allowed text-gray-500" : ""}`}
                         />
                       </td>
                     );
@@ -774,7 +830,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
       {/* Navigation */}
       <div className='flex justify-start gap-4 mt-4'>
 
-        {!isSaved ? (
+        {!isSaved || isEditing ? (
           <button
             type='button'
             disabled={!isFormComplete || isSaving}
@@ -786,9 +842,17 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
             {isSaving ? "Saving…" : "Save & Complete"}
           </button>
         ) : (
-          <div className='flex items-center gap-3 bg-green-100 border border-green-400 text-green-800 font-semibold px-6 py-3 rounded-lg'>
-            ✓ Expense Planning Complete
-          </div>
+          <>
+            <button
+              type='button'
+              onClick={() => setIsEditing(true)}
+              className='px-6 py-3 bg-white text-amber-700 border border-amber-300 rounded-lg font-semibold text-sm hover:bg-amber-50 transition'>
+              ✎ Edit
+            </button>
+            <div className='flex items-center gap-3 bg-green-100 border border-green-400 text-green-800 font-semibold px-6 py-3 rounded-lg'>
+              ✓ Expense Planning Complete
+            </div>
+          </>
         )}
       </div>
 

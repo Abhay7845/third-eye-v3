@@ -228,6 +228,7 @@ function parseApiRows(rows, opts = {}) {
     let cummulativeCashFlow = 0
     for( let i = 0;i<cashFlows.length;i++){
       cummulativeCashFlow += cashFlows[i];
+      console.log("cummulativeCashFlow:",cummulativeCashFlow,"investment:",investment)
       if(cummulativeCashFlow >= investment) return i+1
     }
     return 6
@@ -454,78 +455,19 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
-  const [showPdf, setShowPdf] = useState(false);
+  const [pdfViewed, setPdfViewed] = useState(false);
 
   const isNewStore = roiContext?.projectType === "New Store";
   const historyId = roiContext?.historyId;
 
-  // ─── Inline PDF modal (only for New Store) ──────────────────────────────
-  function NewStorePDFModal({ onClose }) {
-    const [pdfUrl, setPdfUrl] = useState(null);
-    const [pdLoading, setPdLoading] = useState(true);
-    const [pdErr, setPdErr] = useState(null);
-    useEffect(() => {
-      if (!historyId) return;
-      (async () => {
-        try {
-          const res = await fetch(`https://d6oojw29okpcs.cloudfront.net/ThirdEye//history/${encodeURIComponent(historyId).replace(' ', '_')}`);
-          if (!res.ok) throw new Error("Failed to fetch history details.");
-          const json = await res.json();
-          const d = json.data?.[0] ?? {};
-          const url = d.pdf_url ?? d.document_url ?? d.pdf_link ?? d.file_url ??
-            Object.values(d).find(v =>
-              typeof v === "string" && v.startsWith("http") &&
-              (v.includes(".pdf") || v.includes("blob") || v.includes("drive") || v.includes("/document"))
-            ) ?? null;
-          if (!url) setPdErr("No PDF document is linked to this History ID.");
-          setPdfUrl(url);
-        } catch (e) {
-          setPdErr(e.message);
-        } finally {
-          setPdLoading(false);
-        }
-      })();
-    }, []);
-    return (
-      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-700 to-indigo-600 px-6 py-4 shrink-0 flex items-center justify-between">
-            <div>
-              <h3 className="text-white font-bold text-lg">📄 New Store Document</h3>
-              <p className="text-blue-200 text-xs mt-0.5">History ID: {historyId}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              {pdfUrl && (
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer"
-                  className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold rounded-lg transition">
-                  ↗ Open in new tab
-                </a>
-              )}
-              <button onClick={onClose}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 text-white text-xl font-bold transition">
-                ×
-              </button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            {pdLoading ? (
-              <div className="flex items-center justify-center h-full gap-3">
-                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-                <p className="text-slate-400 text-sm">Loading document…</p>
-              </div>
-            ) : pdErr ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
-                <span className="text-4xl">📭</span>
-                <p className="text-sm">{pdErr}</p>
-              </div>
-            ) : (
-              <iframe src={pdfUrl} className="w-full h-full" title="New Store Document" />
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // The CloudFront URL redirects straight to the PDF, so it can be opened directly in a new tab.
+  const pdfUrl = historyId
+    ? `https://d6oojw29okpcs.cloudfront.net/ThirdEye/${historyId.replace(/ /g, '_')}.pdf`
+    : null;
+  const handleViewPdf = () => {
+    window.open(pdfUrl, "_blank", "noopener,noreferrer");
+    setPdfViewed(true);
+  };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -542,14 +484,20 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
         if (!res.ok) throw new Error("Failed to load summary data.");
         const json = await res.json();
         const retailArea = parseFloat(roiContext?.historyRetailArea || roiContext?.existingRetailArea) || 0;
+        // Stock figures (used for BG cost / working capital) live in Sales
+        // Planning screen 4 ("view_sales_planning_stock_summary_phase_2") —
+        // screen 3 is Pricing Metrics only and has no Stock_* rows at all.
+        // "Stock_UCP_Total" (₹ Lakhs) is the only combined-stock header that
+        // actually exists there (there's no plain "Stock_Total").
         const res2 = await fetch(`${BASE_URL}/sales_planning`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ screen: 3, roiid }),
+          body: JSON.stringify({ screen: 4, roiid }),
         });
-        if (!res.ok) throw new Error("Failed to load Stock data.");
+        if (!res2.ok) throw new Error("Failed to load Stock data.");
         const json2 = await res2.json();
-        let stockTotal = json2?.data.filter((it) => it.Header === 'Stock_Total')
+        let stockTotal = json2?.data?.filter((it) => it.Header === 'Stock_UCP_Total') ?? [];
+        if (!stockTotal.length) throw new Error("Stock Summary data not found for this ROI. Please complete Sales Planning first.");
         stockTotal[0].Yr0 = 0
         stockTotal[0].Particulars = stockTotal[0].Header
         stockTotal[0].Header = ''
@@ -571,24 +519,67 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
   const storeFormat = d?.roiType ?? "";
   const irr = d?.kpis?.irr;
   const payback = d?.kpis?.paybackCapex;
+
+  // Reusable tip sets, derived from how EBITDA / Net Cash Flow / IRR / Payback
+  // are actually built above (EBITDA = Gross Earnings − Total Expenses; Net
+  // Cash Flow = Capex + Signing Fee + Advance Rent + Working-Capital outflow
+  // + EBITDA; Payback compares cumulative Net Cash Flow to the Yr0 Capex only).
+  const IRR_GENERAL_TIPS = [
+    "Raise Gross Earnings/Commission relative to UCP Sales (the payout %) — it flows straight into EBITDA every year.",
+    "Trim controllable running costs (Rent, Staff Salaries, Electricity, Repairs & Maintenance) — every rupee saved adds directly to EBITDA.",
+    "Lower the Yr0 Store Interiors CAPEX — IRR is most sensitive to this single upfront outflow.",
+    "Negotiate a lower Signing Fee / Security Deposit (Advance Rent) to shrink the Yr0 cash outflow.",
+  ];
+  const STOCK_TIP_BY_FORMAT = {
+    L2: "Reduce average Stock holding — BG Cost for L2/L4 (20% × Stock × 0.75%) is a recurring expense that eats directly into EBITDA.",
+    L4: "Reduce average Stock holding — BG Cost for L2/L4 (20% × Stock × 0.75%) is a recurring expense that eats directly into EBITDA.",
+    L3: "Reduce average Stock holding — for L3/L2.5 formats, Stock is added directly into Working Capital, increasing Total Investment and the Yr0 cash outflow.",
+    "L2.5": "Reduce average Stock holding — for L3/L2.5 formats, Stock is added directly into Working Capital, increasing Total Investment and the Yr0 cash outflow.",
+  };
+  const PAYBACK_TIPS = [
+    "Payback is measured only against the Yr0 Capex (Store Interiors) — reducing that investment shortens payback fastest.",
+    "Front-load revenue: higher UCP Sales / Gross Earnings in Yr1–Yr2 recovers the Capex sooner.",
+    "Cut Yr1–Yr2 expenses so more of the EBITDA converts into cumulative cash flow in those early years.",
+  ];
+
   const validationWarnings = d ? (() => {
     const w = [];
+    const stockTip = STOCK_TIP_BY_FORMAT[storeFormat];
+    const irrTips = stockTip ? [...IRR_GENERAL_TIPS, stockTip] : IRR_GENERAL_TIPS;
+
     if (storeFormat === "L1" && irr !== null && irr < 17.95)
-      w.push("The IRR is very low for an L1 Store. Please tweak the projections to improve the IRR to minimum 18%.");
+      w.push({ message: "The IRR is very low for an L1 Store. Please tweak the projections to improve the IRR to minimum 18%.", tips: irrTips });
     if ((storeFormat === "L2" || storeFormat === "L4") && irr !== null && irr < 15)
-      w.push("The IRR is very low for an L2/L4 Store. Please tweak the projections to improve the IRR to minimum 16%.");
+      w.push({ message: "The IRR is very low for an L2/L4 Store. Please tweak the projections to improve the IRR to minimum 16%.", tips: irrTips });
     if (storeFormat === "L3" && irr !== null && irr < 11.95)
-      w.push("The IRR is very low for an L3 Store. Please tweak the projections to improve the IRR to minimum 12%.");
+      w.push({ message: "The IRR is very low for an L3 Store. Please tweak the projections to improve the IRR to minimum 12%.", tips: irrTips });
     if (storeFormat === "L2.5" && irr !== null && irr < 11.75)
-      w.push("The IRR is very low for an L2.5 Store. Please tweak the projections to improve the IRR to minimum 12%.");
+      w.push({ message: "The IRR is very low for an L2.5 Store. Please tweak the projections to improve the IRR to minimum 12%.", tips: irrTips });
     if (storeFormat === "L1" && payback !== null && payback > 4)
-      w.push("The CAPEX Payback period is very high for an L1 Store. Please rework the projections.");
+      w.push({ message: "The CAPEX Payback period is very high for an L1 Store. Please rework the projections.", tips: PAYBACK_TIPS });
     if (storeFormat !== "L1" && storeFormat !== "" && payback !== null && payback > 5)
-      w.push("The CAPEX Payback period is very high for the Store. Please rework the projections.");
-    if(!d.hasNegative & irr === null)
-      w.push("IRR cannot be calculated Please make sure an intial investment is neagtive")
-    if(!d.hasPositive & irr === null)
-      w.push("IRR cannot be calculated Please make sure at least one future ccash flow/return is positive")
+      w.push({ message: "The CAPEX Payback period is very high for the Store. Please rework the projections.", tips: PAYBACK_TIPS });
+    if (!d.hasNegative && irr === null)
+      w.push({
+        message: "IRR cannot be calculated. Please make sure an initial investment is negative.",
+        tips: [
+          "The Net Cash Flow (\"Total\") row shows no negative year at all — check Store Interiors value, Signing Fee and Security Deposit are entered correctly.",
+          "Without a genuine Yr0 investment outflow, there's no cost of capital to recover and IRR cannot be solved.",
+        ],
+      });
+    if (!d.hasPositive && irr === null)
+      w.push({
+        message: "IRR cannot be calculated. Please make sure at least one future cash flow/return is positive.",
+        tips: [
+          "The Net Cash Flow (\"Total\") row is negative or zero in every year — check that UCP Sales, Gross Earnings and Expense inputs are complete and realistic.",
+          "EBITDA must outweigh the Capex/Working-Capital outflows in at least one year for IRR to exist.",
+        ],
+      });
+    if (isNewStore && historyId && !pdfViewed)
+      w.push({
+        message: "Please view the New Store document before submitting.",
+        tips: ["Click \"📄 View New Store PDF\" above and review the linked document before submitting for approval."],
+      });
     return w;
   })() : [];
   const canSubmit = validationWarnings.length === 0;
@@ -672,6 +663,27 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
 
   return (
     <div className='p-6 bg-gradient-to-br from-slate-50 to-indigo-50 min-h-screen space-y-6'>
+      {/* Validation warnings — repeated here (top) so they're seen immediately on landing */}
+      {validationWarnings.length > 0 && (
+        <div className='bg-red-50 border border-red-300 rounded-2xl px-6 py-4 space-y-4'>
+          <p className='text-xs font-bold text-red-700 uppercase tracking-wide mb-1'>⚠ Cannot Submit — Please resolve the following issues:</p>
+          {validationWarnings.map((item, i) => (
+            <div key={i}>
+              <div className='flex items-start gap-2 text-sm text-red-700 font-semibold'>
+                <span className='mt-0.5 flex-shrink-0'>•</span>
+                <span>{item.message}</span>
+              </div>
+              {item.tips?.length > 0 && (
+                <ul className='mt-1.5 ml-6 space-y-1 list-disc marker:text-red-400'>
+                  {item.tips.map((tip, ti) => (
+                    <li key={ti} className='text-xs text-red-600'>{tip}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       {/* ── Completion banner ──────────────────────────────────────────────── */}
       <div className='bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl px-8 py-6 flex items-center justify-between shadow-lg'>
         <div className='flex items-center gap-4'>
@@ -1090,12 +1102,21 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
       {/* ── Action bar ────────────────────────────────────────────────────── */}
       {/* Validation warnings — shown above submit when thresholds fail */}
       {validationWarnings.length > 0 && (
-        <div className='bg-red-50 border border-red-300 rounded-2xl px-6 py-4 space-y-2'>
+        <div className='bg-red-50 border border-red-300 rounded-2xl px-6 py-4 space-y-4'>
           <p className='text-xs font-bold text-red-700 uppercase tracking-wide mb-1'>⚠ Cannot Submit — Please resolve the following issues:</p>
-          {validationWarnings.map((msg, i) => (
-            <div key={i} className='flex items-start gap-2 text-sm text-red-700'>
-              <span className='mt-0.5 flex-shrink-0'>•</span>
-              <span>{msg}</span>
+          {validationWarnings.map((item, i) => (
+            <div key={i}>
+              <div className='flex items-start gap-2 text-sm text-red-700 font-semibold'>
+                <span className='mt-0.5 flex-shrink-0'>•</span>
+                <span>{item.message}</span>
+              </div>
+              {item.tips?.length > 0 && (
+                <ul className='mt-1.5 ml-6 space-y-1 list-disc marker:text-red-400'>
+                  {item.tips.map((tip, ti) => (
+                    <li key={ti} className='text-xs text-red-600'>{tip}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
         </div>
@@ -1105,15 +1126,15 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
           <p className='text-xs text-gray-400 hidden sm:block'>
             All sections are complete. Submit your ROI request for approval.
           </p>
-          {/* PDF button for New Store — shown only on the Summary page */}
-          {/* {isNewStore && historyId && (
+          {/* PDF button for New Store — shown only on the Summary page; must be opened once before submit is allowed */}
+          {isNewStore && historyId && (
             <button
               type='button'
-              onClick={() => setShowPdf(true)}
-              className='px-5 py-3 rounded-xl font-bold text-sm shadow-lg transition bg-blue-600 hover:bg-blue-700 text-white'>
-              📄 View New Store PDF
+              onClick={handleViewPdf}
+              className={`px-5 py-3 rounded-xl font-bold text-sm shadow-lg transition text-white ${pdfViewed ? "bg-blue-500/70 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"}`}>
+              {pdfViewed ? "📄 View New Store PDF ✓" : "📄 View New Store PDF"}
             </button>
-          )} */}
+          )}
           <button
             type='button'
             onClick={handleSubmit}
@@ -1126,8 +1147,6 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
           </button>
         </div>
       </div>
-      {/* PDF modal */}
-      {showPdf && <NewStorePDFModal onClose={() => setShowPdf(false)} />}
     </div>
   );
 }

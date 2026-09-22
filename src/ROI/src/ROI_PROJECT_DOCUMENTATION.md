@@ -1,7 +1,8 @@
 # ROI (Return on Investment) Application — Complete Project Documentation
 
-**Version:** As of August 2026 — updated with approval-security, RBM dashboard redesign, and 404 standardisation
-**Backend:** FastAPI (Python) · `f:\ROI\ROI_server\server\`  
+**Version:** As of September 2026 — updated with TOT engine (Gemstones + 6 studded categories), Sales Planning Phase 1/2 split, edit-in-place across every screen, and the Screen-1 duplicate-ROI backend fix
+**Backend (active dev):** FastAPI (Python) · `f:\ROI\Dev_branch\ROI-Backend-python\server\`  
+**Backend (other copies — not kept in sync, do not edit blindly):** `f:\ROI\ROI_server\server\`, `f:\ROI\roi-be-og\roi-be-og\server\`  
 **Frontend:** React 18 embedded inside Third Eye (`third-eye-v3`) · `f:\ROI\git_ROI_THIRD_EYE\third-eye-v3\src\ROI\src\`  
 **Base URL (local):** `http://127.0.0.1:8000`
 
@@ -29,6 +30,8 @@
 13. [Frontend Component Tree](#13-frontend-component-tree)
 14. [Key Data Flow — New Store](#14-key-data-flow--new-store)
 15. [Status Lifecycle](#15-status-lifecycle)
+16. [Recent Changes (August 2026)](#16-recent-changes-august-2026)
+17. [Recent Changes (September 2026)](#17-recent-changes-september-2026)
 
 ---
 
@@ -232,17 +235,22 @@ Validation metrics fetched from `GET /validation_metrics?region=&store_format=` 
 
 ---
 
-#### Sub-page 3.3 — Stock Summary / Pricing Metrics
+#### Sub-page 3.3 — Stock Summary / Pricing Metrics (Phase 1 + Phase 2)
 
 **File:** `Subpage3_3.jsx`  
-**Saves to:** `POST /sales_planning_page_3`
+**Saves to:** `POST /sales_planning_page_3_phase_1` (Pricing Metrics) then `POST /sales_planning_page_3_phase_2` (Stock Turn) — this page was split into two saves so the TOT preview can be computed as soon as pricing is entered, before the user has chosen Stock Turn assumptions.
 
-Inputs:
-- Base Rate (22K gold), Markup %
-- AMC % for Plain groups (LCG/MCG/HCG/Coins) — must sum to 100%
-- Stock turns (Plain / Studded / Coins-Silver) per year
+**Phase 1 — Pricing Metrics** (`sales_planning_page_3_phase_1`):
+- Base Rate (22K gold)
+- AMC % for Plain groups — LCG / MCG / HCG / Gemstones / Coins — must sum to 100%
+- On success, triggers `_compute_and_save_tot` immediately and returns a `stock_section` preview (Stock / Stock-UCP / Brand-Guideline Stock Turn) computed against the reference Stock Turn assumption, before Phase 2 is saved.
+- Once saved, the form collapses behind a summary with an **✎ Edit Pricing Metrics** button (re-opens the form; re-saving recomputes TOT and, if Phase 2 was already saved, forces it to be reviewed/re-saved too — see §17).
 
-Computed: Total stock turns, stock values (Plain / Studded / Coins), brand guideline comparisons
+**Phase 2 — Stock Turn** (`sales_planning_page_3_phase_2`):
+- Stock turns (Plain / Studded / Coins-Silver) per year — defaults from the TOT sheet's Brand-Guideline turns, editable in place (never `disabled`)
+- Computed: Total stock turns, Stock, Stock (UCP Terms), Stock Turn - Brand Guidelines — all recomputed server-side and returned as the authoritative `stock_section`
+
+Supporting endpoint: `GET /tot_stock_section/{roiid}?store_format=&stock_turn_plain=&stock_turn_studded=&stock_turn_coins=` — refetches the current Stock section on resume, or previews a candidate Stock Turn selection without saving.
 
 ---
 
@@ -640,7 +648,8 @@ Until this proc exists, the auth check is **gracefully skipped** (warning logged
 | POST | `/store-retail-spec` | Save Screen 2 |
 | POST | `/sales_planning_page_1` | Save Screen 3.1 (key expenses) |
 | POST | `/sales_planning_page_2` | Save Screen 3.2 (sales summary) |
-| POST | `/sales_planning_page_3` | Save Screen 3.3 (stock/pricing) |
+| POST | `/sales_planning_page_3_phase_1` | Save Screen 3.3 Phase 1 (pricing metrics — Base Rate/AMC%) → auto-triggers TOT, returns `stock_section` preview |
+| POST | `/sales_planning_page_3_phase_2` | Save Screen 3.3 Phase 2 (Stock Turn) → recomputes & returns authoritative `stock_section` |
 | POST | `/sales_planning_page_4` | Save Screen 3.4 (discounts) |
 | POST | `/expense_planning_page1` | Save Screen 4.1 (CAPEX) |
 | POST | `/expense_planning_page2` | Save Screen 4.2 (salaries/ops) |
@@ -673,6 +682,13 @@ Until this proc exists, the auth check is **gracefully skipped** (warning logged
 |---|---|---|
 | POST | `/stock_turn_guideline` | Stock turn lookup by cluster/sales/region |
 | GET | `/tot_calculation/{roiid}?store_format=` | Manually recompute full TOT |
+| GET | `/tot_stock_section/{roiid}?store_format=&stock_turn_plain=&stock_turn_studded=&stock_turn_coins=` | Stock / Stock-UCP / Brand-Guideline Stock Turn section, optionally previewing candidate Stock Turn values |
+| GET | `/tot_excel/{roiid}?store_format=` | Download Plain TOT as Excel |
+| GET | `/tot_excel_studded/{roiid}?store_format=` | Download Studded TOT as Excel |
+| GET | `/tot_excel_coin/{roiid}?store_format=` | Download Coins TOT as Excel |
+| GET | `/tot_excel_summary/{roiid}?store_format=` | Download 6-Year Horizon Summary + Inventory Projection as Excel |
+
+> All five `store_format`-accepting TOT endpoints auto-resolve `store_format` from the ROI's saved Screen-1 data via `_resolve_store_format()` if the query param is left blank.
 
 ---
 
@@ -830,20 +846,32 @@ commented_by: str
 ## 12. TOT Computation Engine
 
 **File:** `TOTFunctions.py`  
-**Auto-triggered:** after `POST /expense_planning_page3` succeeds
+**Source of truth for formulas:** `Template with CS updated.xlsm`, sheet **"TOT - L2"** (rows 1-160). Sheets "TOT - L3/L4/L2.5" share the same layout but different TOT rate tables (`_TOT_BANDS`/`_STUDDED_TOT_BANDS`, currently hardcoded to L2 rates). The older "Plain TOT - L3"/"Studded TOT - L3" sheets are legacy — not used as reference.
 
-The `_compute_and_save_tot(roiid, store_format, db)` function:
+**Auto-triggered:**
+- `POST /sales_planning_page_3_phase_1` (Pricing Metrics save) \u2014 computes TOT against the *reference* Stock Turn assumption, as a preview before Phase 2 is entered
+- `POST /expense_planning_page3` (Screen 4.3 Rent & Summary save) \u2014 authoritative recompute once the full expense picture is known
 
-1. Reads saved expense summary, sales data, and store details for the ROI
-2. Computes Plain TOT sections:
-   - UCP Sales, AMC GM, Grammage, AMC Lakhs, Net AMC, Year-wise data, Pre-summary, Final
+### Category structure (current)
+- **Plain categories (4):** LCG, MCG, HCG, **Gemstones**. Gemstones' slab allocation is NSV-based (not Net-AMC-based like LCG/MCG/HCG). HCG-Stone is tracked as its own 5th column/total, never folded into HCG.
+- **Studded categories (6):** GIS, Regular, Solitaire A/B/C/D. ("Color Stones" was removed from the template — do not reintroduce it.)
+- **Coins/Silver:** flat 3% GST like Plain; Plain GST is also flat 3% (`(UCP-Disc-GHS)*0.03`). Studded (and the studded-style GST) uses back-calculated `3/103` (`_GST_RATE_GOLD`).
+- Plain slab bands: one shared NSV waterfall (LCG+MCG+HCG+Gemstones combined) split across `_TOT_BANDS`, then each category's Net AMC (or NSV for Gemstones) is allocated proportionally to each band before applying that band's rate.
+- GHS impact formula (Plain/Coins) = `GHS discount amount × (TOT / NSV)` — **not** `TOT × GHS%`. Studded's own "Overall ToT Summary" contribution uses the gross TOT (no GHS deduction), even though a GHS-adjusted net_tot is also computed for informational parity.
+
+### `_compute_and_save_tot(roiid, store_format, db)` flow
+1. Reads saved expense summary, sales data, and store details for the ROI (`store_format` auto-resolved via `_resolve_store_format()` if blank — looks up Screen-1 `existing_store_format`/`new_store_format`)
+2. Computes Plain TOT sections: UCP Sales, AMC GM, Grammage, AMC Lakhs, AMC+Stone/gm, Gold Value % of UCP, Sales KGs (22kt), Net AMC, Year-wise data, Pre-summary, Final
 3. Computes Coins TOT
-4. Computes Studded TOT:
-   - Year-wise data, Slab-wise data, Final
-5. Saves each section via dedicated stored procedures
-6. Returns metadata: `{ "saved_procedures": [...], "errors": [...] }`
+4. Computes Studded TOT: Year-wise data, Slab-wise data, Final
+5. Computes **6-Year Horizon Summary** and **Inventory Projections** (`_horizon_summary()`/`_inventory_projection()`, Excel rows 66-160) — inventory stock-turn/min-stock assumptions (1.7/1.5/10, 18/5/0.3, ×1.1 Yr4-Yr6 escalation) are hardcoded brand-guideline constants taken directly from the workbook
+6. Saves each section via dedicated stored procedures (each call wrapped in its own savepoint — one SP failure doesn't abort the rest)
+7. Returns metadata: `{ "saved_procedures": [...], "failed_procedures": [...], "errors": [...] }`
 
-The TOT data is viewable via `GET /tot_details/{roiid}?tot_type=` using one of these types:
+> **Known DB-side gap:** several target tables/SPs referenced by step 6 don't exist yet in the dev DB (`third_eye_V2`) — e.g. `roi_plainTOT_Gramcmu`, `roi_plainTOT_Grammage`, `roi_plainTOT_amclakhs`, `roi_PlainTOT_Final`, `roi_StuddedTOT_YearwiseData`, `roi_StuddedTOT_slabwiseData`, `roi_StuddedTOT_Final`. These fail independently and are reported in `failed_procedures` — this is a DB-schema gap, not a Python bug, and needs DB-team action to resolve.
+
+### Reading TOT data
+`GET /tot_details/{roiid}?tot_type=` using one of these types:
 
 ```
 Plain_TOT_Ucp_Sales | Plain_TOT_amcgm | Plain_TOT_Gramcmu | Pain_TOT_Grammage
@@ -851,6 +879,18 @@ Plain_TOT_amclakhs  | Plain_TOT_yearwise_data | Plain_netamc | Coins_TOT
 Plain_TOT_Presummary | Plain_TOT_Final | Studded_TOT_Yearwise_data
 Studded_TOT_slabwise_data | Studded_TOT_Final
 ```
+
+### Excel export
+`generate_plain_tot_excel`, `generate_studded_tot_excel`, `generate_coin_tot_excel`, and `generate_summary_tot_excel` (6-Year Horizon + Inventory) all pull from `_compute_tot(...)["yearly_tot"]` / `["horizon_summary"]` / `["inventory_projection"]` and are exposed via `/tot_excel/{roiid}`, `/tot_excel_studded/{roiid}`, `/tot_excel_coin/{roiid}`, `/tot_excel_summary/{roiid}`. All values in the summary/tot_summary dicts are already in ₹ Crores — Excel export code must not divide by 100 again.
+
+### Sales Planning page-3 (Subpage3_3) → TOT trigger flow
+Phase 1 save (pricing metrics: base rate/AMC%) → triggers `_compute_and_save_tot` (using the hardcoded reference Stock Turn assumption) → returns `stock_section` (from `get_stock_section_data`) as a preview for Sections 3-5 of that page. Phase 2 save takes the user's own Stock Turn inputs, recomputes via `get_stock_section_data(roiid, db, stock_turns={...})` (threads through `_compute_tot(stock_turns=...)` → `_inventory_projection` override), persists, and returns the authoritative `stock_section` for the UI.
+
+`get_stock_section_data()` maps onto the Subpage3_3 tables:
+- `ucp_kg_sales.ucp/kg_sales` → "6-Year Horizon" UCP & KG-Sales tables
+- `stock.plain/studded/coins` → Section 3 "Stock" (Studded in ₹ Lakhs; Plain/Coins = brand-guideline-floored KG stock)
+- `stock_ucp.*` → Section 4 "Stock (UCP Terms - ₹ Lakhs)"
+- `stock_turn_brand_guideline.*` → Section 5 "Stock Turn - Brand Guidelines" (achieved turns after the floor is applied)
 
 ---
 
@@ -1012,27 +1052,61 @@ Every approval action passes through this gate **before any DB write**:
 | Double-header / scrollbar fixed | `RBMDashboard` removed its own `ThirdEyeHeader`; root div changed to `flex-1 overflow-hidden`. |
 | "Request Changes" renamed | Now **"Seek Clarification"** throughout UI and API. |
 
-### Approval Matrix (from DB)
+---
 
-| Channel | Level | Project Type | Approval1 | Approval2 | Approval3 | Approval4 | BPM |
-|---|---|---|---|---|---|---|---|
-| Tanishq | L1-L4, L2.5 | **New Store** | RBM of Region | 3 Commercial emails | sunilr@ | arun@ | vineetashok@ |
-| Tanishq | L1-L4, L2.5 | **Renovation** | RBM of Region | 3 Commercial emails | sunilr@ | *(none)* | vineetashok@ |
-| Tanishq | L1-L4, L2.5 | **Relocation** | RBM of Region | 3 Commercial emails | sunilr@ | *(none)* | vineetashok@ |
-| Tanishq | L1-L4, L2.5 | **Expansion** | RBM of Region | 3 Commercial emails | sunilr@ | *(none)* | vineetashok@ |
+## 17. Recent Changes (September 2026)
 
-**New Store** is the only project type requiring 4 approval levels. All others skip `Approval4`.
+### Backend — TOT engine (`TOTFunctions.py`)
 
-### Stored Procedure to Create
+| Change | Detail |
+|---|---|
+| Gemstones added to Plain | Plain is now 4 categories (LCG/MCG/HCG/**Gemstones**), NSV-based slab allocation instead of Net-AMC-based like the other three; HCG-Stone kept as its own 5th total, never merged into HCG |
+| Studded re-scoped to 6 categories | GIS/Regular/Solitaire A-D — "Color Stones" removed from the template, do not reintroduce |
+| GHS impact formula fixed | Plain/Coins GHS impact = `GHS discount amount × (TOT / NSV)`, not `TOT × GHS%` |
+| `_plain_year_tot` NameError fixed | `_pbands()` referenced an undefined `store` var and mis-passed params to `text()` instead of `db.execute()` — silently zeroed all Plain TOT bands with no visible exception (bare `except: print(e)`) |
+| `decimal.Decimal` cast bug fixed | `fetch_roi_tot_ref_data` rows return MySQL DECIMAL columns as `decimal.Decimal`, which can't multiply with `float` — now cast to `float` immediately when building `PLAIN_TOT_BANDS` |
+| `_compute_tot(roiid, store_format, db, ...)` signature | `store_format` added as 2nd positional param; all call sites (`get_stock_section_data`, all 4 Excel export functions, `/tot_excel*`, `/tot_stock_section/{roiid}`, Phase 1/2 sales-planning endpoints) updated to accept/thread it through |
+| `_resolve_store_format(roiid, store_format, db)` helper | Auto-resolves blank `store_format` from Screen-1 saved data (`existing_store_format`/`new_store_format`) — DB SP now hard-rejects empty `store_format` (`Store_format is mandatory.`), previously silently zeroed all bands instead of erroring |
+| New Excel export | `generate_summary_tot_excel` (6-Year Horizon + Inventory Projection) added alongside Plain/Studded/Coin exports — all now exposed via `/tot_excel*` endpoints |
+| New endpoint | `GET /tot_stock_section/{roiid}` — Stock/Stock-UCP/Brand-Guideline Stock Turn preview, with optional candidate `stock_turn_plain/studded/coins` query params (doesn't save) |
 
-```sql
-CREATE PROCEDURE get_roi_current_status(IN p_roiid VARCHAR(100))
-BEGIN
-    SELECT status FROM <roi_master_table> WHERE roiid = p_roiid LIMIT 1;
-END;
-```
+### Backend — Sales Planning Screen 3.3 split into Phase 1 / Phase 2
 
-Until this proc exists the auth check is skipped with a warning log — safe for staged rollout.
+`/sales_planning_page_3` was replaced by two endpoints so the TOT preview is available as soon as pricing is entered:
+- `POST /sales_planning_page_3_phase_1` — Pricing Metrics (Base Rate, Plain AMC%, Coins AMC%) → triggers `_compute_and_save_tot`, returns `stock_section` preview
+- `POST /sales_planning_page_3_phase_2` — Stock Turn (Plain/Studded/Coins) → recomputes via `get_stock_section_data(stock_turns=...)`, returns authoritative `stock_section`
+
+### Backend — Screen 1 duplicate-ROI bug fixed (2026-09-17)
+
+`save_basic_store_details` (`POST /basic-store-details`) was **unconditionally minting a brand-new `roi_id`** (`f"{username}{timestamp}"`) on every call, silently ignoring the `roiid` the frontend already sends when editing an existing ROI. Effect: any re-save of Screen 1 while editing (e.g. flipping Franchise Yes→No then saving) forked a brand-new ROI instead of updating the current one. Fixed: `roi_id` now reuses `payload.roiid` when present, only minting a new one when it's genuinely empty; `InsertApprovalHistory` (previously called unconditionally on every save) now only runs `if is_new_roi`, so re-saving an edit no longer spams duplicate "Active" history rows. (Screen 2's `/store-retail-spec` already did this correctly via `payload.roiId` — used as the reference pattern.) The other backend copies (`ROI_server/server/main.py`, `roi-be-og/roi-be-og/server/main.py`) still have the old bug and are **not** synced with `Dev_branch` — only fix there if/when those copies are actually deployed.
+
+### Frontend — Edit-in-place enabled across the entire wizard (previously each screen was save-once with no way back)
+
+| Screen/Page | Fix |
+|---|---|
+| **Screen 1** (`BasicStoreRetailForm.jsx`) | Was fully locked (read-only summary + "Continue" only) after first save — no edit path at all, and even that lock was only enforced after an earlier bug where hitting "← Previous" from Screen 2 re-rendered a blank creation form and forked a duplicate ROI. Now: locked summary card has an **"✎ Edit Details"** button (`startEditingExisting`) that fetches the saved row and prefills the real form; only **Project Type + History ID** (New Store) or **Store Code** (other types) stay disabled — everything else, including Franchise, is editable and re-savable against the same `roiid` (see backend fix above). |
+| **Screen 2** (`StoreRetailSpecification.jsx`) | Had a dead end — once resumed with `isSaved=true`, the footer rendered nothing (no Save, no Next). Added an `isSaved` footer block: "✎ Edit Details" + "Next →" by default, "💾 Save Changes" once editing. `Store Type`/`New Overall Area (SBA)`/`New Retail Area` stay `disabled` even in edit mode; everything else is wrapped in a `<fieldset disabled={isSaved && !isEditingLocked}>` so nothing is silently editable-but-lost. |
+| **Subpage3_1** (Key Expenses) | Previously permanently `disabled={isSaved}` with no toggle back — added a plain "✎ Edit" button. |
+| **Subpage3_2 / Subpage3_3 Phase 2 (Stock Turn)** | Already supported edit-in-place (inputs never `disabled` on `isSaved`); only needed the new cascade-invalidation described below. |
+| **Subpage3_3 Phase 1 (Pricing Metrics)** | Was unreachable once saved — no edit path existed. Added **"✎ Edit Pricing Metrics"**. |
+| **Subpage3_4** (Discounts) | Same staleness-guard pattern added against `discountSavedAtVersion`. |
+| **Subpage4_1/4_2/4_3** (Expense Planning) | Same old bug as pre-fix Subpage3_1 — inputs hardcoded `disabled={isSaved}`, no way back. Added `isEditing` state to each; footer shows "✎ Edit" + "Next →" (or the completion badge on 4_3) vs. the Save button. |
+| **Stepper.jsx / MultiStepROIForm.jsx** | Stepper was purely decorative. Added `maxReachedStep` (furthest step reached this session) + clickable step circles that jump `activeForm` directly to any already-reached step. |
+| **HistoryPage.jsx** | Added a per-section **"✎ Edit"** button next to "View" for every completed page in the History detail view — jumps straight into that exact step/subStep (`PAGE_STEP_MAP`) instead of only the first-incomplete one, reusing the same `roiContext`-building logic as "Continue ROI" so saved data stays intact. Disabled only when the ROI is actually locked (`isSubmitted` — Submitted to RBM / Approved_by* / Rejected_by* / BPM_Requestraised), **not** during `SK_by*` (clarification-pending) or any pre-submission state. |
+
+Editing is bounded automatically: `HistoryPage.jsx` already gates the whole wizard re-entry on `!isSubmitted` (shows "View Final Summary" instead of "Continue ROI"/per-section "Edit" once truly submitted), so "editable until final submission, locked after" falls out without extra plumbing.
+
+### Frontend — Cascading invalidation when upstream Sales Planning data changes
+
+Editing an earlier Sales Planning substep whose downstream substeps were already saved now forces those downstream substeps back to "not saved" (stepper + local `isSaved` flags), since they were computed from now-stale upstream data — especially Subpage3_2 (Sales Mix, feeds TOT + discount calc) and Subpage3_3 Phase 1 (Pricing Metrics, triggers `_compute_and_save_tot`). Implemented via `Section3Context`: `invalidateStepsFrom(i)`, `salesSummaryVersion`/`bumpSalesSummaryVersion()`, `phase1SavedAtVersion`/`markPhase1SavedVersion()`, `discountSavedAtVersion`/`markDiscountSavedVersion()`. This is session-scoped only (no backend timestamp/version column) — it does not protect against staleness across a full page reload/resume-from-history.
+
+### Frontend — Resume/hydration bugs fixed
+
+| Bug | Fix |
+|---|---|
+| `Subpage3_3.jsx` resume effect only checked screen 3 (Phase 1) and, if found, set **both** `isPhase1FormSaved` and `isSaved` true — so resuming with only Phase 1 saved incorrectly skipped Phase 2 (Stock Turn) entirely | Split into two independent effects: screen 3 → `isPhase1FormSaved` only; screen 4 → `isSaved` (+ restores stock-turn inputs) |
+| `HistoryPage.jsx`'s `getFirstIncompleteStep()` mapped its 5 Sales Planning pages to `subStep` via `index + 1`, but Phase 1 and Phase 2 of "Stock Summary" both render inside the same `Subpage3_3` (only 4 subpages exist, not 5) — wrongly jumped to Discounts (`Subpage3_4`) when only Phase 1 was saved | Explicit `salesSubSteps = [1, 2, 3, 3, 4]` lookup instead of `index + 1` |
+| Clicking "✎ Edit Pricing Metrics" (or editing any Stock Turn cell) immediately snapped back to the saved/collapsed view | Both Phase 1 and Phase 2 resume-hydration effects were keyed off the same toggleable flag they were resuming (`isPhase1FormSaved`/`isSaved`), so flipping it to open the edit form re-triggered the fetch, which flipped it straight back. Fixed by gating each effect with a one-shot `useRef` (`phase1HydratedRef`/`phase2HydratedRef`) so it only ever hydrates once per mount, not every time the flag toggles |
 
 ---
 
@@ -1040,7 +1114,7 @@ Until this proc exists the auth check is skipped with a warning log — safe for
 
 ### Backend
 ```
-cd f:\ROI\ROI_server\server
+cd f:\ROI\Dev_branch\ROI-Backend-python\server
 .\venv\Scripts\Activate.ps1
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
@@ -1063,4 +1137,4 @@ DB_PASSWORD=...
 
 ---
 
-*Documentation last updated: August 2026*
+*Documentation last updated: September 2026*

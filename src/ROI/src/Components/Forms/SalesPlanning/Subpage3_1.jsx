@@ -448,12 +448,20 @@ export default function Subpage3_1({ handleNext }) {
               {isSaving ? "Saving..." : "Save"}
             </button>
           ) : (
-            <button
-              type='button'
-              onClick={handleNext}
-              className='bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition transform hover:scale-105 cursor-pointer'>
-              Next →
-            </button>
+            <>
+              <button
+                type='button'
+                onClick={() => setIsSaved(false)}
+                className='text-sm font-semibold text-indigo-700 hover:text-indigo-900 underline underline-offset-2 self-center'>
+                ✎ Edit
+              </button>
+              <button
+                type='button'
+                onClick={handleNext}
+                className='bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition transform hover:scale-105 cursor-pointer'>
+                Next →
+              </button>
+            </>
           )}
         </div>
       </div>
