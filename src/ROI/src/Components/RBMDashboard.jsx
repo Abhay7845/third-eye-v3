@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { BASE_URL } from "./Forms/data/baseUrl";
+import RoiPdfReport from "./Forms/RoiPdfReport";
 
 // ─── Page definitions ─────────────────────────────────────────────────────────
 const PAGES = [
@@ -747,10 +748,11 @@ export default function RBMDashboard({ userRole = "RBM" }) {
       setPageModal(prev => ({ ...prev, loading: false }));
     }
   };
-
+      console.log(userLog)
   // ── Execute action (remark supplied by ActionModal) ───────────────────────
   const handleConfirmAction = async (remark = "") => {
     const roiid = selectedRoi?.roiid;
+
     setActionLoading(true);
     try {
       const res = await fetch(`${BASE_URL}/roi/action/${roiid}`, {
@@ -758,7 +760,7 @@ export default function RBMDashboard({ userRole = "RBM" }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: confirmAction,  // 'approve' | 'reject' | 'clarify'
-          actor_email: userLog?.name ?? "",
+          actor_email: userLog?.email ?? "",
           actor_role: userRole,
           remark: remark.trim(),
           channel: selectedRoi?.channel ?? "Tanishq",
@@ -939,6 +941,13 @@ export default function RBMDashboard({ userRole = "RBM" }) {
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <StatusBadge status={roiStatus} size="md" />
+                    {/* Every ROI reaching this dashboard has already been submitted */}
+                    {!!roiStatus && (
+                      <RoiPdfReport
+                        roiid={selectedRoi.roiid}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition"
+                      />
+                    )}
                     {/* PDF button shown to all roles for New Store projects */}
                     {selectedRoi.project_type === "New Store" && roiHistoryId && (
                       <button

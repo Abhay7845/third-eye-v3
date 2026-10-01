@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSection3Context } from "./Section3Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
@@ -58,7 +58,7 @@ const computeValues = (inputs) => {
   // Buyers per day = walkInPerDay[i] × conversionPct[i] / 100
   const buyersPerDay = walkInPerDay.map((w, i) => {
     const conv = parseFloat(inputs.conversionPct[i]) || 0;
-    return Math.round((w * conv) / 100);
+    return Math.ceil((w * conv) / 100);
   });
 
   // Average Ticket Size chain: Yr.1 from user input, Yr.2–6 = prev × (1 + growthTicketSize%)
@@ -296,6 +296,10 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
   const { storeParticulars, markStepSaved, setSubpage3_2Data, forwardDetail, savedSteps, invalidateStepsFrom, bumpSalesSummaryVersion } = useSection3Context();
   const computed = computeValues(inputs);
   const userLog = useSelector((state) => state?.user?.user);
+  // Read synchronously (unlike the `isSaved` state, which the validation-metrics
+  // effect below can otherwise still see as stale/false due to its own effect
+  // closure, wrongly overwriting a legitimately-saved 0% mix share).
+  const savedMixLoadedRef = useRef(false);
 
   // Load previously saved sales data when resuming
   useEffect(() => {
@@ -312,6 +316,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
         const json = await res.json();
         const rows = json?.data ?? [];
         if (!rows.length) return;
+        savedMixLoadedRef.current = true;
         // API returns flat { Header, Yr1..Yr6 } rows — extract by header name
         const yrs = (header) => {
           const r = rows.find((x) => x.Header === header);
@@ -407,7 +412,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
           solitaireD: get("Studded Sales Mix - SSD"),
         });
         // Pre-fill mix inputs with raw reference values for all 6 years when no saved data exists
-        if (!isSaved) {
+        if (!savedMixLoadedRef.current) {
           setInputs((prev) => ({
             ...prev,
             plainShare:    prev.plainShare[0]    === 0 ? Array(6).fill(get("Overall Sales Mix - Plain"))    : prev.plainShare,

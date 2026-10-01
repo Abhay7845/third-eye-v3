@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { BASE_URL } from "./Forms/data/baseUrl";
+import RoiPdfReport from "./Forms/RoiPdfReport";
 
 // ─── Page definitions ─────────────────────────────────────────────────────────
 const PAGES = [
@@ -763,6 +764,16 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     <span>{stats.total - stats.done} remaining</span>
                   </div>
                 </div>
+
+                {/* One-view report — only once the ROI has actually been submitted */}
+                {isSubmitted && (
+                  <div className='mt-4 flex justify-end'>
+                    <RoiPdfReport
+                      roiid={selectedRoi.roiid}
+                      className='inline-flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow transition'
+                    />
+                  </div>
+                )}
               </div>
 
               {/* ── Rejected / Clarification alert — shown first so it's seen as soon as the page loads ── */}

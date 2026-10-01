@@ -153,17 +153,30 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const [isSaved, setIsSaved] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [screen1Expenses, setScreen1Expenses] = useState(null);
+  const [totalSalesAllYears, setTotalSalesAllYears] = useState(Array(6).fill(0)); // Sales Planning Yr1-6 Total Sales (Subpage3_2)
+  const [btlValues, setBtlValues] = useState(Array(6).fill(100000)); // BTL = each year's own Total Sales × 0.3% × 100000
+  const [creditCardValues, setCreditCardValues] = useState(Array(6).fill(0)); // each year's own Total Sales × 30% × 1.2% (×0.5% for L2/L4)
+  const [gstValues, setGstValues] = useState(Array(6).fill(0)); // each year's own Total Sales × 0.1%
+  // Fallback Capex/Resource/Electricity totals fetched directly from the DB —
+  // subpage4_1Data/subpage4_2Data in context are only populated by Subpage4_1/
+  // 4_2's own handleSave, NOT by their resume effects, so they're empty when
+  // the wizard is resumed straight into this stage (e.g. via History/stepper).
+  const [capexFallback, setCapexFallback] = useState(null);
+  const [resourceFallback, setResourceFallback] = useState(null);
+  const [otherFallback, setOtherFallback] = useState(null);
+
+  // Rows with no annual cost escalation at all (Yr1 value repeats flat across all 6 years)
+  const NO_ESCALATION_ROWS = new Set(["repairs", "insurance", "btl", "creditCard", "gst"]);
 
   // Yr1 and escalation % are user-editable for all non-locked rows
   const [editableRows, setEditableRows] = useState({
-    repairs: { yr1: 0, esc: 5 },
-    insurance: { yr1: 0, esc: 5 },
-    btl: { yr1: 100000, esc: 10 },
+    repairs: { yr1: 0, esc: 0 },
+    insurance: { yr1: 0, esc: 0 },
+    btl: { yr1: 100000, esc: 0 },
     travel: { yr1: 17500 * 12, esc: 7 },
     telephone: { yr1: 11000 * 12, esc: 7 },
-    creditCard: { yr1: 0, esc: 5 },
-    gst: { yr1: 0, esc: 3 },
+    creditCard: { yr1: 0, esc: 0 },
+    gst: { yr1: 0, esc: 0 },
     printing: { yr1: 17500 * 12, esc: 10 },
     consumables: { yr1: 20000 * 12, esc: 10 },
     staffWelfare: { yr1: 0, esc: 10 },
@@ -220,11 +233,17 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
         const rateRow = find("Rate per Square Foot");
         const revShareRow = find("Revenue Sharing (% of Net Sales)");
         const minGuaranteeRow = find("Min Gurantee / Monthly (?)");
+        const btlRow = find("BTL");
+        const creditCardRow = find("Credit Card Commission");
+        const gstRow = find("GST (primarily rental)");
 
         if (yearsOf(sbaRow)) setSba(yearsOf(sbaRow));
         if (yearsOf(rateRow)) setRatePerSqft(yearsOf(rateRow));
         if (yearsOf(revShareRow)) setRevSharePct(yearsOf(revShareRow));
         if (yearsOf(minGuaranteeRow)) setMinGuaranteeMth(yearsOf(minGuaranteeRow));
+        if (yearsOf(btlRow)) setBtlValues(yearsOf(btlRow));
+        if (yearsOf(creditCardRow)) setCreditCardValues(yearsOf(creditCardRow));
+        if (yearsOf(gstRow)) setGstValues(yearsOf(gstRow));
         // No explicit Yes/No flag is persisted (main.py sends NULL for the
         // revenue-share/min-guarantee params when "No") — infer it from
         // whether a real revenue-share % was actually saved.
@@ -251,7 +270,10 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
           Object.entries(EDITABLE_HEADERS).forEach(([key, label]) => {
             const row = find(label);
             if (!row) return;
-            updated[key] = { yr1: yr1Of(row), esc: escOf(row, updated[key]?.esc ?? 0) };
+            updated[key] = {
+              yr1: yr1Of(row),
+              esc: NO_ESCALATION_ROWS.has(key) ? 0 : escOf(row, updated[key]?.esc ?? 0),
+            };
           });
           return updated;
         });
@@ -281,12 +303,18 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   // Sync locked-row Yr1 values from subpage4_2Data in the live (non-resume) flow
   useEffect(() => {
     if (isRestoredRef.current) return; // don't clobber values restored from a saved SUMMARY row
-    const sal = subpage4_2Data?.salaries?.totalAnnualTotal;
-    const sec = subpage4_2Data?.securityHousekeeping?.totalAnnual;
-    const elec = subpage4_2Data?.electricity?.total;
+    const sal = subpage4_2Data?.salaries?.totalAnnualTotal ?? resourceFallback?.totalAnnualTotal;
+    const sec = subpage4_2Data?.securityHousekeeping?.totalAnnual ?? resourceFallback?.secHkTotalAnnual;
+    const elec = subpage4_2Data?.electricity?.total ?? otherFallback?.electricityTotal;
     if (!sal && !sec && !elec) return;
     setLockedRowYr1({ salaries: sal ?? 0, secHk: sec ?? 0, electricity: elec ?? 0 });
-  }, [subpage4_2Data?.salaries?.totalAnnualTotal, subpage4_2Data?.securityHousekeeping?.totalAnnual, subpage4_2Data?.electricity?.total]);
+  }, [
+    subpage4_2Data?.salaries?.totalAnnualTotal,
+    subpage4_2Data?.securityHousekeeping?.totalAnnual,
+    subpage4_2Data?.electricity?.total,
+    resourceFallback,
+    otherFallback,
+  ]);
 
   // Seed ratePerSqft from upstream salary data when context loads after a resume
   useEffect(() => {
@@ -300,82 +328,149 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     );
   }, [subpage4_2Data?.salaries?.sqftPerEmp]);
 
-  const fetchExpenseData = async () => {
-    if (!storeData?.roiid) return;
-    try {
-      const res = await fetch(`${BASE_URL}/sales_planning`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ screen: 1, roiid: storeData.roiid }),
-      });
-      if (!res.ok) {
-        toast.error("Failed to load key expense reference data.");
-        return;
-      }
-      const json = await res.json();
-      setScreen1Expenses(json.data?.[0] ?? null);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to load key expense reference data.");
-    }
-  };
-
+  // Fetch Yr.1-6 Total Sales from Sales Planning (Subpage3_2) — drives the BTL
+  // (per-year)/Credit Card Commission/GST (Yr1-based) Yr1 formulas below.
   useEffect(() => {
-    fetchExpenseData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const roiid = storeData?.roiid;
+    if (!roiid) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/sales_planning`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ screen: 2, roiid }),
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const row = (json?.data ?? []).find((r) => r.Header === "Sales Planning_Total Sales");
+        if (row) {
+          setTotalSalesAllYears([1, 2, 3, 4, 5, 6].map((n) => parseFloat(row[`Yr${n}`]) || 0));
+        }
+      } catch (e) {
+        console.error("Failed to load Sales Planning total sales:", e);
+      }
+    })();
   }, [storeData?.roiid]);
 
-  // Seed editable Yr1 values from screen-1 key expenses once loaded
+  // Seed BTL/Credit Card Commission/GST per-year (not a flat Yr1 escalation)
+  // from each year's own Total Sales.
   useEffect(() => {
-    if (!screen1Expenses || isRestoredRef.current) return;
-    const s = screen1Expenses;
-    const toAnn = (m) => (parseFloat(m) || 0) * 12;
-    const _interiors = subpage4_1Data?.interiors ?? 0;
-    const _nos = subpage4_2Data?.salaries?.totalNos ?? 0;
+    if (isRestoredRef.current) return;
+    if (!totalSalesAllYears.some((v) => v > 0)) return;
+
+    const storeFormat = (storeData?.existing_store_format ?? storeData?.new_store_format ?? "")
+      .trim()
+      .toUpperCase();
+    const isL2orL4 = storeFormat === "L2" || storeFormat === "L4";
+
+    setBtlValues(totalSalesAllYears.map((sales) => Math.round(sales * 0.003) * 100000));
+    setCreditCardValues(
+      totalSalesAllYears.map((sales) => {
+        const base = sales * 0.3 * 0.012 * 100000;
+        return isL2orL4 ? base * 0.005 : base;
+      }),
+    );
+    setGstValues(totalSalesAllYears.map((sales) => sales * 0.001 * 100000));
+  }, [totalSalesAllYears, storeData?.existing_store_format, storeData?.new_store_format]);
+
+  // Fallback fetch: Capex totals (Interiors, Total capex) direct from the DB
+  useEffect(() => {
+    const roiid = storeData?.roiid;
+    if (!roiid) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=CAPEX`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const row = json?.data?.[0];
+        if (!row) return;
+        setCapexFallback({
+          interiors: parseFloat(row.Interiors) || 0,
+          totalCapex: parseFloat(row["Total capex"]) || 0,
+        });
+      } catch (e) {
+        console.error("Failed to load fallback Capex data:", e);
+      }
+    })();
+  }, [storeData?.roiid]);
+
+  // Fallback fetch: Resource totals (Salaries + Security & Housekeeping annual cost, staff count)
+  useEffect(() => {
+    const roiid = storeData?.roiid;
+    if (!roiid) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=RESOURCE`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const rows = json?.data ?? [];
+        if (!rows.length) return;
+        const SEC_HK = ["security", "housekeeping", "house keeping"];
+        const isSecHk = (r) => SEC_HK.includes((r.Role ?? "").trim().toLowerCase());
+        const salRows = rows.filter((r) => !isSecHk(r));
+        const secRows = rows.filter(isSecHk);
+        const sumCol = (arr, col) => arr.reduce((s, r) => s + (parseFloat(r[col]) || 0), 0);
+        setResourceFallback({
+          totalAnnualTotal: sumCol(salRows, "Annual Total"),
+          totalNos: salRows.reduce((s, r) => s + (parseInt(r.No_of_Resource) || 0), 0),
+          secHkTotalAnnual: sumCol(secRows, "Annual Total"),
+        });
+      } catch (e) {
+        console.error("Failed to load fallback resource data:", e);
+      }
+    })();
+  }, [storeData?.roiid]);
+
+  // Fallback fetch: Electricity annual total
+  useEffect(() => {
+    const roiid = storeData?.roiid;
+    if (!roiid) return;
+    (async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/expense_details/${roiid}?expense_type=OTHER`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const row = json?.data?.[0];
+        if (!row) return;
+        setOtherFallback({ electricityTotal: parseFloat(row.Electricity_Total) || 0 });
+      } catch (e) {
+        console.error("Failed to load fallback electricity data:", e);
+      }
+    })();
+  }, [storeData?.roiid]);
+
+  // Seed Yr1 for repairs/insurance/printing/consumables/staffWelfare from the
+  // defined formulas (Capex, Interiors, staff count). BTL/Credit Card
+  // Commission/GST have their own dedicated per-year effect above (each uses
+  // its own year's Total Sales, not a flat Yr1 escalation).
+  useEffect(() => {
+    if (isRestoredRef.current) return;
+    const totalCapexVal = subpage4_1Data?.totalCapex ?? capexFallback?.totalCapex ?? 0;
+    const interiorsVal = subpage4_1Data?.interiors ?? capexFallback?.interiors ?? 0;
+    const staffNos = subpage4_2Data?.salaries?.totalNos ?? resourceFallback?.totalNos ?? 0;
+    if (!totalCapexVal && !interiorsVal && !staffNos) return;
+
+    const repairsYr1 = totalCapexVal * 0.01;
+    const insuranceYr1 = interiorsVal * 0.01;
+    const printingYr1 = 17500 * 12;
+    const consumablesYr1 = 20000 * 12;
+    const staffWelfareYr1 = 3500 * staffNos * 12;
+
     setEditableRows((prev) => ({
-      repairs: {
-        ...prev.repairs,
-        yr1: toAnn(s["repairs maintenance"]) || prev.repairs.yr1,
-      },
-      insurance: {
-        ...prev.insurance,
-        yr1: toAnn(s.insurance) || _interiors * 0.01 || prev.insurance.yr1,
-      },
-      btl: { ...prev.btl, yr1: toAnn(s.btl) || prev.btl.yr1 },
-      travel: {
-        ...prev.travel,
-        yr1: toAnn(s["travel & Conveyance"]) || prev.travel.yr1,
-      },
-      telephone: {
-        ...prev.telephone,
-        yr1: toAnn(s["telephone/internet"]) || prev.telephone.yr1,
-      },
-      creditCard: {
-        ...prev.creditCard,
-        yr1: toAnn(s["credit card commission"]) || prev.creditCard.yr1,
-      },
-      gst: {
-        ...prev.gst,
-        yr1: toAnn(s["GST (primarily rental)"]) || prev.gst.yr1,
-      },
-      printing: {
-        ...prev.printing,
-        yr1: toAnn(s["Store - Printing/Pantry"]) || prev.printing.yr1,
-      },
-      consumables: {
-        ...prev.consumables,
-        yr1: toAnn(s.consumables) || prev.consumables.yr1,
-      },
-      staffWelfare: {
-        ...prev.staffWelfare,
-        yr1:
-          toAnn(s["Other - Staff welfare/Uniforms"]) ||
-          3500 * _nos * 12 ||
-          prev.staffWelfare.yr1,
-      },
+      ...prev,
+      repairs: { ...prev.repairs, yr1: repairsYr1 },
+      insurance: { ...prev.insurance, yr1: insuranceYr1 },
+      printing: { ...prev.printing, yr1: printingYr1 },
+      consumables: { ...prev.consumables, yr1: consumablesYr1 },
+      staffWelfare: { ...prev.staffWelfare, yr1: staffWelfareYr1 },
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen1Expenses]);
+  }, [
+    subpage4_1Data?.totalCapex,
+    subpage4_1Data?.interiors,
+    subpage4_2Data?.salaries?.totalNos,
+    capexFallback,
+    resourceFallback,
+  ]);
 
   // Getting NSV value
   useEffect(() => {
@@ -404,8 +499,8 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const salaryYr1 = lockedRowYr1.salaries;
   const secHkYr1 = lockedRowYr1.secHk;
   const electricityYr1 = lockedRowYr1.electricity;
-  const totalCapex = subpage4_1Data?.totalCapex ?? 0;
-  const interiors = subpage4_1Data?.interiors ?? 0;
+  const totalCapex = subpage4_1Data?.totalCapex ?? capexFallback?.totalCapex ?? 0;
+  const interiors = subpage4_1Data?.interiors ?? capexFallback?.interiors ?? 0;
 
   // ── Computed rent ─────────────────────────────────────────────────────────
   const annualRent = YEARS.map((_, i) => {
@@ -423,7 +518,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const salaryEscalated = escalate(salaryYr1, lockedRowEsc.salaries);
   const secHkEscalated = escalate(secHkYr1, lockedRowEsc.secHk);
   const electricityEscalated = escalate(electricityYr1, lockedRowEsc.electricity);
-  const totalNos = subpage4_2Data?.salaries?.totalNos ?? 0;
+  const totalNos = subpage4_2Data?.salaries?.totalNos ?? resourceFallback?.totalNos ?? 0;
 
   // Expense summary rows — locked=true rows are read-only; others expose Yr1 + escalation% inputs
   const expenseRows = [
@@ -431,13 +526,13 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     { key: null, locked: true, escKey: "salaries", escEditable: true, yr1Editable: false, label: "Salaries", basis: "as under", escalation: "", values: salaryEscalated },
     { key: null, locked: true, escKey: "secHk", escEditable: true, yr1Editable: false, label: "Security & Housekeeping", basis: "as under", escalation: "", values: secHkEscalated },
     { key: null, locked: true, escKey: "electricity", escEditable: true, yr1Editable: false, label: "Electricity", basis: "as under", escalation: "", values: electricityEscalated },
-    { key: "repairs", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Repairs & Maintenance", basis: "1%–3% initial capex", escalation: "", values: escalate(editableRows.repairs.yr1, editableRows.repairs.esc) },
-    { key: "insurance", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Insurance", basis: "1% interiors", escalation: "", values: escalate(editableRows.insurance.yr1, editableRows.insurance.esc) },
-    { key: "btl", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "BTL", basis: "0.3% sale", escalation: "", values: escalate(editableRows.btl.yr1, editableRows.btl.esc) },
+    { key: "repairs", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Repairs & Maintenance", basis: "1%–3% initial capex", escalation: "% capex", values: escalate(editableRows.repairs.yr1, editableRows.repairs.esc) },
+    { key: "insurance", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Insurance", basis: "1% interiors", escalation: "% interior", values: escalate(editableRows.insurance.yr1, editableRows.insurance.esc) },
+    { key: "btl", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "BTL", basis: "0.3% sale (per year)", escalation: "% sale", values: btlValues },
     { key: "travel", locked: false, escKey: null, escEditable: true, yr1Editable: true, label: "Travel & Conveyance", basis: "17.5k p.m", escalation: "", values: escalate(editableRows.travel.yr1, editableRows.travel.esc) },
     { key: "telephone", locked: false, escKey: null, escEditable: true, yr1Editable: true, label: "Telephone/Internet", basis: "11k p.m", escalation: "", values: escalate(editableRows.telephone.yr1, editableRows.telephone.esc) },
-    { key: "creditCard", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Credit Card Commission", basis: "30% sale @ 1.2%", escalation: "", values: escalate(editableRows.creditCard.yr1, editableRows.creditCard.esc) },
-    { key: "gst", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "GST (primarily rental)", basis: "0.1% sale", escalation: "", values: escalate(editableRows.gst.yr1, editableRows.gst.esc) },
+    { key: "creditCard", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Credit Card Commission", basis: "30% sale @ 1.2% (per year)", escalation: "% sale", values: creditCardValues },
+    { key: "gst", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "GST (primarily rental)", basis: "0.1% sale (per year)", escalation: "% sale", values: gstValues },
     { key: "printing", locked: false, escKey: null, escEditable: true, yr1Editable: false, label: "Store — Printing/Pantry etc", basis: "17.5k p.m", escalation: "", values: escalate(editableRows.printing.yr1, editableRows.printing.esc) },
     { key: "consumables", locked: false, escKey: null, escEditable: true, yr1Editable: false, label: "Consumables, Safety, Cust Exp", basis: "20k p.m", escalation: "", values: escalate(editableRows.consumables.yr1, editableRows.consumables.esc) },
     { key: "staffWelfare", locked: false, escKey: null, escEditable: true, yr1Editable: false, label: "Other — Staff welfare/Uniforms", basis: "3.5k/person/month", escalation: "", values: escalate(editableRows.staffWelfare.yr1, editableRows.staffWelfare.esc) },
@@ -763,7 +858,11 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
                   </td>
                 ) : (
                   <td className='border border-gray-200 px-3 py-2 text-xs text-gray-500 text-center bg-white'>
-                    {locked ? escalation : `${editableRows[key]?.esc ?? ""}%`}
+                    {locked
+                      ? escalation
+                      : NO_ESCALATION_ROWS.has(key)
+                        ? `${escalation}`
+                        : `${editableRows[key]?.esc ?? ""}%`}
                   </td>
                 )}
                 {/* Yr1 editable only for travel & telephone; all other year cells auto-computed */}

@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Input, Select } from "../FormControl";
 import { toast } from "react-toastify";
@@ -72,11 +72,11 @@ export default function StoreRetailSpecifications({
       retailFloors: [],
       cashierCount: "1",
       karatmeterCount: "1",
-      strongRoom: "1",
-      franchiseRoom: "1",
-      managerRoom: "1",
-      conferenceRoom: "1",
-      pvrRoom: "1",
+      strongRoom: "",
+      franchiseRoom: "",
+      managerRoom: "",
+      conferenceRoom: "",
+      pvrRoom: "",
       additionalWorkstation: "1",
       regionalServiceCentre: "",
       remarks: "",
@@ -95,10 +95,10 @@ export default function StoreRetailSpecifications({
   const [storeTypes, setStoreTypes] = useState([]);
   const [flooringTypes, setFlooringTypes] = useState([]);
   const [displayTypes, setDisplayTypes] = useState([]);
-  const prevFloorPlateRef = useRef({});
   const userLog = useSelector((state) => state?.user?.user);
   const selectedStoreType = useWatch({ control, name: "storeType" });
   const existingRetailArea = useWatch({ control, name: "existingRetailArea" });
+  const existingOverallArea = useWatch({ control, name: "existingOverallArea" });
   const newOverallArea = useWatch({ control, name: "newOverallArea" });
   const newRetailArea = useWatch({ control, name: "newRetailArea" });
   const noOfFloors = Number(useWatch({ control, name: "noOfFloors" }) || 0);
@@ -210,54 +210,41 @@ export default function StoreRetailSpecifications({
         const d = json?.data?.[0];
         if (!d) return;
         const str = (v) => (v != null ? String(v) : undefined);
-        if (d.no_of_floors)               setValue("noOfFloors", str(d.no_of_floors));
-        if (d.gf_area)                    setValue("floorPlate.GF", str(d.gf_area));
-        if (d.ff_area)                    setValue("floorPlate.FF", str(d.ff_area));
-        if (d.sf_area)                    setValue("floorPlate.SF", str(d.sf_area));
-        if (d.tf_area)                    setValue("floorPlate.TF", str(d.tf_area));
-        if (d.frontage)                   setValue("frontage", str(d.frontage));
-        if (d.ceiling_height)             setValue("ceilingHeight", str(d.ceiling_height));
-        if (d.facade_led)                 setValue("facadeLed", d.facade_led);
-        if (d.terrace_branding)           setValue("terraceBranding", d.terrace_branding);
-        if (d.totem_pole)                 setValue("totemPole", d.totem_pole);
-        if (d.display_type)               setValue("displayType", d.display_type);
-        if (d.flooring_type)              setValue("flooringType", d.flooring_type);
-        if (d.retail_floors)              setValue("retailFloors", d.retail_floors);
-        if (d.cashier_count)              setValue("cashierCount", str(d.cashier_count));
-        if (d.karatmeter_count)           setValue("karatmeterCount", str(d.karatmeter_count));
-        if (d.strong_room)                setValue("strongRoom", str(d.strong_room));
-        if (d.franchise_room)             setValue("franchiseRoom", str(d.franchise_room));
-        if (d.manager_room)               setValue("managerRoom", str(d.manager_room));
-        if (d.conference_room)            setValue("conferenceRoom", str(d.conference_room));
-        if (d.pvr_room)                   setValue("pvrRoom", str(d.pvr_room));
-        if (d.additional_workstation)     setValue("additionalWorkstation", str(d.additional_workstation));
-        if (d.regional_service_centre)    setValue("regionalServiceCentre", d.regional_service_centre);
-        if (d.remarks)                    setValue("remarks", d.remarks);
-        if (d.existing_overall_area_SBA)  setValue("existingOverallArea", str(d.existing_overall_area_SBA));
-        if (d.new_over_all_area_SBA)      setValue("newOverallArea", str(d.new_over_all_area_SBA));
+        const has = (v) => v !== null && v !== undefined;
+        if (has(d.no_of_floors))          setValue("noOfFloors", str(d.no_of_floors));
+        if (has(d.gf_area))               setValue("floorPlate.GF", str(d.gf_area));
+        if (has(d.ff_area))               setValue("floorPlate.FF", str(d.ff_area));
+        if (has(d.sf_area))               setValue("floorPlate.SF", str(d.sf_area));
+        if (has(d.tf_area))               setValue("floorPlate.TF", str(d.tf_area));
+        if (has(d.frontage))              setValue("frontage", str(d.frontage));
+        if (has(d.ceiling_height))        setValue("ceilingHeight", str(d.ceiling_height));
+        if (has(d.facade_led))            setValue("facadeLed", d.facade_led);
+        if (has(d.terrace_branding))      setValue("terraceBranding", d.terrace_branding);
+        if (has(d.totem_pole))            setValue("totemPole", d.totem_pole);
+        if (has(d.display_type))          setValue("displayType", d.display_type);
+        if (has(d.flooring_type))         setValue("flooringType", d.flooring_type);
+        if (has(d.retail_floors))         setValue("retailFloors", d.retail_floors);
+        if (has(d.cashier_count))         setValue("cashierCount", str(d.cashier_count));
+        if (has(d.karatmeter_count))      setValue("karatmeterCount", str(d.karatmeter_count));
+        if (has(d.strong_room))           setValue("strongRoom", str(d.strong_room));
+        if (has(d.franchise_room))        setValue("franchiseRoom", str(d.franchise_room));
+        if (has(d.manager_room))          setValue("managerRoom", str(d.manager_room));
+        if (has(d.conference_room))       setValue("conferenceRoom", str(d.conference_room));
+        if (has(d.pvr_room))              setValue("pvrRoom", str(d.pvr_room));
+        if (has(d.additional_workstation)) setValue("additionalWorkstation", str(d.additional_workstation));
+        if (has(d.regional_service_centre)) setValue("regionalServiceCentre", d.regional_service_centre);
+        if (has(d.remarks))               setValue("remarks", d.remarks);
+        if (has(d.existing_overall_area_SBA)) setValue("existingOverallArea", str(d.existing_overall_area_SBA));
+        if (has(d.new_over_all_area_SBA)) setValue("newOverallArea", str(d.new_over_all_area_SBA));
         // restore newRetailArea for all project types (Renovation/Relocation/Expansion also have new_retail_area)
-        if (d.new_retail_area)             setValue("newRetailArea", str(d.new_retail_area));
-        if (d.existing_retail_area && !isNewStore) setValue("existingRetailArea", str(d.existing_retail_area));
+        if (has(d.new_retail_area))       setValue("newRetailArea", str(d.new_retail_area));
+        if (has(d.existing_retail_area) && !isNewStore) setValue("existingRetailArea", str(d.existing_retail_area));
         setIsSaved(true);
       } catch (e) {
         console.error("Failed to restore store specifications:", e);
       }
     })();
   }, [roiContext?.roiId]);
-
-  useEffect(() => {
-    if (
-      !isNewStore &&
-      newRetailArea &&
-      newOverallArea &&
-      Number(newRetailArea) > Number(newOverallArea)
-    ) {
-      toast.error(
-        "New Retail Area cannot exceed New Overall Area. Field has been reset.",
-      );
-      setValue("newRetailArea", "");
-    }
-  }, [newRetailArea, newOverallArea, setValue]);
 
   useEffect(() => {
     fetchAttribute("store_type");
@@ -287,10 +274,14 @@ export default function StoreRetailSpecifications({
     0,
   );
 
+  // SBA target the floor plate must sum up to: Existing Overall Area for
+  // Renovation (no New Overall Area field shown), New Overall Area otherwise.
+  const targetSBA = isRenovation ? existingOverallArea : newOverallArea;
+
   const allFloorsFilled =
     floorOptions.length > 0 &&
     floorOptions.every((floor) => !!floorPlateData?.[floor]) &&
-    totalFloorArea === Number(newRetailArea);
+    totalFloorArea === Number(targetSBA);
 
   const isRetailAreaTooLow =
     isNewStore &&
@@ -305,36 +296,6 @@ export default function StoreRetailSpecifications({
     // Relocation / Store Expansion
     return !!existingRetailArea && !!newOverallArea && !!newRetailArea;
   })();
-
-  useEffect(() => {
-    if (!newRetailArea || Number(newRetailArea) <= 0) {
-      prevFloorPlateRef.current = { ...floorPlateData };
-      return;
-    }
-
-    const currentTotal = floorOptions.reduce(
-      (sum, floor) => sum + Number(floorPlateData?.[floor] || 0),
-      0,
-    );
-
-    const changedFloor = floorOptions.find(
-      (floor) =>
-        String(floorPlateData?.[floor] ?? "") !==
-          String(prevFloorPlateRef.current?.[floor] ?? "") &&
-        floorPlateData?.[floor] !== "" &&
-        floorPlateData?.[floor] !== undefined,
-    );
-
-    if (changedFloor && currentTotal > Number(newRetailArea)) {
-      setValue(`floorPlate.${changedFloor}`, "");
-      toast.warning(
-        `${changedFloor} area would exceed New Retail Area (${newRetailArea} sq ft). Field has been reset.`,
-      );
-    }
-
-    prevFloorPlateRef.current = { ...floorPlateData };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [floorPlateData]);
 
   const archCompleted =
     !!selectedFlooringType &&
@@ -597,7 +558,14 @@ export default function StoreRetailSpecifications({
             name='newRetailArea'
             type='number'
             register={register}
-            rules={{ required: "New Retail Area is required" }}
+            rules={{
+              required: "New Retail Area is required",
+              validate: (v) =>
+                isNewStore ||
+                !newOverallArea ||
+                Number(v) <= Number(newOverallArea) ||
+                "New Retail Area cannot exceed New Overall Area",
+            }}
             disabled={isSaved || (isNewStore && !!roiContext?.historyRetailArea)}
           />
           {errors?.newRetailArea && (
@@ -652,7 +620,7 @@ export default function StoreRetailSpecifications({
             <label className='block font-medium text-gray-800 mb-4'>
               Floor Plate Details *{" "}
               <small className='text-red-700'>
-                <strong>The total of floor area is equal to Retail Area</strong>
+                <strong>The total of floor area is equal to Overall Area SBA</strong>
               </small>
             </label>
             <div className='grid md:grid-cols-4 gap-5'>
@@ -667,6 +635,16 @@ export default function StoreRetailSpecifications({
                 />
               ))}
             </div>
+            {!!targetSBA && Number(targetSBA) > 0 && (
+              <p
+                className={`text-xs mt-3 font-medium ${
+                  totalFloorArea === Number(targetSBA)
+                    ? "text-green-600"
+                    : "text-amber-600"
+                }`}>
+                Total Floor Area: {totalFloorArea} / {targetSBA} sq ft
+              </p>
+            )}
           </div>
         )}
       </Section>
@@ -678,7 +656,10 @@ export default function StoreRetailSpecifications({
         isExpanded={expandedSections.arch}
         onToggle={() =>
           setExpandedSections((prev) => ({ ...prev, arch: !prev.arch }))
-        }>
+          
+        }
+        className='mt-2'
+        >
         <Input
           label='Frontage (width * height in sq.ft) *'
           name='frontage'
@@ -763,11 +744,6 @@ export default function StoreRetailSpecifications({
         {[
           ["cashierCount", "Number of Cashier"],
           ["karatmeterCount", "Number of Karatmeter"],
-          ["strongRoom", "Strong Room"],
-          ["franchiseRoom", "Franchise Room"],
-          ["managerRoom", "Manager Room"],
-          ["conferenceRoom", "Conference Room"],
-          ["pvrRoom", "PVR Room"],
           ["additionalWorkstation", "Additional Workstation"],
         ].map(([name, label]) => (
           <Input
@@ -781,6 +757,25 @@ export default function StoreRetailSpecifications({
               min: { value: 0, message: "Cannot be negative" },
             }}
           />
+        ))}
+
+        {[
+          ["strongRoom", "Strong Room"],
+          ["franchiseRoom", "Franchise Room"],
+          ["managerRoom", "Manager Room"],
+          ["conferenceRoom", "Conference Room"],
+          ["pvrRoom", "PVR Room"],
+        ].map(([name, label]) => (
+          <Select
+            key={name}
+            label={`${label} *`}
+            name={name}
+            register={register}
+            rules={{ required: `${label} is required` }}>
+            <option value=''>Select</option>
+            <option value='Yes'>Yes</option>
+            <option value='No'>No</option>
+          </Select>
         ))}
 
         <>

@@ -171,8 +171,8 @@ export default function Section4({
 
           if (allRows.length > 0) {
             const SEC_HK = ["security", "housekeeping", "house keeping"];
-            const salRows = allRows.filter(r => !SEC_HK.includes((r.Role ?? "").toLowerCase()));
-            const secRows = allRows.filter(r =>  SEC_HK.includes((r.Role ?? "").toLowerCase()));
+            const salRows = allRows.filter(r => !SEC_HK.includes(String(r.Role ?? "").toLowerCase()));
+            const secRows = allRows.filter(r =>  SEC_HK.includes(String(r.Role ?? "").toLowerCase()));
 
             const salaryRowsObj = Object.fromEntries(
               salRows.map(r => [r.Role, {
@@ -212,7 +212,7 @@ export default function Section4({
                 relocCost:           d3["Temp_cost"] ?? 0,
               },
             };
-
+            console.log(d2)
             setSubpage4_2Data(d2);
             markStepSaved(1);
           }

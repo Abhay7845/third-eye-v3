@@ -526,13 +526,25 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
     stockTurnInitialisedRef.current = true;
   }, [stockSectionData, isSaved]);
 
-  const totalAMCPct = +(
-    (parseFloat(inputs.lcgAMC[0]) || 0) +
-    (parseFloat(inputs.mcgAMC[0]) || 0) +
-    (parseFloat(inputs.hcgAMC[0]) || 0) +
-    (parseFloat(inputs.gemstoneAMC[0]) || 0) +
-    (parseFloat(inputs.coinsAMC[0]) || 0)
-  ).toFixed(2);
+  // Total AMC% is a SUMPRODUCT of each category's AMC% and its sales-mix share
+  // (weighted average), not a flat sum — LCG/MCG/HCG/Gemstones are weighted by
+  // their share within the Plain Group (subpage3_2Data.lcg/mcg/hcg/colorStones,
+  // which already sum to 100) scaled by Plain's overall share of sales, and
+  // Coins is weighted by its own overall sales share.
+  const plainShareY1 = parseFloat(subpage3_2Data?.plainShare?.[0]) || 0;
+  const coinsShareY1 = parseFloat(subpage3_2Data?.coinsShare?.[0]) || 0;
+  const lcgWeight = (plainShareY1 / 100) * ((parseFloat(subpage3_2Data?.lcg?.[0]) || 0) / 100);
+  const mcgWeight = (plainShareY1 / 100) * ((parseFloat(subpage3_2Data?.mcg?.[0]) || 0) / 100);
+  const hcgWeight = (plainShareY1 / 100) * ((parseFloat(subpage3_2Data?.hcg?.[0]) || 0) / 100);
+  const gemstoneWeight = (plainShareY1 / 100) * ((parseFloat(subpage3_2Data?.colorStones?.[0]) || 0) / 100);
+  const coinsWeight = coinsShareY1 / 100;
+  const totalWeight = lcgWeight + mcgWeight + hcgWeight + gemstoneWeight;
+  const sumProduct =
+    (parseFloat(inputs.lcgAMC[0]) || 0) * lcgWeight +
+    (parseFloat(inputs.mcgAMC[0]) || 0) * mcgWeight +
+    (parseFloat(inputs.hcgAMC[0]) || 0) * hcgWeight +
+    (parseFloat(inputs.gemstoneAMC[0]) || 0) * gemstoneWeight;
+  const totalAMCPct = +(totalWeight > 0 ? sumProduct / totalWeight : 0).toFixed(1);
   const amcTotalRow = Array(6).fill(totalAMCPct);
   // ── Form completeness ──────────────────────────────────────────────────
   const isPhase1FormComplete =
@@ -896,7 +908,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                   </tr>
 
                   {/* AMC Total row */}
-                  <TotalRow label='Total AMC%' values={amcTotalRow} />
+                  <TotalRow label='Btq AMC%' values={amcTotalRow} />
                 </tbody>
               </table>
               <div className='flex justify-center mt-3 mb-3'>

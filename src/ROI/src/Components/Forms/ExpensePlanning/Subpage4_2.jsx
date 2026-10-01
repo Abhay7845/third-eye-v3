@@ -8,8 +8,16 @@ const fmt = (n) =>
     ? "—"
     : Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
+// Only Team Lead and Store Merchandiser roles may have Nos. = 0; every other role needs at least 1
+const ZERO_NOS_ALLOWED_KEYWORDS = ["team lead", "merchandiser"];
+const roleAllowsZeroNos = (role) => {
+  const r = (role || "").toLowerCase();
+  return ZERO_NOS_ALLOWED_KEYWORDS.some((k) => r.includes(k));
+};
+
 // ─── Salary Row Component ─────────────────────────────────────────────────────
 function SalaryRow({ role, levelOptions, row, onChange, disabled }) {
+  const minNos = roleAllowsZeroNos(role) ? 0 : 1;
   const annualFixed =
     (parseFloat(row.monthly) || 0) * 12 * (parseFloat(row.nos) || 0);
   const annualVariable =
@@ -56,7 +64,7 @@ function SalaryRow({ role, levelOptions, row, onChange, disabled }) {
       <td className='border border-gray-200 p-1 bg-blue-50'>
         <input
           type='number'
-          min={0}
+          min={minNos}
           value={row.nos}
           onChange={(e) => onChange(role, "nos", e.target.value)}
           disabled={disabled}
@@ -140,6 +148,14 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
         const allRows = json?.data ?? [];
         if (!allRows.length) return;
 
+        // KNOWN DB-SIDE DEFECT (flagged 2026-09-16, still blocked on DB team):
+        // `roi_resource_expenses.Role` is stored as decimal(18,2) and is always
+        // 0.00 for every row — the real role name is never persisted. That makes
+        // this Role-keyed restore (and the Security/Housekeeping split below)
+        // unreliable: `restoredSalaryRows` can collapse multiple roles onto a
+        // single "0" key, and `secRows`/`salRows` can't be told apart. Cannot be
+        // fixed from the frontend/main.py alone — requires the SP to stop
+        // resolving Role to an id/0 and store the text value instead.
         const SEC_HK = ["security", "housekeeping", "house keeping"];
         const salRows = allRows.filter(r => !SEC_HK.includes((r.Role ?? "").toLowerCase()));
         const secRows = allRows.filter(r =>  SEC_HK.includes((r.Role ?? "").toLowerCase()));
@@ -173,6 +189,15 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
             registrationCharges: o["Registration Charges"] ?? 500000,
             relocCost:           o["Temp_cost"] ?? 0,
           });
+          // Populate Section4Context too — it's otherwise only set on handleSave,
+          // leaving Subpage4_3's Electricity row blank on a direct resume.
+          // Salaries/Security & Housekeeping totals aren't pushed here since the
+          // Role-column defect above makes that split unreliable.
+          setSubpage4_2Data((prev) => ({
+            ...prev,
+            roiid: storeData?.roiid,
+            electricity: { total: parseFloat(o.Electricity_Total) || 0 },
+          }));
         }
 
         setIsSaved(true);
@@ -340,6 +365,12 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
         // Auto-fill monthly fixed with the ref monthly salary so user sees a starting value
         updated[role].monthly = annualRef > 0 ? Math.round(annualRef / 12) : 0;
       }
+
+      if (field === "nos" && value !== "") {
+        const minNos = roleAllowsZeroNos(role) ? 0 : 1;
+        const num = parseInt(value) || 0;
+        updated[role].nos = num < minNos ? minNos : num;
+      }
       return updated;
     });
   };
@@ -383,7 +414,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   );
 
   const electricityTotal =
-    carpetArea * (parseFloat(electricity.ratePerSqft) || 0);
+    carpetArea * (parseFloat(electricity.ratePerSqft) || 0) *12;
 
   const secTotal = secHousekeeping.reduce(
     (s, r) => s + (parseInt(r.nos) || 0) * (parseFloat(r.monthly) || 0) * 12,
@@ -406,9 +437,11 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
   const sqftPerEmp = totalNos > 0 ? Math.round(carpetArea / totalNos) : 0;
   const costPerEmp = totalNos > 0 ? Math.round(totalAnnualTotal / totalNos) : 0;
 
-  const isFormComplete = Object.values(salaryRows).every(
-    (r) => r.level !== "" && parseFloat(r.monthly) > 0,
-  );
+  const isFormComplete = Object.entries(salaryRows).every(([role, r]) => {
+    if (r.level === "" || !(parseFloat(r.monthly) > 0)) return false;
+    const minNos = roleAllowsZeroNos(role) ? 0 : 1;
+    return (parseInt(r.nos) || 0) >= minNos;
+  });
 
   const handleSave = async () => {
     setIsSaving(true);

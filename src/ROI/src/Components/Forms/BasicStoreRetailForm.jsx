@@ -87,6 +87,15 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
   const [savedSummary, setSavedSummary] = useState(null);
   const [storeFound, setStoreFound] = useState(false);
   const [franchiseeFound, setFranchiseeFound] = useState(false);
+  // Tracks which franchisee score fields were populated from the DB (fetch or
+  // saved-record load) so they lock independent of what the user types in —
+  // previously disabled was derived from the field's own live value, which
+  // locked the field after the very first character typed manually.
+  const [scoreFieldsLocked, setScoreFieldsLocked] = useState({
+    baiatScore: false,
+    partnerDbStatus: false,
+    partnerScore: false,
+  });
   const [storeFormats, setStoreFormats] = useState([]);
   const [projectTypes, setProjectTypes] = useState([]);
   const [historyIds, setHistoryIds] = useState([]);
@@ -332,6 +341,7 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
       return;
     }
     setFranchiseeFound(false);
+    setScoreFieldsLocked({ baiatScore: false, partnerDbStatus: false, partnerScore: false });
     setValue("franchiseeStoreName", "");
     setValue("baiatScore", "");
     setValue("partnerDbStatus", "");
@@ -417,6 +427,7 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
       const res = await fetch(`${BASE_URL}/store/${franchiseeStoreCode}`);
       if (!res.ok) {
         setFranchiseeFound(false);
+        setScoreFieldsLocked({ baiatScore: false, partnerDbStatus: false, partnerScore: false });
         setValue("franchiseeStoreName", "");
         setValue("baiatScore", "");
         setValue("partnerDbStatus", "");
@@ -431,6 +442,11 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
       setValue("baiatScore", data[0]?.baiat_score ?? "");
       setValue("partnerDbStatus", data[0]?.partner_db_status ?? "");
       setValue("partnerScore", data[0]?.partner_score ?? "");
+      setScoreFieldsLocked({
+        baiatScore: !!data[0]?.baiat_score,
+        partnerDbStatus: !!data[0]?.partner_db_status,
+        partnerScore: !!data[0]?.partner_score,
+      });
     } catch (error) {
       console.error(error);
       setFranchiseeFound(false);
@@ -480,11 +496,21 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
       setValue("franchiseeStoreCode", d.existing_franchisee_store_code ?? d.franchisee_store_code ?? "");
       setValue("franchiseeStoreName", d.existing_franchisee_store_name ?? d.franchisee_store_name ?? "");
       setValue("baiatScore", d.franchisee_ba_iat_score != null ? String(d.franchisee_ba_iat_score) : "");
-      setValue("partnerDbStatus", d.partner_db_status ?? "");
+      // Saved as "1"/"0" (see onSubmitBasicDetails) — map back to the Yes/No select options.
+      const dbStatusRaw = d.partner_db_status;
+      setValue(
+        "partnerDbStatus",
+        String(dbStatusRaw) === "1" ? "Yes" : String(dbStatusRaw) === "0" ? "No" : dbStatusRaw ?? "",
+      );
       setValue("partnerScore", d.partner_score != null ? String(d.partner_score) : "");
       setValue("retailArea", d.retail_area != null ? String(d.retail_area) : d.retailArea != null ? String(d.retailArea) : "");
 
       setFranchiseeFound(!!(d.existing_franchisee_store_code || d.franchisee_store_code));
+      setScoreFieldsLocked({
+        baiatScore: d.franchisee_ba_iat_score != null && d.franchisee_ba_iat_score !== "",
+        partnerDbStatus: !!d.partner_db_status,
+        partnerScore: d.partner_score != null && d.partner_score !== "",
+      });
       setExpandedSections({ projectType: true, location: true, storeFormat: true, franchise: true });
       setIsEditingLocked(true);
     } catch (e) {
@@ -495,9 +521,17 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
     }
   };
 
+  // Clamps a score to the 0-100 range, defaulting invalid/empty input to 0.
+  const clampScore = (val) => {
+    const num = Number(val);
+    if (val === "" || val == null || Number.isNaN(num)) return 0;
+    return Math.min(Math.max(num, 0), 100);
+  };
+
   const onSubmitBasicDetails = async (data) => {
     const username = userLog?.name;
     try {
+      const isPartnerDbDone = data.partnerDbStatus === "Yes";
       const payload = {
         username: username,
         roiid: roiContext?.roiId || undefined,
@@ -518,9 +552,9 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
         newFranchiseeStoreCode: data.newFranchiseeStoreCode,
         franchiseeStoreCode: data.franchiseeStoreCode,
         franchiseeStoreName: data.franchiseeStoreName,
-        baiatScore: data.baiatScore,
-        partnerDbStatus: data.partnerDbStatus,
-        partnerScore: data.partnerScore,
+        baiatScore: String(clampScore(data.baiatScore)),
+        partnerDbStatus: isPartnerDbDone ? "1" : "0",
+        partnerScore: String(isPartnerDbDone ? clampScore(data.partnerScore) : 0),
       };
 
       const res = await fetch(`${BASE_URL}/basic-store-details`, {
@@ -1011,24 +1045,64 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
                   <span className='text-gray-400 font-normal'>(Optional)</span>
                 </h4>
                 <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'>
-                  <Input
-                    label='BA-IAT Score'
-                    name='baiatScore'
-                    register={register}
-                    disabled={franchiseeFound && baiatScore !== ""}
-                  />
-                  <Input
-                    label='Partner DB Status'
+                  <div>
+                    <Input
+                      label='BA-IAT Score'
+                      name='baiatScore'
+                      type='number'
+                      register={register}
+                      disabled={scoreFieldsLocked.baiatScore}
+                      rules={{
+                        max: { value: 100, message: "Score cannot exceed 100" },
+                        min: { value: 0, message: "Score cannot be negative" },
+                      }}
+                    />
+                    {errors?.baiatScore && (
+                      <p className='text-red-500 text-xs mt-1'>
+                        {errors.baiatScore.message}
+                      </p>
+                    )}
+                    {!errors?.baiatScore && Number(baiatScore) > 100 && (
+                      <p className='text-amber-600 text-xs mt-1'>
+                        ⚠ Score cannot exceed 100
+                      </p>
+                    )}
+                  </div>
+                  <Select
+                    label='Partner D&B Done'
                     name='partnerDbStatus'
                     register={register}
-                    disabled={franchiseeFound && partnerDbStatus !== ""}
-                  />
-                  <Input
-                    label='Partner Score'
-                    name='partnerScore'
-                    register={register}
-                    disabled={franchiseeFound && partnerScore !== ""}
-                  />
+                    disabled={scoreFieldsLocked.partnerDbStatus}>
+                    <option value=''>Select</option>
+                    <option value='Yes'>Yes</option>
+                    <option value='No'>No</option>
+                  </Select>
+                  <div>
+                    <Input
+                      label='Partner Score'
+                      name='partnerScore'
+                      type='number'
+                      register={register}
+                      disabled={
+                        scoreFieldsLocked.partnerScore ||
+                        partnerDbStatus !== "Yes"
+                      }
+                      rules={{
+                        max: { value: 100, message: "Score cannot exceed 100" },
+                        min: { value: 0, message: "Score cannot be negative" },
+                      }}
+                    />
+                    {errors?.partnerScore && (
+                      <p className='text-red-500 text-xs mt-1'>
+                        {errors.partnerScore.message}
+                      </p>
+                    )}
+                    {!errors?.partnerScore && Number(partnerScore) > 100 && (
+                      <p className='text-amber-600 text-xs mt-1'>
+                        ⚠ Score cannot exceed 100
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
