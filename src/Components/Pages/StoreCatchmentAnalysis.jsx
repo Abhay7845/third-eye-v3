@@ -1,10 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import Sidebar from "../custom/Sidebar";
-import { Table, Thead, Tbody, Tr, Th, Td } from "react-super-responsive-table";
 import { Select } from "antd";
+import html2canvas from "html2canvas";
+import { Modal } from "@mui/material";
 import DarkCatchmentGoogleView from "../map/DarkCatchmentGoogleView";
 import { toast } from "react-toastify";
 import Loader from "../custom/Loader";
+import StoreSummary from "../custom/StoreSummary";
+import CustomersShares from "../custom/CustomersShares";
 import { axiosInstance } from "../../HostManger/API/Authorization";
 import ThirdEyeHeader from "../custom/ThirdEyeHeader";
 import { useSelector, useDispatch } from "react-redux";
@@ -15,11 +18,15 @@ import { PolygonCentroid, StoreColorSet } from "../Data/PolygonCentroid";
 import StoreAnlTabel from "../../Mainpages/StoreAnlTabel";
 import StoreTypeDetails from "../custom/StoreTypeDetails";
 import { channel_list } from "../Data/Data";
+import NewStoreCatchmentPdf from "../pdf/NewStoreCatchmentPdf";
+import { FilePopStyle } from "./NewStoreProjection";
+import CatchmentLevelAction from "../custom/CatchmentLevelAction";
 // import { channel_list } from "../Data/Data";
 
 const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
   const userLog = useSelector((state) => state?.user?.user);
   const dispatch = useDispatch();
+  const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [slideOut, setSlideOut] = useState(false);
   const [showTable, setShowTable] = useState(true);
@@ -37,7 +44,10 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
   const [userLocation, setUserLocation] = useState(null);
   const [googleMapInstance, setGoogleMapInstance] = useState(null);
   const polygonRefs = useRef([]);
+  const map_img = useRef(null);
+
   const [polygonLabels, setPolygonLabels] = useState([]);
+  const [storeAnlMapImg, setStoreAnlMapImg] = useState(null);
 
   useEffect(() => {
     dispatch(clearNewStoreInputs());
@@ -45,20 +55,7 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const store_summ_heading = [
-    "Total Population",
-    "Encircle Base (CAGR)",
-    `${channelval} Base (CAGR)`,
-    "ARPC",
-    "Dormant Base",
-    "Dormancy Rate",
-    "Fill Rate",
-  ];
-
   const population_list = pincodeSummary.map((item) => item.population);
-  function getTotalSum(numbers) {
-    return numbers.reduce((sum, num) => sum + num, 0);
-  }
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -362,65 +359,154 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
     setPolygonLabels([]);
   };
 
+  const handleScreenshot = (map_img, mapInstance) => {
+    return new Promise((resolve) => {
+      if (!map_img?.current) {
+        resolve(null);
+        return;
+      }
+
+      if (!mapInstance) {
+        resolve(null);
+        return;
+      }
+
+      window.google.maps.event.addListenerOnce(
+        mapInstance,
+        "idle",
+        async () => {
+          try {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
+            const mapElement = map_img.current;
+
+            if (!mapElement) {
+              resolve(null);
+              return;
+            }
+
+            const canvas = await html2canvas(mapElement, {
+              useCORS: true,
+              allowTaint: false,
+              logging: false,
+              backgroundColor: "#ffffff",
+
+              // High quality
+              scale: Math.max(2, window.devicePixelRatio || 1),
+
+              // Don't clone unnecessarily
+              removeContainer: false,
+            });
+
+            const imgData = canvas.toDataURL("image/png", 1.0);
+            setStoreAnlMapImg(imgData);
+            resolve(imgData);
+          } catch (error) {
+            resolve(null);
+          }
+        },
+      );
+    });
+  };
+
   const GetAdjusentPin = async (data) => {
     try {
       setLoading(true);
-      // clear previous store's results so stale data never stays on screen
+
+      // Clear previous store results
       setPincodeSummary([]);
       setStoreSummary(null);
       setCustStrPerc([]);
       setMomStoreTrend([]);
       setStoreTypeData(null);
+
+      // --------------------------------------------------
+      // STEP 1: Get adjacent pincodes
+      // --------------------------------------------------
       const res = await axiosInstance.get(
         `/ThirdEye/get/adjacent/pincodes/db?pincode=${data?.pincode}`,
       );
+
       if (res?.data?.code !== "1000") {
         toast.info("Data not found.", {
           theme: "colored",
           autoClose: 2000,
           position: "bottom-right",
         });
+
+        setLoading(false);
         return;
       }
-      const { pincode, primaryPincode, secondaryPincode } = res?.data?.value;
-      const AdjacentPins = [pincode, ...primaryPincode, ...secondaryPincode];
-      // Step 1: Get city & dormancy data
+
+      const {
+        pincode,
+        primaryPincode = [],
+        secondaryPincode = [],
+      } = res?.data?.value || {};
+
+      const AdjacentPins = [
+        pincode,
+        ...primaryPincode,
+        ...secondaryPincode,
+      ].filter(Boolean);
+
+      // --------------------------------------------------
+      // STEP 2: Get city & dormancy data
+      // --------------------------------------------------
       const cityName = await GetCityName(AdjacentPins);
+
       const str_details = await GetStoreType(store);
       setStoreTypeData(str_details);
+
       const mom_trend_details = await GetMomTrendData(channelval, store);
       setMomStoreTrend(mom_trend_details);
+
       const grouped_cachment = await GetCityDormancyData(channelval, cityName);
+
       if (!grouped_cachment || grouped_cachment.length === 0) {
         setLoading(false);
         return;
       }
-      // Step 2: Get summaries
+
+      // --------------------------------------------------
+      // STEP 3: Get summaries
+      // --------------------------------------------------
       const pincode_summary = await GetPincodeSummary(channelval, AdjacentPins);
+
       const store_summary = await GetStoreSummary(channelval, AdjacentPins);
+
       setStoreSummary(store_summary);
+
       const get_cust_str_perc = await GetCustStrPerc(
         store,
         primaryPincode,
         secondaryPincode,
       );
+
       setCustStrPerc(get_cust_str_perc);
 
       const get_pin_population = await GetPopulation(AdjacentPins);
 
-      // Step 3: Get polygon data
+      // --------------------------------------------------
+      // STEP 4: Get polygon data
+      // --------------------------------------------------
       const polygonRes = await axiosInstance.get(
         `/ThirdEye/get/pincode/cords/db?pincodes=${AdjacentPins}`,
       );
+
       const MapCoordinates = polygonRes?.data;
 
-      // Step 4: Merge summary + coordinates
+      // --------------------------------------------------
+      // STEP 5: Merge summary + coordinates
+      // --------------------------------------------------
       function getMergeSummary(resp1 = [], resp2 = [], resp3 = []) {
         const normalize = (val) =>
           val !== null && val !== undefined ? String(val) : "";
+
         return resp1
           .filter((r1) => {
             const pincode1 = normalize(r1.pincode);
+
             return (
               resp2.some((r2) => normalize(r2.pincode) === pincode1) &&
               resp3.some((r3) => normalize(r3.pincode) === pincode1)
@@ -431,9 +517,16 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
 
             const r2 =
               resp2.find((r2) => normalize(r2.pincode) === pincode1) || {};
+
             const r3 =
               resp3.find((r3) => normalize(r3.pincode) === pincode1) || {};
-            return { ...r1, ...r2, ...r3, pincode: pincode1 }; // ✅ ensure pincode stays consistent
+
+            return {
+              ...r1,
+              ...r2,
+              ...r3,
+              pincode: pincode1,
+            };
           });
       }
 
@@ -442,24 +535,40 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
         pincode_summary || [],
         get_pin_population || [],
       );
+
       setPincodeSummary(mergedData);
+
+      // --------------------------------------------------
+      // STEP 6: Create Google Maps bounds
+      // --------------------------------------------------
       const overallBounds = new window.google.maps.LatLngBounds();
 
-      // ✅ Keep both color + action in a map
+      // --------------------------------------------------
+      // STEP 7: Create pincode information map
+      // --------------------------------------------------
       const pincodeInfoMap = {};
+
       grouped_cachment.forEach((group) => {
-        group.data.forEach((item) => {
+        group?.data?.forEach((item) => {
           pincodeInfoMap[item.pincode] = {
             color: group.color,
             action: group.action,
           };
         });
       });
-      // ✅ One reusable InfoWindow
+
+      // --------------------------------------------------
+      // STEP 8: InfoWindow
+      // --------------------------------------------------
       const infoWindow = new window.google.maps.InfoWindow();
+
       let activePolygon = null;
+
+      // --------------------------------------------------
+      // STEP 9: Draw polygons
+      // --------------------------------------------------
       if (mergedData.length > 0) {
-        mergedData?.forEach((item) => {
+        mergedData.forEach((item) => {
           const {
             pincode,
             channelBase,
@@ -474,20 +583,41 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
           } = item;
 
           const pinInfo = pincodeInfoMap[pincode] || {};
-          const fillColor = pinInfo.color;
-          const action_level = pinInfo.action;
+
+          const fillColor = pinInfo.color || "#808080";
+
+          const action_level = pinInfo.action || "No Action";
+
           const drawPolygons = (coordinates) => {
-            if (!coordinates) return;
+            if (!coordinates?.length) return;
+
             coordinates.forEach((poly) => {
-              const isMultiPolygon = Array.isArray(poly[0][0]);
+              if (!poly?.length) return;
+
+              const isMultiPolygon =
+                Array.isArray(poly[0]) && Array.isArray(poly[0][0]);
+
               const pathsArray = isMultiPolygon ? poly : [poly];
+
               pathsArray.forEach((ring) => {
+                if (!ring?.length) return;
+
                 const path = ring.map(([lng, lat]) => {
-                  const latLng = { lat, lng };
+                  const latLng = {
+                    lat: Number(lat),
+                    lng: Number(lng),
+                  };
+
                   overallBounds.extend(latLng);
+
                   return latLng;
                 });
-                if (path.length === 0) return;
+
+                if (!path.length) return;
+
+                // ------------------------------------------
+                // Polygon
+                // ------------------------------------------
                 const polygon = new window.google.maps.Polygon({
                   paths: path,
                   strokeColor: "blue",
@@ -499,9 +629,12 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                 });
 
                 polygon.setMap(googleMapInstance);
+
                 polygonRefs.current.push(polygon);
 
-                // Hover highlight
+                // ------------------------------------------
+                // Mouse over
+                // ------------------------------------------
                 polygon.addListener("mouseover", () => {
                   if (polygon !== activePolygon) {
                     polygon.setOptions({
@@ -513,21 +646,25 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                   }
                 });
 
-                window.google.maps.event.addListener(
-                  polygon,
-                  "mouseout",
-                  () => {
-                    polygon.setOptions({
-                      strokeColor: "blue",
-                      strokeWeight: 1.5,
-                      zIndex: 1,
-                      fillOpacity: 0.4,
-                    });
-                    infoWindow.close();
-                  },
-                );
+                // ------------------------------------------
+                // Mouse out
+                // ------------------------------------------
+                polygon.addListener("mouseout", () => {
+                  polygon.setOptions({
+                    strokeColor: "blue",
+                    strokeWeight: 1.5,
+                    zIndex: 1,
+                    fillOpacity: 0.4,
+                  });
 
+                  infoWindow.close();
+                });
+
+                // ------------------------------------------
+                // Centroid marker
+                // ------------------------------------------
                 const centroid = PolygonCentroid(path);
+
                 const label = new window.google.maps.Marker({
                   position: centroid,
                   map: googleMapInstance,
@@ -535,114 +672,183 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                     path: window.google.maps.SymbolPath.CIRCLE,
                     scale: 0,
                   },
-                  // label: {
-                  //   text: `${pincode}`,
-                  //   fontSize: "14px",
-                  //   fontWeight: "bold",
-                  //   color: "#000",
-                  // },
                 });
+
                 setPolygonLabels((prev) => [...prev, label]);
-                window.google.maps.event.addListener(polygon, "click", (e) => {
+
+                // ------------------------------------------
+                // Click
+                // ------------------------------------------
+                polygon.addListener("click", (e) => {
+                  activePolygon = polygon;
+
                   polygon.setOptions({
                     strokeColor: "red",
                     strokeWeight: 2,
                     zIndex: 2,
                     fillOpacity: 0.5,
                   });
-                  // Determine direction based on click position vs map center
+
                   const mapCenter = googleMapInstance.getCenter();
+
                   const clickLng = e.latLng.lng();
+
                   const centerLng = mapCenter.lng();
+
                   const offsetX = clickLng < centerLng ? -180 : 150;
-                  // Apply the corrected offset
+
                   infoWindow.setOptions({
                     pixelOffset: new window.google.maps.Size(offsetX, -20),
                   });
 
-                  // Set InfoWindow content with 1 decimal values
-                  infoWindow.setContent(
-                    `<div class="map_catchment_box" 
-        style="font-size:12px; border:1px solid #ccc; border-radius:6px; padding:4px; max-width:300px;">
+                  infoWindow.setContent(`
+                    <div
+                      class="map_catchment_box"
+                      style="
+                        font-size:12px;
+                        border:1px solid #ccc;
+                        border-radius:6px;
+                        padding:4px;
+                        max-width:300px;
+                        background:#fff;
+                      "
+                    >
 
-      <!-- Header -->
-      <div style="font-size:12px; margin-bottom:3px; border-bottom:1px solid #ddd; padding-bottom:2px;">
-        Catchment Level Action: <span style="color:${fillColor};">${
-                      action_level || "No Action"
-                    }</span>
-      </div>
+                      <div
+                        style="
+                          font-size:12px;
+                          margin-bottom:3px;
+                          border-bottom:1px solid #ddd;
+                          padding-bottom:2px;
+                        "
+                      >
+                        Catchment Level Action:
+                        <span style="color:${fillColor};">
+                          ${action_level}
+                        </span>
+                      </div>
 
-      <!-- Table -->
-      <table style="width:100%; border-collapse:collapse; font-size:12px;">
-        <tbody>
-          <!-- Pincode and Population row -->
-          <tr>
-            <td colspan="2" style="padding:3px 0; text-align:center; color:blue; font-weight:bold;">
-              ${pincode}
-            </td>
-          </tr>
+                      <table
+                        style="
+                          width:100%;
+                          border-collapse:collapse;
+                          font-size:12px;
+                        "
+                      >
+                        <tbody>
 
-          <tr>
-            <td style="padding:2px 4px;">Encircle Base:</td>
-            <td style="padding:2px 4px;">
-              ${encircleBase.toLocaleString()} (CAGR: ${(
-                      encircleBaseCagr * 100
-                    ).toFixed(1)}%)
-            </td>
-          </tr>
+                          <tr>
+                            <td
+                              colspan="2"
+                              style="
+                                padding:3px 0;
+                                text-align:center;
+                                color:blue;
+                                font-weight:bold;
+                              "
+                            >
+                              ${pincode}
+                            </td>
+                          </tr>
 
-          <tr>
-            <td style="padding:2px 4px;">${channelval} Base:</td>
-            <td style="padding:2px 4px;">
-              ${channelBase.toLocaleString()} (CAGR: ${(
-                      channelBaseCagr * 100
-                    ).toFixed(1)}%)
-            </td>
-          </tr>
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              Encircle Base:
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${Number(encircleBase || 0).toLocaleString()}
+                              (CAGR:
+                              ${(Number(encircleBaseCagr || 0) * 100).toFixed(
+                                1,
+                              )}%)
+                            </td>
+                          </tr>
 
-          <tr>
-            <td style="padding:2px 4px;">Dormant Base:</td>
-            <td style="padding:2px 4px;">${dormantBase.toLocaleString()}</td>
-          </tr>
-          <tr>
-            <td style="padding:2px 4px;">Dormancy (%):</td>
-            <td style="padding:2px 4px;">${dormancyRate.toLocaleString()}%</td>
-          </tr>
-          <tr>
-            <td style="padding:2px 4px;">ARPC:</td>
-            <td style="padding:2px 4px;"> ${(arpc / 100000)
-              ?.toFixed(2)
-              ?.toLocaleString()}L</td>
-            <tr>
-            <td style="padding:2px 4px;">Fill Rate:</td>
-            <td style="padding:2px 4px;">${parseFloat(fillRate * 100).toFixed(
-              1,
-            )}%</td>
-          </tr>
-          </tr>
-        </tbody>
-      </table>
-  </div>`,
-                  );
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              ${channelval} Base:
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${Number(channelBase || 0).toLocaleString()}
+                              (CAGR:
+                              ${(Number(channelBaseCagr || 0) * 100).toFixed(
+                                1,
+                              )}%)
+                            </td>
+                          </tr>
 
-                  // Position and open InfoWindow
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              Dormant Base:
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${Number(dormantBase || 0).toLocaleString()}
+                            </td>
+                          </tr>
+
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              Dormancy (%):
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${Number(dormancyRate || 0).toFixed(1)}%
+                            </td>
+                          </tr>
+
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              ARPC:
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${(Number(arpc || 0) / 100000).toFixed(2)}L
+                            </td>
+                          </tr>
+
+                          <tr>
+                            <td style="padding:2px 4px;">
+                              Fill Rate:
+                            </td>
+                            <td style="padding:2px 4px;">
+                              ${(Number(fillRate || 0) * 100).toFixed(1)}%
+                            </td>
+                          </tr>
+
+                        </tbody>
+                      </table>
+                    </div>
+                  `);
+
                   infoWindow.setPosition(e.latLng);
+
                   infoWindow.open(googleMapInstance);
 
-                  // Optional: Hide default close button
                   setTimeout(() => {
                     const closeBtn = document.querySelector(
                       ".gm-ui-hover-effect",
                     );
-                    if (closeBtn) closeBtn.style.display = "none";
+
+                    if (closeBtn) {
+                      closeBtn.style.display = "none";
+                    }
                   }, 0);
                 });
               });
             });
           };
+
           drawPolygons(geometryJson?.coordinates);
         });
+
+        // --------------------------------------------------
+        // STEP 10: Fit map to polygons
+        // --------------------------------------------------
         googleMapInstance.fitBounds(overallBounds);
+
+        // --------------------------------------------------
+        // STEP 11: WAIT FOR MAP + TAKE SCREENSHOT
+        // --------------------------------------------------
+        await handleScreenshot(map_img, googleMapInstance);
+
         setShowTable(true);
       } else {
         toast.error("Data Not Available", {
@@ -650,18 +856,18 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
           autoClose: 2000,
         });
       }
+
       setLoading(false);
     } catch (err) {
-      toast.error("Somthing went wrong!", {
+      toast.error("Something went wrong!", {
         theme: "colored",
         autoClose: 2000,
       });
+
       setPincodeSummary([]);
       setLoading(false);
     }
   };
-
-  // -----------------------------MAP RELATED AREA HILIGHTING FUNCTIONALITY-----------------------------------------------------------
 
   const GetStoreDetails = async (chl, str) => {
     try {
@@ -739,8 +945,41 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
             <div style={{ width: "70%" }}>
               <div style={{ border: "1px solid #233044" }}>
                 {storeTypeData && (
-                  <StoreTypeDetails storeTypeData={storeTypeData} />
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      width: "100%",
+                      background: "#233044",
+                    }}>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                      }}>
+                      <StoreTypeDetails storeTypeData={storeTypeData} />
+                    </div>
+
+                    <button
+                      type='button'
+                      style={{
+                        marginRight: "8px",
+                        padding: "4px 15px",
+                        background: "#fff",
+                        color: "#233044",
+                        border: "none",
+                        borderRadius: "1px",
+                        fontSize: "13px",
+                        fontWeight: "bold",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                      onClick={() => setModalOpen(true)}>
+                      Preview 👁
+                    </button>
+                  </div>
                 )}
+
                 <div style={{ display: "flex", justifyContent: "flex-end" }}>
                   <div className='target_chatchment_data'>
                     <GraphAccordion
@@ -749,12 +988,14 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                     />
                   </div>
                 </div>
-                <DarkCatchmentGoogleView
-                  setGoogleMapInstance={setGoogleMapInstance}
-                  placeMarkers={mapCenter}
-                  store={store}
-                  userLocation={userLocation}
-                />
+                <div ref={map_img}>
+                  <DarkCatchmentGoogleView
+                    setGoogleMapInstance={setGoogleMapInstance}
+                    placeMarkers={mapCenter}
+                    store={store}
+                    userLocation={userLocation}
+                  />
+                </div>
               </div>
             </div>
             <div
@@ -839,81 +1080,12 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                         marginTop: "5px",
                         marginBottom: "5px",
                       }}>
-                      <div
-                        style={{
-                          textAlign: "center",
-                          fontSize: "13px",
-                          marginBottom: "3px",
-                        }}>
-                        Store Summary
-                      </div>
-                      <div
-                        style={{
-                          maxHeight: "86px",
-                          overflowY: "auto",
-                          border: "1px solid #ddd",
-                          width: "100%",
-                          margin: "0 auto",
-                        }}>
-                        <Table
-                          className='custom_table'
-                          style={{
-                            fontSize: "10px",
-                            borderCollapse: "collapse",
-                          }}>
-                          <Tbody>
-                            {store_summ_heading.map((head, i) => (
-                              <Tr key={i}>
-                                <Th
-                                  style={{
-                                    background: "#ccc",
-                                    color: "#000",
-                                    fontSize: "11px",
-                                    textAlign: "start",
-                                    padding: "4px 6px",
-                                    whiteSpace: "nowrap",
-                                  }}>
-                                  {head}
-                                </Th>
-                                {storeSummary ? (
-                                  <Td
-                                    style={{
-                                      padding: "4px 6px",
-                                      fontSize: "10px",
-                                      textAlign: "start",
-                                    }}>
-                                    {i === 0 &&
-                                      getTotalSum(
-                                        population_list,
-                                      ).toLocaleString("en-IN")}
-                                    {i === 1 &&
-                                      `${storeSummary?.encircleBase?.toLocaleString(
-                                        "en-IN",
-                                      )} (${storeSummary?.encircleBaseCagr}%)`}
-                                    {i === 2 &&
-                                      `${storeSummary?.channelBase?.toLocaleString(
-                                        "en-IN",
-                                      )} (${storeSummary?.channelBaseCagr}%)`}
-                                    {i === 3 &&
-                                      storeSummary?.arpc?.toLocaleString(
-                                        "en-IN",
-                                      )}
-                                    {i === 4 &&
-                                      storeSummary?.dormantBase?.toLocaleString(
-                                        "en-IN",
-                                      )}
-                                    {i === 5 &&
-                                      `${storeSummary?.dormancyRate}%`}
-                                    {i === 6 && `${storeSummary?.fillRate}%`}
-                                  </Td>
-                                ) : (
-                                  <Td>0</Td>
-                                )}
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </div>
+                      <StoreSummary
+                        storeSummary={storeSummary}
+                        populationList={population_list}
+                        channel={channelval}
+                        maxHeight='86px'
+                      />
                     </div>
                     <div
                       style={{
@@ -922,106 +1094,12 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
                         fontSize: "16px",
                         padding: "5px",
                       }}>
-                      <div
-                        style={{
-                          textAlign: "center",
-                          fontSize: "13px",
-                          marginBottom: "5px",
-                        }}>
-                        Customer Share
-                      </div>
-                      <Table
-                        className='custom_table'
-                        style={{
-                          textAlign: "start",
-                          margin: "0 auto",
-                          border: "1px solid #ddd",
-                        }}>
-                        <Thead
-                          style={{
-                            background: "#ccc",
-                            color: "#000",
-                            textAlign: "start",
-                          }}>
-                          <Tr>
-                            {["Share Type", "Share", "Count"].map((head, i) => (
-                              <Th
-                                key={i}
-                                style={{
-                                  padding: "3px 3px",
-                                  fontSize: "12px",
-                                  textAlign: "start",
-                                }}>
-                                {head}
-                              </Th>
-                            ))}
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          {custStrPerc.map((item, i) => (
-                            <Tr key={i}>
-                              <Td
-                                style={{
-                                  padding: "2px 3px",
-                                  fontSize: "12px",
-                                }}>
-                                {item?.percentShareType}
-                              </Td>
-                              <Td
-                                style={{
-                                  padding: "2px 3px",
-                                  fontSize: "12px",
-                                }}>
-                                {parseFloat(item?.customerShare).toFixed(2)} %
-                              </Td>
-                              <Td
-                                style={{
-                                  padding: "2px 3px",
-                                  fontSize: "12px",
-                                }}>
-                                {item?.customerCount?.toLocaleString("en-IN")}
-                              </Td>
-                            </Tr>
-                          ))}
-                        </Tbody>
-                      </Table>
+                      <CustomersShares custStrPerc={custStrPerc} />
                     </div>
                   </div>
                 )}
-                <div
-                  style={{
-                    padding: "5px",
-                    border: "1px solid #233044",
-                    marginTop: "5px",
-                  }}>
-                  <div
-                    style={{
-                      textAlign: "center",
-                      fontSize: "13px",
-                      marginBottom: "5px",
-                    }}>
-                    Catchment Level Action
-                  </div>
-                  {StoreColorSet.map((item, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        marginBottom: "5px",
-                      }}>
-                      <div
-                        style={{
-                          width: "15px",
-                          height: "13px",
-                          backgroundColor: item.color,
-                          marginRight: "10px",
-                          border: "1px solid #ccc",
-                        }}
-                      />
-                      <span style={{ fontSize: "13px" }}>{item.action}</span>
-                    </div>
-                  ))}
+                <div style={{ border: "1px solid #233044" }}>
+                  <CatchmentLevelAction StoreColorSet={StoreColorSet} />
                 </div>
               </div>
             </div>
@@ -1035,6 +1113,21 @@ const StoreCatchmentAnalysis = ({ toggle_open, toggle }) => {
             channel={channelval}
           />
         )}
+        <Modal open={modalOpen} onClose={() => setModalOpen(false)}>
+          <div style={FilePopStyle} className='scrollable_container'>
+            <NewStoreCatchmentPdf
+              close={() => setModalOpen(false)}
+              storeTypeData={storeTypeData}
+              channel={channelval}
+              map_img={storeAnlMapImg}
+              storeSummary={storeSummary}
+              population_list={population_list}
+              custStrPerc={custStrPerc}
+              StoreColorSet={StoreColorSet}
+              pincodeSummary={pincodeSummary}
+            />
+          </div>
+        </Modal>
       </div>
     </React.Fragment>
   );
