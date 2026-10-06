@@ -39,6 +39,38 @@ const fmt = (n) =>
     ? "—"
     : Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
+const IT_EQUIPMENT_MAX = 2500000; // ₹25 lakh cap
+
+function EditableAmountRow({ label, value, onChange, max, disabled, note }) {
+  return (
+    <tr className='hover:bg-gray-50'>
+      <td className='border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 bg-white'>
+        {label}
+      </td>
+      <td className='border border-gray-200 px-4 py-3 bg-blue-50'>
+        <input
+          type='number'
+          min={0}
+          max={max}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          placeholder='₹ Enter amount'
+          className={`w-full px-2 py-1.5 border border-blue-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+            disabled ? "bg-gray-100 cursor-not-allowed text-gray-500" : "bg-white"
+          }`}
+        />
+      </td>
+      <td className='border border-gray-200 px-4 py-3 text-sm font-bold text-right text-gray-800 bg-amber-50'>
+        ₹ {fmt(value)}
+      </td>
+      <td className='border border-gray-200 px-4 py-3 text-xs text-gray-400 italic bg-white'>
+        {note}
+      </td>
+    </tr>
+  );
+}
+
 function ReadOnlyRow({ label, value, note }) {
   return (
     <tr className='hover:bg-gray-50'>
@@ -174,6 +206,7 @@ export default function Subpage4_1({ handleNext }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
   // Stores user-entered amounts when selection is 'Enter Custom Value'
@@ -188,10 +221,25 @@ export default function Subpage4_1({ handleNext }) {
   const [sectionAdditionalCost, setSectionAdditionalCost] = useState("");
   const [additionalCostDescription, setAdditionalCostDescription] = useState("");
 
+  // ── Carpet area (declared early — the restore effect below needs it) ──────
+  const carpetArea =
+    storeData?.project_type === "Relocation" || storeData?.project_type === 'Renovation' ||
+    storeData?.project_type === "New Store" || storeData?.project_type === 'Store Expansion'
+      ? parseFloat(storeData?.new_retail_area)
+      : parseFloat(storeData?.existing_retail_area);
+
   // Load previously saved CAPEX selections when resuming
+  //
+  // NOTE: `/expense_details?expense_type=CAPEX` returns the raw flat
+  // `roi_capex_expenses` row (one column per item, holding the SAVED ₹
+  // AMOUNT) — NOT the `{selections:{...}}` shape this page originally posted.
+  // There's no column distinguishing "Yes" (DB-rate) from "Enter Custom
+  // Value" (user amount), so we infer it: if the saved amount matches what
+  // the live DB rate would compute today, treat it as "Yes"; otherwise it's
+  // a custom value. Needs `dbRates`/`carpetArea` loaded first to compare.
   useEffect(() => {
     const roiid = storeData?.roiid;
-    if (!roiid || isSaved) return;
+    if (!roiid || isSaved || !dbRates.length) return;
     (async () => {
       try {
         const res = await fetch(
@@ -201,25 +249,82 @@ export default function Subpage4_1({ handleNext }) {
         const json = await res.json();
         const row = json?.data?.[0];
         if (!row) return;
-        if (row.selections) {
-          const restored = {};
-          YES_NO_ITEMS.forEach(({ key }) => {
-            if (row.selections[key] !== undefined)
-              restored[key] = row.selections[key];
-          });
-          // Restore artAndCrafts — it was stored as key = value when selected
-          const artKey = DROPDOWN_ITEMS.find(
-            ({ key }) => row.selections[key] === key,
+
+        const COLUMN_BY_KEY = {
+          "Civil Works": "Additional Civil Works",
+          "Additional Work for Corner Property": "Corner Property Work",
+          "Lift(Irrespective of the area - 1 No)": "Lift Installation",
+          "Increase Fa\u00e7ade Height per Floor": "Increase Fa\u00e7ade Height per Floor",
+          "EHV zone addition - Furniture and interior": "EHV zone addition (Furniture & Interior)",
+          "DXC Equipment": "DxC (Equipment and Interiors)",
+          "LED Screen": "LED Screen",
+          "Solar": "Solar Installation",
+          "engravingMachine": "Engraving Machine",
+        };
+        const rateFor = (key) => {
+          const rateData = dbRates.find(
+            (item) => item.description.toLowerCase() === key.toLowerCase(),
           );
-          if (artKey) restored.artAndCrafts = artKey.key;
-          setSelections((prev) => ({ ...prev, ...restored }));
+          if (!rateData) return 0;
+          return Number(rateData.sqft) > 0
+            ? Number(rateData.sqft) * carpetArea
+            : Number(rateData.total_cost) || 0;
+        };
+
+        const restoredSelections = {};
+        const restoredUserAmounts = {};
+        let yesNoTotal = 0;
+        YES_NO_ITEMS.forEach(({ key }) => {
+          const saved = parseFloat(row[COLUMN_BY_KEY[key]]) || 0;
+          yesNoTotal += saved;
+          if (saved <= 0) {
+            restoredSelections[key] = "No";
+            return;
+          }
+          restoredSelections[key] =
+            Math.abs(saved - rateFor(key)) < 1 ? "Yes" : "Enter Custom Value";
+          if (restoredSelections[key] === "Enter Custom Value")
+            restoredUserAmounts[key] = saved;
+        });
+
+        const artType1 = parseFloat(row["Art and Crafts(Type 1 (Crafts)"]) || 0;
+        const artType2 = parseFloat(row["Art and Crafts(Type 2 (Crafts)"]) || 0;
+        let artTotal = 0;
+        if (artType1 > 0) {
+          restoredSelections.artAndCrafts = "Art & Craft - TYPE 1";
+          artTotal = artType1;
+        } else if (artType2 > 0) {
+          restoredSelections.artAndCrafts = "Art & Craft - TYPE 2 & TYPE 3";
+          artTotal = artType2;
         }
+
+        const savedItEquipment = parseFloat(row["IT (Equipments and Installation)"]) || 0;
+        if (savedItEquipment > 0) setItEquipment(savedItEquipment);
+
+        // Additional Cost isn't stored as its own column — back it out of the
+        // saved "Other Expenses" total (= YES/NO items + Art&Crafts + this).
+        const otherExpensesTotal = parseFloat(row["Other Expenses"]) || 0;
+        const leftover = otherExpensesTotal - yesNoTotal - artTotal;
+        if (leftover > 0) setSectionAdditionalCost(leftover);
+
+        setSelections((prev) => ({ ...prev, ...restoredSelections }));
+        setUserEnteredAmounts((prev) => ({ ...prev, ...restoredUserAmounts }));
         setIsSaved(true);
+        // Populate Section4Context too — it's otherwise only set on handleSave,
+        // leaving Subpage4_3 (totalCapex/interiors-dependent Yr1 formulas) blank
+        // whenever the wizard is resumed straight past this page.
+        setSubpage4_1Data({
+          roiid,
+          interiors: parseFloat(row.Interiors) || 0,
+          itEquipment: savedItEquipment,
+          totalCapex: parseFloat(row["Total capex"]) || 0,
+          ratePerSqft: parseFloat(row["Rate /Sqft"]) || 0,
+        });
       } catch (e) {
         console.error("Failed to load saved CAPEX data:", e);
       }
     })();
-  }, [storeData?.roiid]);
+  }, [storeData?.roiid, dbRates, carpetArea]);
 
   // ── Fetch DB rates for additional capex items ────────────────────────────
   useEffect(() => {
@@ -278,6 +383,16 @@ export default function Subpage4_1({ handleNext }) {
     setUserEnteredAmounts((prev) => ({ ...prev, [key]: val }));
   };
 
+  // Clamps user edits to the IT equipment field at ₹25 lakh
+  const handleItEquipmentChange = (val) => {
+    if (val === "") {
+      setItEquipment("");
+      return;
+    }
+    const num = parseFloat(val) || 0;
+    setItEquipment(num > IT_EQUIPMENT_MAX ? IT_EQUIPMENT_MAX : num);
+  };
+
   // Effective amount per item: DB rate (Yes), user-entered (Enter Custom Value), or 0 (No)
   const getEffectiveAmount = (key) => {
     const sel = selections[key];
@@ -289,12 +404,6 @@ export default function Subpage4_1({ handleNext }) {
   };
 
   // ── Compute capex amounts ─────────────────────────────────────────────────
-  const carpetArea =
-    storeData?.project_type === "Relocation" || storeData?.project_type === 'Renovation' ||
-    storeData?.project_type === "New Store" || storeData?.project_type === 'Store Expansion'
-      ? parseFloat(storeData?.new_retail_area)
-      : parseFloat(storeData?.existing_retail_area);
-
   const computedAmounts = {};
 
   YES_NO_ITEMS.forEach(({ key }) => {
@@ -332,7 +441,7 @@ export default function Subpage4_1({ handleNext }) {
     (selections.artAndCrafts ? computedAmounts.artAndCrafts || 0 : 0) +
     (parseFloat(sectionAdditionalCost) || 0);
 
-  const totalCapex = interiors + itEquipment + additionalCapex;
+  const totalCapex = interiors + (parseFloat(itEquipment) || 0) + additionalCapex;
   const ratePerSqft = carpetArea > 0 ? totalCapex / carpetArea : 0;
   const isFormComplete = [
     ...YES_NO_ITEMS.map(({ key }) => key),
@@ -351,8 +460,15 @@ export default function Subpage4_1({ handleNext }) {
     setIsSaving(true);
 
     const payloadSelections = { ...selections };
+    // Art & Crafts amount must be keyed by its DB column name (Type 1 vs
+    // Type 2 & 3), same as payloadSelections below — computedAmounts.artAndCrafts
+    // alone doesn't match what the backend looks up, so it always saved as 0.
+    const payloadComputedAmounts = { ...computedAmounts };
 
     if (payloadSelections.artAndCrafts) {
+      payloadComputedAmounts[payloadSelections.artAndCrafts] =
+        computedAmounts.artAndCrafts;
+
       payloadSelections[payloadSelections.artAndCrafts] =
         payloadSelections.artAndCrafts;
 
@@ -363,7 +479,7 @@ export default function Subpage4_1({ handleNext }) {
       roiid: storeData?.roiid,
       storeData,
       selections: payloadSelections,
-      computedAmounts,
+      computedAmounts: payloadComputedAmounts,
       interiors,
       itEquipment,
       additionalCapex,
@@ -389,6 +505,7 @@ export default function Subpage4_1({ handleNext }) {
 
       setSubpage4_1Data(payload);
       setIsSaved(true);
+      setIsEditing(false);
       markStepSaved(0);
       setShowModal(true);
     } catch (err) {
@@ -489,7 +606,7 @@ export default function Subpage4_1({ handleNext }) {
                 value={selections[key]}
                 onChange={handleChange}
                 computedValue={computedAmounts[key]}
-                disabled={isSaved}
+                disabled={isSaved && !isEditing}
                 userValue={userEnteredAmounts[key]}
                 onUserValueChange={handleUserValueChange}
               />
@@ -503,14 +620,17 @@ export default function Subpage4_1({ handleNext }) {
               onChange={handleChange}
               options={artOptions}
               computedValue={computedAmounts.artAndCrafts}
-              disabled={isSaved}
+              disabled={isSaved && !isEditing}
             />
 
-            {/* IT (Equipments and Installation) */}
-            <ReadOnlyRow
+            {/* IT (Equipments and Installation) — editable, capped at ₹25 lakh */}
+            <EditableAmountRow
               label='IT (Equipments and Installation)'
               value={itEquipment}
-              note='From DB'
+              onChange={handleItEquipmentChange}
+              max={IT_EQUIPMENT_MAX}
+              disabled={isSaved && !isEditing}
+              note='Editable — capped at ₹25,00,000'
             />
 
             {/* Additional Cost — editable section before Total Capex */}
@@ -524,10 +644,10 @@ export default function Subpage4_1({ handleNext }) {
                   min={0}
                   value={sectionAdditionalCost}
                   onChange={(e) => setSectionAdditionalCost(e.target.value)}
-                  disabled={isSaved}
+                  disabled={isSaved && !isEditing}
                   placeholder='₹ Enter amount'
                   className={`w-full px-2 py-1.5 border border-indigo-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
-                    isSaved
+                    isSaved && !isEditing
                       ? 'bg-gray-100 cursor-not-allowed text-gray-500'
                       : 'bg-white'
                   }`}
@@ -538,10 +658,10 @@ export default function Subpage4_1({ handleNext }) {
                     rows={2}
                     value={additionalCostDescription}
                     onChange={(e) => setAdditionalCostDescription(e.target.value)}
-                    disabled={isSaved}
+                    disabled={isSaved && !isEditing}
                     placeholder='Specify reason for this additional cost…'
                     className={`w-full px-2 py-1.5 border border-indigo-300 rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 ${
-                      isSaved
+                      isSaved && !isEditing
                         ? 'bg-gray-100 cursor-not-allowed text-gray-500'
                         : 'bg-white'
                     }`}
@@ -602,7 +722,7 @@ export default function Subpage4_1({ handleNext }) {
 
       {/* Navigation */}
       <div className='flex justify-start gap-4 mt-8'>
-        {!isSaved ? (
+        {!isSaved || isEditing ? (
           <button
             type='button'
             disabled={!isFormComplete || isSaving}
@@ -615,12 +735,20 @@ export default function Subpage4_1({ handleNext }) {
             {isSaving ? "Saving…" : "Save"}
           </button>
         ) : (
-          <button
-            type='button'
-            onClick={handleNext}
-            className='bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition transform hover:scale-105 cursor-pointer'>
-            Next →
-          </button>
+          <>
+            <button
+              type='button'
+              onClick={() => setIsEditing(true)}
+              className='px-6 py-3 bg-white text-amber-700 border border-amber-300 rounded-lg font-semibold text-sm hover:bg-amber-50 transition'>
+              ✎ Edit
+            </button>
+            <button
+              type='button'
+              onClick={handleNext}
+              className='bg-amber-600 hover:bg-amber-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition transform hover:scale-105 cursor-pointer'>
+              Next →
+            </button>
+          </>
         )}
       </div>
 

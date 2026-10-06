@@ -24,8 +24,20 @@ export default function MultiStepROIForm({
 }) {
   // const [activeForm, setActiveForm] = useState(4);
   const [activeForm, setActiveForm] = useState(initialStep);
+  const [maxReachedStep, setMaxReachedStep] = useState(initialStep);
   const [roiContext, setRoiContext] = useState(initialRoiContext);
   const progressPct = Math.round(((activeForm - 1) / (STEPS.length - 1)) * 100);
+
+  // Any step already passed through is safe to revisit/edit — its own resume
+  // logic (per-page isSaved/Edit buttons) takes over from there.
+  const goToStep = (step) => {
+    if (step > maxReachedStep) return;
+    setActiveForm(step);
+  };
+  const advanceTo = (step) => {
+    setActiveForm(step);
+    setMaxReachedStep((prev) => Math.max(prev, step));
+  };
 
   return (
     <div className='bg-gradient-to-br from-slate-50 to-blue-50 px-2 pb-2'>
@@ -48,7 +60,7 @@ export default function MultiStepROIForm({
         <div className='bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden'>
           {/* Stepper Header */}
           <div className='bg-gradient-to-r from-[#233044] to-[#3a5a80] px-2 pt-2'>
-            <Stepper currentStep={activeForm} steps={STEPS} />
+            <Stepper currentStep={activeForm} steps={STEPS} maxReachedStep={maxReachedStep} onStepClick={goToStep} />
             {/* Progress bar */}
             <div className='-mt-2 pb-1.5'>
               <div className='h-0.5 bg-white/20 rounded-full overflow-hidden'>
@@ -93,16 +105,17 @@ export default function MultiStepROIForm({
           <div>
             {activeForm === 1 && (
               <BasicStoreDetails
+                roiContext={roiContext}
                 onNext={(ctx) => {
                   setRoiContext(ctx);
-                  setActiveForm(2);
+                  advanceTo(2);
                 }}
               />
             )}
             {activeForm === 2 && (
               <StoreRetailSpecifications
                 roiContext={roiContext}
-                onNext={() => setActiveForm(3)}
+                onNext={() => advanceTo(3)}
                 onPrevious={() => setActiveForm(1)}
               />
             )}
@@ -110,7 +123,7 @@ export default function MultiStepROIForm({
               <Section3
                 roiContext={roiContext}
                 initialSubStep={initialStep === 3 ? initialSubStep : 1}
-                onNext={() => setActiveForm(4)}
+                onNext={() => advanceTo(4)}
                 onPrevious={() => setActiveForm(2)}
               />
             )}
@@ -118,7 +131,7 @@ export default function MultiStepROIForm({
               <Section4
                 roiContext={roiContext}
                 initialSubStep={initialStep === 4 ? initialSubStep : 1}
-                onNext={() => setActiveForm(5)}
+                onNext={() => advanceTo(5)}
                 onPrevious={() => setActiveForm(3)}
               />
             )}

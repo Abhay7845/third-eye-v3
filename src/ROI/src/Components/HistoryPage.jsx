@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { BASE_URL } from "./Forms/data/baseUrl";
+import RoiPdfReport from "./Forms/RoiPdfReport";
 
 // ─── Page definitions ─────────────────────────────────────────────────────────
 const PAGES = [
@@ -25,7 +26,13 @@ const PAGES = [
     group: "Sales Planning",
   },
   {
-    name: "Sales Planning - Stock Summary",
+    name: "Sales Planning - Stock Summary - Phase 1",
+    icon: "📦",
+    step: 3,
+    group: "Sales Planning",
+  },
+  {
+    name: "Sales Planning - Stock Summary - Phase 2",
     icon: "📦",
     step: 3,
     group: "Sales Planning",
@@ -43,6 +50,22 @@ const PAGES = [
 ];
 
 const GROUPS = ["Store Setup", "Sales Planning", "Expense Planning"];
+
+// Maps each page to the exact step/subStep it lives on, so "Edit" can jump
+// straight to that section instead of the first incomplete one.
+const PAGE_STEP_MAP = {
+  "Basic Store Details": { step: 1, subStep: 1 },
+  "Store Retail Specifications": { step: 2, subStep: 1 },
+  "Sales Planning - Ref Store Code Details": { step: 3, subStep: 1 },
+  "Sales Planning - Sales Summary": { step: 3, subStep: 2 },
+  "Sales Planning - Stock Summary - Phase 1": { step: 3, subStep: 3 },
+  "Sales Planning - Stock Summary - Phase 2": { step: 3, subStep: 3 },
+  "Sales Planning - Discount": { step: 3, subStep: 4 },
+  "Capex Expenses": { step: 4, subStep: 1 },
+  "Resource Expenses": { step: 4, subStep: 2 },
+  "Other Expenses": { step: 4, subStep: 3 },
+  "Summary Expenses": { step: 4, subStep: 3 },
+};
 
 const PROJECT_COLORS = {
   "New Store": "bg-blue-100 text-blue-700 border-blue-200",
@@ -72,12 +95,16 @@ function getFirstIncompleteStep(pages) {
   const salesPages = [
     "Sales Planning - Ref Store Code Details",
     "Sales Planning - Sales Summary",
-    "Sales Planning - Stock Summary",
+    "Sales Planning - Stock Summary - Phase 1",
+    "Sales Planning - Stock Summary - Phase 2",
     "Sales Planning - Discount",
   ];
+  // Phase 1 & Phase 2 of Stock Summary both live on Subpage3_3 (subStep 3) —
+  // only "Discount" maps to Subpage3_4 (subStep 4).
+  const salesSubSteps = [1, 2, 3, 3, 4];
   const firstIncompleteSales = salesPages.findIndex(na);
   if (firstIncompleteSales !== -1)
-    return { step: 3, subStep: firstIncompleteSales + 1 };
+    return { step: 3, subStep: salesSubSteps[firstIncompleteSales] };
 
   const expensePages = [
     "Capex Expenses",
@@ -163,6 +190,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [continuing, setContinuing] = useState(false);
+  const [editingPage, setEditingPage] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [dateFrom, setDateFrom] = useState("");
@@ -228,59 +256,80 @@ export default function HistoryPage({ onBack, onContinueROI }) {
     }
   };
 
+  // Shared by "Continue ROI" and per-section "Edit" — both need the same
+  // stored context, they only differ on which step/subStep to land on.
+  const buildRoiContext = async () => {
+    const [r1, r2] = await Promise.all([
+      fetch(
+        `${BASE_URL}/fetchScreen?parameter=roi_basic_store_details&roiid=${selectedRoi.roiid}`,
+      ),
+      fetch(
+        `${BASE_URL}/fetchScreen?parameter=roi_store_retail_specifications&roiid=${selectedRoi.roiid}`,
+      ),
+    ]);
+
+    const d1 = r1.ok ? (await r1.json()).data?.[0] ?? {} : {};
+    const d2 = r2.ok ? (await r2.json()).data?.[0] ?? {} : {};
+
+    const projectType = d1.project_type ?? d1.projectType ?? "";
+    const existingStoreCode =
+      d1.exsisting_store_code ?? d1.existing_store_code ?? "";
+
+    return {
+      roiId: selectedRoi.roiid,
+      projectType,
+      historyId: d1.TY_historyID ?? d1.history_id ?? "",
+      city: d1.city ?? "",
+      state: d1.state ?? "",
+      region: d1.region ?? "",
+      newCity: d1.new_city ?? "",
+      existingStoreCode,
+      existingStoreFormat: d1.existing_store_format ?? "",
+      // effective format drives Section 3 validation-metrics benchmark lookup
+      effectiveStoreFormat:
+        (projectType === "New Store")
+          ? (d1.new_store_format ?? "")
+          : (d1.exsisting_store_format ?? ""),
+      // d2 wins when screen 2 was saved; d1 carries storeType as fallback
+      storeType: d2.store_type ?? d1.store_type ?? "",
+      existingRetailArea: d2.existing_retail_area ?? d1.retail_area ?? d1.retailArea ?? "",
+      historyRetailArea: d2.new_retail_area ?? "",
+      refStoreCode:
+        (projectType === "New Store" || projectType === "Renovation" )
+          ? d1.ref_store_code ?? existingStoreCode
+          : existingStoreCode,
+    };
+  };
+
   const handleContinue = async () => {
     if (!selectedRoi?.roiid) return;
     setContinuing(true);
     try {
-      const [r1, r2] = await Promise.all([
-        fetch(
-          `${BASE_URL}/fetchScreen?parameter=roi_basic_store_details&roiid=${selectedRoi.roiid}`,
-        ),
-        fetch(
-          `${BASE_URL}/fetchScreen?parameter=roi_store_retail_specifications&roiid=${selectedRoi.roiid}`,
-        ),
-      ]);
-
-      const d1 = r1.ok ? (await r1.json()).data?.[0] ?? {} : {};
-      const d2 = r2.ok ? (await r2.json()).data?.[0] ?? {} : {};
-
-      const projectType = d1.project_type ?? d1.projectType ?? "";
-      const existingStoreCode =
-        d1.exsisting_store_code ?? d1.existing_store_code ?? "";
-
-      const roiContext = {
-        roiId: selectedRoi.roiid,
-        projectType,
-        historyId: d1.TY_historyID ?? d1.history_id ?? "",
-        city: d1.city ?? "",
-        state: d1.state ?? "",
-        region: d1.region ?? "",
-        newCity: d1.new_city ?? "",
-        existingStoreCode,
-        existingStoreFormat: d1.existing_store_format ?? "",
-        // effective format drives Section 3 validation-metrics benchmark lookup
-        effectiveStoreFormat:
-          (projectType === "New Store")
-            ? (d1.new_store_format ?? "")
-            : (d1.exsisting_store_format ?? ""),
-        // d2 wins when screen 2 was saved; d1 carries storeType as fallback
-        storeType: d2.store_type ?? d1.store_type ?? "",
-        existingRetailArea: d2.existing_retail_area ?? d1.retail_area ?? d1.retailArea ?? "",
-        historyRetailArea: d2.new_retail_area ?? "",
-        refStoreCode:
-          (projectType === "New Store" || projectType === "Renovation" )
-            ? d1.ref_store_code ?? existingStoreCode
-            : existingStoreCode,
-      };
-
-
-
+      const roiContext = await buildRoiContext();
       onContinueROI(roiContext, firstIncomplete.step, firstIncomplete.subStep);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load ROI context. Please try again.");
     } finally {
       setContinuing(false);
+    }
+  };
+
+  // Jumps straight into a specific section for editing, keeping all
+  // previously saved data intact (same context loader as Continue).
+  const handleEditPage = async (pageName) => {
+    if (!selectedRoi?.roiid || editingPage) return;
+    const target = PAGE_STEP_MAP[pageName];
+    if (!target) return;
+    setEditingPage(pageName);
+    try {
+      const roiContext = await buildRoiContext();
+      onContinueROI(roiContext, target.step, target.subStep);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load ROI context. Please try again.");
+    } finally {
+      setEditingPage(null);
     }
   };
 
@@ -311,11 +360,14 @@ export default function HistoryPage({ onBack, onContinueROI }) {
         case "Sales Planning - Sales Summary":
           res = await sp(2);
           break;
-        case "Sales Planning - Stock Summary":
+        case "Sales Planning - Stock Summary - Phase 1":
           res = await sp(3);
           break;
-        case "Sales Planning - Discount":
+        case "Sales Planning - Stock Summary - Phase 2":
           res = await sp(4);
+          break;
+        case "Sales Planning - Discount":
+          res = await sp(5);
           break;
         case "Capex Expenses":
           res = await fetch(
@@ -712,7 +764,79 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     <span>{stats.total - stats.done} remaining</span>
                   </div>
                 </div>
+
+                {/* One-view report — only once the ROI has actually been submitted */}
+                {isSubmitted && (
+                  <div className='mt-4 flex justify-end'>
+                    <RoiPdfReport
+                      roiid={selectedRoi.roiid}
+                      className='inline-flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow transition'
+                    />
+                  </div>
+                )}
               </div>
+
+              {/* ── Rejected / Clarification alert — shown first so it's seen as soon as the page loads ── */}
+              {roiStatus.startsWith("Rejected_by") && (
+                <div className='rounded-2xl border border-red-300 bg-red-50 p-6 flex items-center justify-between gap-4'>
+                  <div className='flex-1 min-w-0'>
+                    <p className='font-bold text-red-800'>
+                      ✗ Rejected by {roiStatus.replace("Rejected_by", "")}
+                    </p>
+                    <p className='text-xs text-red-600 mt-1'>
+                      This ROI was rejected. Review the remark below.
+                    </p>
+                    {selectedRoi?.remarks && (
+                      <div className='mt-3 bg-white rounded-xl border border-red-200 px-4 py-3'>
+                        <p className='text-xs font-semibold text-red-700 uppercase tracking-wide mb-1'>
+                          Remark from Approver
+                        </p>
+                        <p className='text-sm text-gray-800 whitespace-pre-wrap'>
+                          {selectedRoi.remarks}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleViewPage("Final Summary")}
+                    className='flex-shrink-0 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm shadow transition'>
+                    📊 View Final Summary
+                  </button>
+                </div>
+              )}
+
+              {isClarificationPending && (
+                <div className='rounded-2xl border border-amber-300 bg-amber-50 p-6 flex items-center justify-between gap-4'>
+                  <div className='flex-1 min-w-0'>
+                    <p className='font-bold text-gray-800'>
+                      💬 Clarification Requested by {(selectedRoi?.status ?? "").replace("SK_by", "")}
+                    </p>
+                    <p className='text-xs text-gray-500 mt-1'>
+                      Review the remark below and make necessary changes before resubmitting.
+                    </p>
+                    {selectedRoi?.remarks && (
+                      <div className='mt-3 bg-white rounded-xl border border-amber-200 px-4 py-3'>
+                        <p className='text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1'>
+                          Remark from Approver
+                        </p>
+                        <p className='text-sm text-gray-800 whitespace-pre-wrap'>
+                          {selectedRoi.remarks}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleContinue}
+                    disabled={continuing}
+                    className={`flex-shrink-0 px-6 py-3 rounded-xl font-semibold text-sm shadow transition ${
+                      continuing
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-amber-500 hover:bg-amber-600 text-white"
+                    }`}>
+                    {continuing ? "Loading…" : "✏️ Edit & Resubmit"}
+                  </button>
+                </div>
+              )}
 
               {/* ── Section groups ────────────────────────────────────── */}
               {groupedPages.map(({ group, pages }) => {
@@ -790,6 +914,21 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                                     className='text-[10px] font-semibold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-2.5 py-1 rounded-full transition'>
                                     View
                                   </button>
+                                  <button
+                                    onClick={() => handleEditPage(page.name)}
+                                    disabled={isSubmitted || pageSubmitted || !!editingPage}
+                                    title={
+                                      isSubmitted || pageSubmitted
+                                        ? "Locked — ROI already submitted"
+                                        : "Edit this section"
+                                    }
+                                    className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition ${
+                                      isSubmitted || pageSubmitted
+                                        ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                                        : "text-amber-700 bg-amber-100 hover:bg-amber-200"
+                                    }`}>
+                                    {editingPage === page.name ? "Loading…" : "✎ Edit"}
+                                  </button>
                                   {!isSubmitted && !pageSubmitted && (
                                     <span className='flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2.5 py-1 rounded-full'>
                                       ✓ Completed
@@ -810,16 +949,14 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 );
               })}
 
-              {/* ── Continue / View-only / Clarification action card ── */}
-              {isSubmitted ? (
+              {/* ── Continue / View-only action card (Rejected & Clarification now shown above) ── */}
+              {isSubmitted && !roiStatus.startsWith("Rejected_by") ? (
                 <div className='rounded-2xl border border-blue-200 bg-blue-50 p-6 flex items-center gap-4'>
                   <span className='text-3xl flex-shrink-0'>🔒</span>
                   <div className='flex-1'>
                     <p className='font-bold text-blue-800'>
                       {roiStatus === "BPM_Requestraised"
                         ? "BPM Request Raised"
-                        : roiStatus.startsWith("Rejected_by")
-                        ? `Rejected by ${roiStatus.replace("Rejected_by", "")}`
                         : roiStatus.startsWith("Approved_by")
                         ? `Approved by ${roiStatus.replace(
                             "Approved_by",
@@ -838,43 +975,24 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     📊 View Final Summary
                   </button>
                 </div>
-              ) : (
+              ) : !isSubmitted && !isClarificationPending ? (
                 <div
                   className={`rounded-2xl border p-6 flex items-center justify-between gap-4 ${
-                    isClarificationPending
-                      ? "bg-amber-50 border-amber-300"
-                      : isAllComplete
+                    isAllComplete
                       ? "bg-green-50 border-green-200"
                       : "bg-indigo-50 border-indigo-200"
                   }`}>
                   <div className='flex-1 min-w-0'>
                     <p className='font-bold text-gray-800'>
-                      {isClarificationPending
-                        ? `💬 Clarification Requested by ${(
-                            selectedRoi?.status ?? ""
-                          ).replace("SK_by", "")}`
-                        : isAllComplete
+                      {isAllComplete
                         ? "🎉 All sections complete"
                         : `📍 Continue from Step ${firstIncompleteStep}`}
                     </p>
                     <p className='text-xs text-gray-500 mt-1'>
-                      {isClarificationPending
-                        ? "Review the remark below and make necessary changes before resubmitting."
-                        : isAllComplete
+                      {isAllComplete
                         ? "Review all filled data and proceed to submit."
                         : "Saved fields are editable — Project Type, History ID & Ref Store are locked."}
                     </p>
-                    {/* Show remark from approval history when clarification is pending */}
-                    {isClarificationPending && selectedRoi?.remarks && (
-                      <div className='mt-3 bg-white rounded-xl border border-amber-200 px-4 py-3'>
-                        <p className='text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1'>
-                          Remark from Approver
-                        </p>
-                        <p className='text-sm text-gray-800 whitespace-pre-wrap'>
-                          {selectedRoi.remarks}
-                        </p>
-                      </div>
-                    )}
                   </div>
                   <button
                     onClick={handleContinue}
@@ -882,22 +1000,18 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     className={`flex-shrink-0 px-6 py-3 rounded-xl font-semibold text-sm shadow transition ${
                       continuing
                         ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : isClarificationPending
-                        ? "bg-amber-500 hover:bg-amber-600 text-white"
                         : isAllComplete
                         ? "bg-green-600 hover:bg-green-700 text-white"
                         : "bg-indigo-600 hover:bg-indigo-700 text-white"
                     }`}>
                     {continuing
                       ? "Loading…"
-                      : isClarificationPending
-                      ? "✏️ Edit & Resubmit"
                       : isAllComplete
                       ? "Review & Submit"
                       : "Continue ROI →"}
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
           )}
         </main>

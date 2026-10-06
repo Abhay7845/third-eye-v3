@@ -22,6 +22,7 @@ const root = ReactDOM.createRoot(document.getElementById("root"));
 const prod_key = process.env.REACT_APP_GOOGLE_KEY_PROD;
 const uat_key = process.env.REACT_APP_GOOGLE_KEY_UAT;
 const GoogleKey = process.env.NODE_ENV === "development" ? uat_key : prod_key;
+// const GoogleKey = uat_key;
 
 const renderApp = () => {
   root.render(

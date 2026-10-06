@@ -1,277 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { BASE_URL } from "./data/baseUrl";
-
-const YEARS = ["Yr 0", "Yr 1", "Yr 2", "Yr 3", "Yr 4", "Yr 5", "Yr 6"];
-
-const r2 = (n) => Math.round((n ?? 0) * 100) / 100;
-// sum all non-null values across Yr0–Yr6
-const sum6y = (vals) => r2((vals ?? []).filter(v => v !== null && v !== undefined).reduce((s, v) => s + (v ?? 0), 0));
-
-// Bisection IRR — guaranteed convergence when sign changes within [-99.99%, 5000%]
-function computeIRR(cashFlows, maxIter = 400, tol = 1e-10) {
-  console.log(cashFlows)
-  if (!cashFlows.length || cashFlows[0] >= 0) return null;
-  const npvAt = (r) =>
-    cashFlows.reduce((s, cf, i) => s + cf / Math.pow(1 + r, i), 0);
-  let lo = -0.9999, hi = 50;
-  // widen or narrow until we bracket a sign change
-  if (npvAt(lo) * npvAt(hi) > 0) {
-    hi = 5;
-    if (npvAt(lo) * npvAt(hi) > 0) return null;
-  }
-  for (let i = 0; i < maxIter; i++) {
-    const mid = (lo + hi) / 2;
-    const midNpv = npvAt(mid);
-    if (Math.abs(midNpv) < tol || hi - lo < tol) return r2(mid * 100);
-    if (npvAt(lo) * midNpv <= 0) hi = mid;
-    else lo = mid;
-  }
-  return r2(((lo + hi) / 2) * 100);
-}
-
-function parseApiRows(rows, opts = {}) {
-  if (!rows?.length) return null;
-  const by = {};
-  rows.forEach((r) => {
-    by[r.Particulars] = r;
-  });
-
-  const yrs = (name) => {
-    const r = by[name];
-    if (!r) return [0, 0, 0, 0, 0, 0, 0];
-    return [
-      r.Yr0 ?? 0,
-      r.Yr1 ?? 0,
-      r.Yr2 ?? 0,
-      r.Yr3 ?? 0,
-      r.Yr4 ?? 0,
-      r.Yr5 ?? 0,
-      r.Yr6 ?? 0,
-    ];
-  };
-  const scalar = (name) => parseFloat(by[name]?.Header) || 0;
-
-  // Expense-side values come from expense planning (stored in Rupees).
-  // Sales-side values (UCP Sales, Gross earnings) come from sales planning (stored in Lakhs).
-  // Normalise expenses to Lakhs so EBITDA / PBT / IRR use consistent units.
-  const LAKH = 100_000;
-  const toLakh = (arr) => arr.map((v) => (v !== null ? r2((v ?? 0) / LAKH) : null));
-
-  const gross = yrs("Gross earnings/Commission"); // already in Lakhs
-  const ucpSales = yrs("UCP Sales");
-  const customerDiscount = yrs("Customer Discount");
-
-
-  // NSV: prefer the API row, fall back to UCP − Customer Discount
-  const nsvFromApi = yrs("NSV Sales");
-  const nsvSales = nsvFromApi.some((v, i) => i > 0 && (v ?? 0) > 0)
-    ? nsvFromApi
-    : [null, ...ucpSales.slice(1).map((u, i) => r2((u ?? 0) - (customerDiscount[i + 1] ?? 0)))];
-
-  const stockTotal = yrs("Stock_Total")
-  const bgCost = YEARS.map((_, i) => {
-    if ((by["ROI New Store"]?.Header ?? "") === "L2" || (by["ROI New Store"]?.Header ?? "") === "L4") {
-      return (stockTotal[i] * 0.2 * (0.75 / 100))
-    }
-    else return 0
-  })
-
-  // Build expense line items first — totExp is derived from these
-  const expenses = [
-    { label: "Rent", values: toLakh(yrs("Rent")) },
-    { label: "Staff Salaries", values: toLakh(yrs("Staff Salaries")) },
-    { label: "Security & Housekeeping", values: toLakh(yrs("Security & Housekeeping")) },
-    { label: "Electricity", values: toLakh(yrs("Electricity")) },
-    { label: "Repairs & Maintenance", values: toLakh(yrs("Repairs & Maintenance")) },
-    { label: "Insurance", values: toLakh(yrs("Insurance")) },
-    { label: "BTL", values: toLakh(yrs("BTL")) },
-    { label: "Travel & Conveyance", values: toLakh(yrs("Travel & Conveyance")) },
-    { label: "Telephone / Internet", values: toLakh(yrs("Telephone/Internet")) },
-    { label: "Credit Card Commission", values: toLakh(yrs("Credit Card Commission")) },
-    { label: "GST (primarily rental)", values: toLakh(yrs("GST (primarily rental)")) },
-    { label: "Store \u2014 Printing / Pantry etc", values: toLakh(yrs("Store - Printing/Pantry etc")) },
-    { label: "Consumables, Safety, Cust Exp", values: toLakh(yrs("Consumables, Safety, Cust experience")) },
-    { label: "Other \u2014 Staff welfare/Uniforms", values: toLakh(yrs("Other - Staff welfare/Uniforms etc")) },
-    { label: "BG cost", values: bgCost },
-    { label: "Regn Charges / Temp Store Cost", values: toLakh(yrs("Registeration Charges/Temporary Store Cost")) },
-  ];
-
-  // Total expenses — Excel formula:
-  // L2.5 → 0; Yr0 = Elec×20% + Staff×20% + Insurance×30% + RegnCharges_Yr0; Yr1–6 = Σ all items
-  const isL2_5 = (by["ROI New Store"]?.Header ?? "") === "L2.5";
-  const _elec = expenses.find(e => e.label === "Electricity")?.values ?? Array(7).fill(0);
-  const _staff = expenses.find(e => e.label === "Staff Salaries")?.values ?? Array(7).fill(0);
-  const _ins = expenses.find(e => e.label === "Insurance")?.values ?? Array(7).fill(0);
-  const _regn = expenses.find(e => e.label === "Regn Charges / Temp Store Cost")?.values ?? Array(7).fill(0);
-  const totExp = Array.from({ length: 7 }, (_, i) => {
-    if (isL2_5) return i === 0 ? null : 0;
-    if (i === 0) return r2((_elec[1] ?? 0) * 0.2 + (_staff[1] ?? 0) * 0.2 + (_ins[1] ?? 0) * 0.3 + (_regn[0] ?? 0));
-    return r2(expenses.reduce((s, e) => s + (e.values[i] ?? 0), 0));
-  });
-  const storeInteriors = toLakh(yrs("Store Interiors value on Set Up"))[0]; // Rupees → Lakhs
-  const ebitda = [
-    null,
-    ...Array.from({ length: 6 }, (_, i) =>
-      r2((gross[i + 1] ?? 0) - (totExp[i + 1] ?? 0)),
-    ),
-  ];
-
-  const deprn = Array(7).fill(0);
-
-  const cummDepIncYr = YEARS?.map((_, i) => {
-    if (i === 0) return 0;
-    if (i === 1) {
-      deprn.fill(storeInteriors * 0.2, 1, 6);
-      return (storeInteriors * 0.2)
-    };
-    if (i === 2) return deprn[2] + (storeInteriors * 0.2);
-    if (i === 3) return deprn[3] + (deprn[2] + (storeInteriors * 0.2));
-    if (i === 4) return deprn[4] + (deprn[3] + deprn[2] + (storeInteriors * 0.2));
-    if (i === 5) return deprn[5] + (deprn[4] + deprn[3] + deprn[2] + (storeInteriors * 0.2));
-    if (i === 6) return deprn[6] + (deprn[5] + deprn[4] + deprn[3] + deprn[2] + (storeInteriors * 0.2));
-  })
-
-  const pbt = [...ebitda.map((e, i) => r2((e ?? 0) - deprn[i]))];
-
-  const currentValueOfInteriors = Array(7).fill(0)
-  currentValueOfInteriors[0] = storeInteriors - deprn[0];
-  for (let i = 1; i <= 6; i++) {
-    currentValueOfInteriors[i] = currentValueOfInteriors[i - 1] - deprn[i]
-  }
-
-  const workingCapital_atRate_1per = YEARS.map((_, i) => {
-    if ((by["ROI New Store"]?.Header ?? "") === "L2.5" || (by["ROI New Store"]?.Header ?? "") === "L3") {
-      return (stockTotal[i] + (ucpSales[i] * 0.01) / 12)
-    }
-    else return (ucpSales[i] * 0.01) / 12
-  })
-
-  const secDep = toLakh(yrs("Security Deposit"));
-  const totalInv = YEARS.map((_, i) => {
-    return r2(workingCapital_atRate_1per[i] + currentValueOfInteriors[i] + secDep[i])
-  });
-
-  // Capital expenditure
-  const calCapex = Array(7).fill(0);
-  calCapex[0] = -currentValueOfInteriors[0];
-  calCapex[6] = calCapex[0] + calCapex[0] * 0.05;
-
-  // Sigin
-  const calSigningFee = Array(7).fill(0)
-  calSigningFee[0] = (by["ROI New Store"]?.Header ?? "") === "L1" ? 0 : -10;
-
-  const calAdvanceRent = Array(7).fill(0)
-  calAdvanceRent[0] = secDep[0]
-  for (let i = 0; i <= 5; i++) {
-    calAdvanceRent[6] = calAdvanceRent[6] + calAdvanceRent[i]
-  }
-
-  // Working Capital cash outflow
-  const calIncWorkingCapitalCashOutflow = Array(7).fill(0)
-  // Formula : Yr0
-  calIncWorkingCapitalCashOutflow[0] = -workingCapital_atRate_1per[1];
-  // Formula : Yr 1 -> Yr 5 => (workingCap[currYr] - workingCap[nextYr])
-  for (let i = 1; i <= 5; i++) {
-    calIncWorkingCapitalCashOutflow[i] = (workingCapital_atRate_1per[i] - workingCapital_atRate_1per[i + 1])
-  }
-  // Formula : Yr 6 => sum of Yr0 till Yr5
-  calIncWorkingCapitalCashOutflow[6] = calIncWorkingCapitalCashOutflow.slice(0, 5).reduce((sum, val) => (sum + val), 0);
-
-  // Net Cash Flow
-  const calCapexTotal = Array(7).fill(0)
-  for (let i = 0; i <= 6; i++) {
-    calCapexTotal[i] = calCapex[i] + calSigningFee[i] + calAdvanceRent[i] + calIncWorkingCapitalCashOutflow[i] + ebitda[i]
-  }
-
-  // ROI %
-  const roiPct = Array(7).fill(0)
-  for (let i = 1; i <= 5; i++) {
-    roiPct[i] = ebitda[i] / (-calCapexTotal[i] - (roiPct[i - 1] / 2))
-  }
-  roiPct[6] = (ebitda[6] + calCapex[6] + calSigningFee[6] + calAdvanceRent[6]) / (-(calCapexTotal.slice(0, 5).reduce((s, v) => s + v, 0)))
-
-  const pbtYrs = pbt.slice(1).map((v) => v ?? 0);
-  const grossYrs = gross.slice(1).map((v) => v ?? 0);
-
-
-  // Rent / Revenue (5yr) — both sides must be in Lakhs
-  const rentR = by["Rent"];
-  const rent5 = rentR
-    ? [rentR.Yr1, rentR.Yr2, rentR.Yr3, rentR.Yr4, rentR.Yr5].reduce((s, v) => s + v, 0) : 0;
-  const rev5 = ucpSales.slice(0, 6).reduce((s, v) => s + v, 0);
-  const rentRev5 = rev5 > 0 ? r2(((rent5 / 100000) / rev5) * 100) : null;
-
-  // Rev per sqft — requires retailArea passed via opts
-  const retailArea = opts.retailArea ?? 0;
-  const totalUCP = ucpSales.slice(0, 7).reduce((s, v) => s + v, 0);
-  const revPerSqft = retailArea > 0 ? (totalUCP / (retailArea * 6)) : 0;
-
-  // Revenue CAGR Yr1 → Yr6
-  const cagr = ucpSales[1] > 0 && ucpSales[6] > 0 ? r2((Math.pow(ucpSales[6] / ucpSales[1], 0.2) - 1) * 100) : null;
-
-  // Payout % (5 yr)
-  const grossEarning5 = gross.slice(0, 6).reduce((s, v) => s + v, 0);
-  const grossUCPSales5 = ucpSales.slice(0, 6).reduce((s, v) => s + v, 0);
-  const payOutPer = (grossEarning5 / grossUCPSales5) * 100
-
-  // IRR
-  const hasPositive = calCapexTotal.some(v => v > 0);
-  const hasNegative = calCapexTotal.some(v => v < 0);
-  const irr = (hasPositive & hasNegative) > 0 ? computeIRR(calCapexTotal) : null;
-
-  // NPV @ 11%
-  let npv = calCapexTotal[0] + calCapexTotal.slice(1).reduce((sum, cf, i) => sum + cf / Math.pow(1.11, i + 1), 0)
-
-  // Payback period
-  const calculatePaybackPeriod = (initialCapex,cashFlows)=>{
-    const investment = Math.abs(initialCapex)
-    let cummulativeCashFlow = 0
-    for( let i = 0;i<cashFlows.length;i++){
-      cummulativeCashFlow += cashFlows[i];
-      if(cummulativeCashFlow >= investment) return i+1
-    }
-    return 6
-  }
-
-  const payback = calculatePaybackPeriod(calCapex[0],calCapexTotal.slice(1));
-
-  return {
-    roiType: by["ROI New Store"]?.Header ?? "0.0",
-    cityName: by["City Name"]?.Header ?? "0.0",
-    ucpSales,
-    customerDiscount,
-    nsvSales,
-    grossEarnings: gross,
-    totalExpenses: totExp,
-    expenses,
-    ebitda,
-    depreciation: deprn,
-    pbt,
-    roiPct,
-    storeInteriors,
-    totalInvestment: totalInv,
-    cumDeprn: cummDepIncYr,
-    currentInteriors: currentValueOfInteriors,
-    workingCapital: workingCapital_atRate_1per,
-    securityDeposit: secDep,
-    capex: calCapex,
-    signingFee: calSigningFee,
-    advRent: calAdvanceRent,
-    cashOutflow: calIncWorkingCapitalCashOutflow,
-    capexTotal: calCapexTotal,
-    kpis: {
-      rentRevenue5yr: rentRev5,
-      revPerSqft,
-      revenueCAGR: cagr,
-      payout5yr: payOutPer,
-      irr,
-      npv,
-      paybackCapex: payback,
-    },
-    hasNegative,
-    hasPositive,
-  };
-}
+import RoiPdfReport from "./RoiPdfReport";
+import { YEARS, r2, sum6y, fmt, fmtPct, parseApiRows } from "./roiFinancialSummary";
 
 function buildSubmitPayload(d) {
   const row = (particulars, vals, header) => {
@@ -337,19 +68,6 @@ function buildSubmitPayload(d) {
     },
   ];
 }
-
-// ─── Formatters ───────────────────────────────────────────────────────────────
-const fmt = (n) => {
-  if (n === null || n === undefined) return "0.0";
-  if (n === 0) return " - ";
-  const abs = Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return n < 0 ? `(${abs})` : abs;
-};
-
-const fmtPct = (n, decimals = 1) => {
-  if (n === null || n === undefined) return "0.0";
-  return `${Number(n).toFixed(decimals)}%`;
-};
 
 // ─── Cell component ───────────────────────────────────────────────────────────
 function Num({ v, bold = false, highlight = false }) {
@@ -446,6 +164,7 @@ function KpiCard({ label, value, sub, color = "indigo" }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
+  const userLog = useSelector((state) => state?.user?.user);
   const [expExpanded, setExpExpanded] = useState(true);
   const [invExpanded, setInvExpanded] = useState(false);
   const [cashExpanded, setCashExpanded] = useState(false);
@@ -454,78 +173,19 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
-  const [showPdf, setShowPdf] = useState(false);
+  const [pdfViewed, setPdfViewed] = useState(false);
 
   const isNewStore = roiContext?.projectType === "New Store";
   const historyId = roiContext?.historyId;
 
-  // ─── Inline PDF modal (only for New Store) ──────────────────────────────
-  function NewStorePDFModal({ onClose }) {
-    const [pdfUrl, setPdfUrl] = useState(null);
-    const [pdLoading, setPdLoading] = useState(true);
-    const [pdErr, setPdErr] = useState(null);
-    useEffect(() => {
-      if (!historyId) return;
-      (async () => {
-        try {
-          const res = await fetch(`https://d6oojw29okpcs.cloudfront.net/ThirdEye//history/${encodeURIComponent(historyId).replace(' ', '_')}`);
-          if (!res.ok) throw new Error("Failed to fetch history details.");
-          const json = await res.json();
-          const d = json.data?.[0] ?? {};
-          const url = d.pdf_url ?? d.document_url ?? d.pdf_link ?? d.file_url ??
-            Object.values(d).find(v =>
-              typeof v === "string" && v.startsWith("http") &&
-              (v.includes(".pdf") || v.includes("blob") || v.includes("drive") || v.includes("/document"))
-            ) ?? null;
-          if (!url) setPdErr("No PDF document is linked to this History ID.");
-          setPdfUrl(url);
-        } catch (e) {
-          setPdErr(e.message);
-        } finally {
-          setPdLoading(false);
-        }
-      })();
-    }, []);
-    return (
-      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-700 to-indigo-600 px-6 py-4 shrink-0 flex items-center justify-between">
-            <div>
-              <h3 className="text-white font-bold text-lg">📄 New Store Document</h3>
-              <p className="text-blue-200 text-xs mt-0.5">History ID: {historyId}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              {pdfUrl && (
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer"
-                  className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold rounded-lg transition">
-                  ↗ Open in new tab
-                </a>
-              )}
-              <button onClick={onClose}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 text-white text-xl font-bold transition">
-                ×
-              </button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            {pdLoading ? (
-              <div className="flex items-center justify-center h-full gap-3">
-                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-                <p className="text-slate-400 text-sm">Loading document…</p>
-              </div>
-            ) : pdErr ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
-                <span className="text-4xl">📭</span>
-                <p className="text-sm">{pdErr}</p>
-              </div>
-            ) : (
-              <iframe src={pdfUrl} className="w-full h-full" title="New Store Document" />
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // The CloudFront URL redirects straight to the PDF, so it can be opened directly in a new tab.
+  const pdfUrl = historyId
+    ? `https://d6oojw29okpcs.cloudfront.net/ThirdEye/${historyId.replace(/ /g, '_')}.pdf`
+    : null;
+  const handleViewPdf = () => {
+    window.open(pdfUrl, "_blank", "noopener,noreferrer");
+    setPdfViewed(true);
+  };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -542,14 +202,20 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
         if (!res.ok) throw new Error("Failed to load summary data.");
         const json = await res.json();
         const retailArea = parseFloat(roiContext?.historyRetailArea || roiContext?.existingRetailArea) || 0;
+        // Stock figures (used for BG cost / working capital) live in Sales
+        // Planning screen 4 ("view_sales_planning_stock_summary_phase_2") —
+        // screen 3 is Pricing Metrics only and has no Stock_* rows at all.
+        // "Stock_UCP_Total" (₹ Lakhs) is the only combined-stock header that
+        // actually exists there (there's no plain "Stock_Total").
         const res2 = await fetch(`${BASE_URL}/sales_planning`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ screen: 3, roiid }),
+          body: JSON.stringify({ screen: 4, roiid }),
         });
-        if (!res.ok) throw new Error("Failed to load Stock data.");
+        if (!res2.ok) throw new Error("Failed to load Stock data.");
         const json2 = await res2.json();
-        let stockTotal = json2?.data.filter((it) => it.Header === 'Stock_Total')
+        let stockTotal = json2?.data?.filter((it) => it.Header === 'Stock_UCP_Total') ?? [];
+        if (!stockTotal.length) throw new Error("Stock Summary data not found for this ROI. Please complete Sales Planning first.");
         stockTotal[0].Yr0 = 0
         stockTotal[0].Particulars = stockTotal[0].Header
         stockTotal[0].Header = ''
@@ -571,24 +237,67 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
   const storeFormat = d?.roiType ?? "";
   const irr = d?.kpis?.irr;
   const payback = d?.kpis?.paybackCapex;
+
+  // Reusable tip sets, derived from how EBITDA / Net Cash Flow / IRR / Payback
+  // are actually built above (EBITDA = Gross Earnings − Total Expenses; Net
+  // Cash Flow = Capex + Signing Fee + Advance Rent + Working-Capital outflow
+  // + EBITDA; Payback compares cumulative Net Cash Flow to the Yr0 Capex only).
+  const IRR_GENERAL_TIPS = [
+    "Raise Gross Earnings/Commission relative to UCP Sales (the payout %) — it flows straight into EBITDA every year.",
+    "Trim controllable running costs (Rent, Staff Salaries, Electricity, Repairs & Maintenance) — every rupee saved adds directly to EBITDA.",
+    "Lower the Yr0 Store Interiors CAPEX — IRR is most sensitive to this single upfront outflow.",
+    "Negotiate a lower Signing Fee / Security Deposit (Advance Rent) to shrink the Yr0 cash outflow.",
+  ];
+  const STOCK_TIP_BY_FORMAT = {
+    L2: "Reduce average Stock holding — BG Cost for L2/L4 (20% × Stock × 0.75%) is a recurring expense that eats directly into EBITDA.",
+    L4: "Reduce average Stock holding — BG Cost for L2/L4 (20% × Stock × 0.75%) is a recurring expense that eats directly into EBITDA.",
+    L3: "Reduce average Stock holding — for L3/L2.5 formats, Stock is added directly into Working Capital, increasing Total Investment and the Yr0 cash outflow.",
+    "L2.5": "Reduce average Stock holding — for L3/L2.5 formats, Stock is added directly into Working Capital, increasing Total Investment and the Yr0 cash outflow.",
+  };
+  const PAYBACK_TIPS = [
+    "Payback is measured only against the Yr0 Capex (Store Interiors) — reducing that investment shortens payback fastest.",
+    "Front-load revenue: higher UCP Sales / Gross Earnings in Yr1–Yr2 recovers the Capex sooner.",
+    "Cut Yr1–Yr2 expenses so more of the EBITDA converts into cumulative cash flow in those early years.",
+  ];
+
   const validationWarnings = d ? (() => {
     const w = [];
+    const stockTip = STOCK_TIP_BY_FORMAT[storeFormat];
+    const irrTips = stockTip ? [...IRR_GENERAL_TIPS, stockTip] : IRR_GENERAL_TIPS;
+
     if (storeFormat === "L1" && irr !== null && irr < 17.95)
-      w.push("The IRR is very low for an L1 Store. Please tweak the projections to improve the IRR to minimum 18%.");
+      w.push({ message: "The IRR is very low for an L1 Store. Please tweak the projections to improve the IRR to minimum 18%.", tips: irrTips });
     if ((storeFormat === "L2" || storeFormat === "L4") && irr !== null && irr < 15)
-      w.push("The IRR is very low for an L2/L4 Store. Please tweak the projections to improve the IRR to minimum 16%.");
+      w.push({ message: "The IRR is very low for an L2/L4 Store. Please tweak the projections to improve the IRR to minimum 16%.", tips: irrTips });
     if (storeFormat === "L3" && irr !== null && irr < 11.95)
-      w.push("The IRR is very low for an L3 Store. Please tweak the projections to improve the IRR to minimum 12%.");
+      w.push({ message: "The IRR is very low for an L3 Store. Please tweak the projections to improve the IRR to minimum 12%.", tips: irrTips });
     if (storeFormat === "L2.5" && irr !== null && irr < 11.75)
-      w.push("The IRR is very low for an L2.5 Store. Please tweak the projections to improve the IRR to minimum 12%.");
+      w.push({ message: "The IRR is very low for an L2.5 Store. Please tweak the projections to improve the IRR to minimum 12%.", tips: irrTips });
     if (storeFormat === "L1" && payback !== null && payback > 4)
-      w.push("The CAPEX Payback period is very high for an L1 Store. Please rework the projections.");
+      w.push({ message: "The CAPEX Payback period is very high for an L1 Store. Please rework the projections.", tips: PAYBACK_TIPS });
     if (storeFormat !== "L1" && storeFormat !== "" && payback !== null && payback > 5)
-      w.push("The CAPEX Payback period is very high for the Store. Please rework the projections.");
-    if(!d.hasNegative & irr === null)
-      w.push("IRR cannot be calculated Please make sure an intial investment is neagtive")
-    if(!d.hasPositive & irr === null)
-      w.push("IRR cannot be calculated Please make sure at least one future ccash flow/return is positive")
+      w.push({ message: "The CAPEX Payback period is very high for the Store. Please rework the projections.", tips: PAYBACK_TIPS });
+    if (!d.hasNegative && irr === null)
+      w.push({
+        message: "IRR cannot be calculated. Please make sure an initial investment is negative.",
+        tips: [
+          "The Net Cash Flow (\"Total\") row shows no negative year at all — check Store Interiors value, Signing Fee and Security Deposit are entered correctly.",
+          "Without a genuine Yr0 investment outflow, there's no cost of capital to recover and IRR cannot be solved.",
+        ],
+      });
+    if (!d.hasPositive && irr === null)
+      w.push({
+        message: "IRR cannot be calculated. Please make sure at least one future cash flow/return is positive.",
+        tips: [
+          "The Net Cash Flow (\"Total\") row is negative or zero in every year — check that UCP Sales, Gross Earnings and Expense inputs are complete and realistic.",
+          "EBITDA must outweigh the Capex/Working-Capital outflows in at least one year for IRR to exist.",
+        ],
+      });
+    if (isNewStore && historyId && !pdfViewed)
+      w.push({
+        message: "Please view the New Store document before submitting.",
+        tips: ["Click \"📄 View New Store PDF\" above and review the linked document before submitting for approval."],
+      });
     return w;
   })() : [];
   const canSubmit = validationWarnings.length === 0;
@@ -606,9 +315,22 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
         }),
       });
       if (!saveRes.ok) throw new Error("Failed to save summary.");
+      // Send actor/context so the backend can resolve the approval chain and
+      // actually trigger the RBM notification email (it previously posted an
+      // empty body, so the chain lookup — and the email — silently failed).
       const statusRes = await fetch(
         `${BASE_URL}/roi/submit/${roiContext.roiId}`,
-        { method: "POST" },
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            actor_email: userLog?.email ?? "",
+            channel: userLog?.channel ?? "Tanishq",
+            store_format: roiContext?.effectiveStoreFormat ?? roiContext?.existingStoreFormat ?? "",
+            project_type: roiContext?.projectType ?? "",
+            region: roiContext?.region ?? "",
+          }),
+        },
       );
       if (!statusRes.ok) throw new Error("Failed to update status.");
       setSubmitted(true);
@@ -661,17 +383,42 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
             </p>
           </div>
         )}
-        <button
-          onClick={onHome}
-          className='mt-8 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm shadow-lg transition'>
-          ← Back to Main Page
-        </button>
+        <div className='flex flex-wrap items-center justify-center gap-3 mt-8'>
+          {/* Only shown once the ROI has actually been submitted for approval */}
+          <RoiPdfReport roiid={roiContext?.roiId} />
+          <button
+            onClick={onHome}
+            className='px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm shadow-lg transition'>
+            ← Back to Main Page
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className='p-6 bg-gradient-to-br from-slate-50 to-indigo-50 min-h-screen space-y-6'>
+      {/* Validation warnings — repeated here (top) so they're seen immediately on landing */}
+      {validationWarnings.length > 0 && (
+        <div className='bg-red-50 border border-red-300 rounded-2xl px-6 py-4 space-y-4'>
+          <p className='text-xs font-bold text-red-700 uppercase tracking-wide mb-1'>⚠ Cannot Submit — Please resolve the following issues:</p>
+          {validationWarnings.map((item, i) => (
+            <div key={i}>
+              <div className='flex items-start gap-2 text-sm text-red-700 font-semibold'>
+                <span className='mt-0.5 flex-shrink-0'>•</span>
+                <span>{item.message}</span>
+              </div>
+              {item.tips?.length > 0 && (
+                <ul className='mt-1.5 ml-6 space-y-1 list-disc marker:text-red-400'>
+                  {item.tips.map((tip, ti) => (
+                    <li key={ti} className='text-xs text-red-600'>{tip}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       {/* ── Completion banner ──────────────────────────────────────────────── */}
       <div className='bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl px-8 py-6 flex items-center justify-between shadow-lg'>
         <div className='flex items-center gap-4'>
@@ -685,16 +432,18 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
             </p>
           </div>
         </div>
-        {roiContext?.roiId && (
-          <div className='bg-white/20 rounded-xl px-5 py-3 text-right'>
-            <p className='text-white/70 text-xs font-semibold uppercase tracking-widest'>
-              ROI ID
-            </p>
-            <p className='text-white font-extrabold text-lg font-mono tracking-widest'>
-              {roiContext.roiId}
-            </p>
-          </div>
-        )}
+        <div className='flex items-center gap-3'>
+          {roiContext?.roiId && (
+            <div className='bg-white/20 rounded-xl px-5 py-3 text-right'>
+              <p className='text-white/70 text-xs font-semibold uppercase tracking-widest'>
+                ROI ID
+              </p>
+              <p className='text-white font-extrabold text-lg font-mono tracking-widest'>
+                {roiContext.roiId}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Context info strip ────────────────────────────────────────────── */}
@@ -1090,12 +839,21 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
       {/* ── Action bar ────────────────────────────────────────────────────── */}
       {/* Validation warnings — shown above submit when thresholds fail */}
       {validationWarnings.length > 0 && (
-        <div className='bg-red-50 border border-red-300 rounded-2xl px-6 py-4 space-y-2'>
+        <div className='bg-red-50 border border-red-300 rounded-2xl px-6 py-4 space-y-4'>
           <p className='text-xs font-bold text-red-700 uppercase tracking-wide mb-1'>⚠ Cannot Submit — Please resolve the following issues:</p>
-          {validationWarnings.map((msg, i) => (
-            <div key={i} className='flex items-start gap-2 text-sm text-red-700'>
-              <span className='mt-0.5 flex-shrink-0'>•</span>
-              <span>{msg}</span>
+          {validationWarnings.map((item, i) => (
+            <div key={i}>
+              <div className='flex items-start gap-2 text-sm text-red-700 font-semibold'>
+                <span className='mt-0.5 flex-shrink-0'>•</span>
+                <span>{item.message}</span>
+              </div>
+              {item.tips?.length > 0 && (
+                <ul className='mt-1.5 ml-6 space-y-1 list-disc marker:text-red-400'>
+                  {item.tips.map((tip, ti) => (
+                    <li key={ti} className='text-xs text-red-600'>{tip}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
         </div>
@@ -1105,15 +863,15 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
           <p className='text-xs text-gray-400 hidden sm:block'>
             All sections are complete. Submit your ROI request for approval.
           </p>
-          {/* PDF button for New Store — shown only on the Summary page */}
-          {/* {isNewStore && historyId && (
+          {/* PDF button for New Store — shown only on the Summary page; must be opened once before submit is allowed */}
+          {isNewStore && historyId && (
             <button
               type='button'
-              onClick={() => setShowPdf(true)}
-              className='px-5 py-3 rounded-xl font-bold text-sm shadow-lg transition bg-blue-600 hover:bg-blue-700 text-white'>
-              📄 View New Store PDF
+              onClick={handleViewPdf}
+              className={`px-5 py-3 rounded-xl font-bold text-sm shadow-lg transition text-white ${pdfViewed ? "bg-blue-500/70 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"}`}>
+              {pdfViewed ? "📄 View New Store PDF ✓" : "📄 View New Store PDF"}
             </button>
-          )} */}
+          )}
           <button
             type='button'
             onClick={handleSubmit}
@@ -1126,8 +884,6 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
           </button>
         </div>
       </div>
-      {/* PDF modal */}
-      {showPdf && <NewStorePDFModal onClose={() => setShowPdf(false)} />}
     </div>
   );
 }

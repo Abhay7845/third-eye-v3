@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Input, Select } from "../FormControl";
 import { BASE_URL } from "./data/baseUrl";
@@ -46,7 +46,7 @@ const Section = ({
   </div>
 );
 
-export default function BasicStoreDetails({ onNext }) {
+export default function BasicStoreDetails({ onNext, roiContext }) {
   const {
     control,
     register,
@@ -87,11 +87,27 @@ export default function BasicStoreDetails({ onNext }) {
   const [savedSummary, setSavedSummary] = useState(null);
   const [storeFound, setStoreFound] = useState(false);
   const [franchiseeFound, setFranchiseeFound] = useState(false);
+  // Tracks which franchisee score fields were populated from the DB (fetch or
+  // saved-record load) so they lock independent of what the user types in —
+  // previously disabled was derived from the field's own live value, which
+  // locked the field after the very first character typed manually.
+  const [scoreFieldsLocked, setScoreFieldsLocked] = useState({
+    baiatScore: false,
+    partnerDbStatus: false,
+    partnerScore: false,
+  });
   const [storeFormats, setStoreFormats] = useState([]);
   const [projectTypes, setProjectTypes] = useState([]);
   const [historyIds, setHistoryIds] = useState([]);
   const [btqStores, setBtqStores] = useState([]);
   const [refStoreCode, setRefStoreCode] = useState("");
+  const [isEditingLocked, setIsEditingLocked] = useState(false);
+  const [isLoadingExisting, setIsLoadingExisting] = useState(false);
+  // Consumed once by the corresponding destructive reset effect so that
+  // programmatic prefill (editing an existing ROI) doesn't immediately wipe
+  // the very values it just set.
+  const skipProjectTypeResetRef = useRef(false);
+  const skipFranchiseeResetRef = useRef(false);
   const [expandedSections, setExpandedSections] = useState({
     projectType: true,
     location: false,
@@ -212,6 +228,10 @@ export default function BasicStoreDetails({ onNext }) {
 
   // ── Reset on project type change ────────────────────────────────────────────
   useEffect(() => {
+    if (skipProjectTypeResetRef.current) {
+      skipProjectTypeResetRef.current = false;
+      return;
+    }
     if (selectedProjectType) {
       [
         "historyId",
@@ -316,7 +336,12 @@ export default function BasicStoreDetails({ onNext }) {
 
   // Reset franchisee fields when franchisee store code changes
   useEffect(() => {
+    if (skipFranchiseeResetRef.current) {
+      skipFranchiseeResetRef.current = false;
+      return;
+    }
     setFranchiseeFound(false);
+    setScoreFieldsLocked({ baiatScore: false, partnerDbStatus: false, partnerScore: false });
     setValue("franchiseeStoreName", "");
     setValue("baiatScore", "");
     setValue("partnerDbStatus", "");
@@ -402,6 +427,7 @@ export default function BasicStoreDetails({ onNext }) {
       const res = await fetch(`${BASE_URL}/store/${franchiseeStoreCode}`);
       if (!res.ok) {
         setFranchiseeFound(false);
+        setScoreFieldsLocked({ baiatScore: false, partnerDbStatus: false, partnerScore: false });
         setValue("franchiseeStoreName", "");
         setValue("baiatScore", "");
         setValue("partnerDbStatus", "");
@@ -416,6 +442,11 @@ export default function BasicStoreDetails({ onNext }) {
       setValue("baiatScore", data[0]?.baiat_score ?? "");
       setValue("partnerDbStatus", data[0]?.partner_db_status ?? "");
       setValue("partnerScore", data[0]?.partner_score ?? "");
+      setScoreFieldsLocked({
+        baiatScore: !!data[0]?.baiat_score,
+        partnerDbStatus: !!data[0]?.partner_db_status,
+        partnerScore: !!data[0]?.partner_score,
+      });
     } catch (error) {
       console.error(error);
       setFranchiseeFound(false);
@@ -425,11 +456,85 @@ export default function BasicStoreDetails({ onNext }) {
     }
   };
 
+  // Loads the already-saved Screen 1 record and switches into the editable
+  // form — Project Type/History ID (New Store) or Store Code (other types)
+  // stay disabled below since they define the ROI and can't change.
+  const startEditingExisting = async () => {
+    if (!roiContext?.roiId) return;
+    setIsLoadingExisting(true);
+    try {
+      const res = await fetch(
+        `${BASE_URL}/fetchScreen?parameter=roi_basic_store_details&roiid=${roiContext.roiId}`,
+      );
+      if (!res.ok) {
+        alert("Failed to load saved store details.");
+        return;
+      }
+      const json = await res.json();
+      const d = json?.data?.[0];
+      if (!d) {
+        alert("No saved store details found for this ROI.");
+        return;
+      }
+
+      skipProjectTypeResetRef.current = true;
+      skipFranchiseeResetRef.current = true;
+
+      const pType = d.project_type ?? d.projectType ?? roiContext.projectType ?? "";
+      setValue("projectType", pType);
+      if (pType === "New Store") {
+        setValue("historyId", d.TY_historyID ?? d.ty_history_id ?? d.history_id ?? roiContext.historyId ?? "");
+      } else {
+        setValue("existingStoreCode", d.exsisting_store_code ?? d.existing_store_code ?? roiContext.existingStoreCode ?? "");
+      }
+      setValue("existingStoreFormat", d.exsisting_store_format ?? d.existing_store_format ?? "");
+      setValue("storeFormatChange", d.store_format_change ?? "");
+      setValue("newStoreFormat", d.new_store_format ?? "");
+      setValue("newFranchise", d.new_franchise ?? "");
+      setValue("newFranchiseeStoreName", d.new_franchisee_storename ?? d.new_franchisee_store_name ?? "");
+      setValue("newFranchiseeStoreCode", d.new_franchisee_storecode ?? d.new_franchisee_store_code ?? "");
+      setValue("franchiseeStoreCode", d.existing_franchisee_store_code ?? d.franchisee_store_code ?? "");
+      setValue("franchiseeStoreName", d.existing_franchisee_store_name ?? d.franchisee_store_name ?? "");
+      setValue("baiatScore", d.franchisee_ba_iat_score != null ? String(d.franchisee_ba_iat_score) : "");
+      // Saved as "1"/"0" (see onSubmitBasicDetails) — map back to the Yes/No select options.
+      const dbStatusRaw = d.partner_db_status;
+      setValue(
+        "partnerDbStatus",
+        String(dbStatusRaw) === "1" ? "Yes" : String(dbStatusRaw) === "0" ? "No" : dbStatusRaw ?? "",
+      );
+      setValue("partnerScore", d.partner_score != null ? String(d.partner_score) : "");
+      setValue("retailArea", d.retail_area != null ? String(d.retail_area) : d.retailArea != null ? String(d.retailArea) : "");
+
+      setFranchiseeFound(!!(d.existing_franchisee_store_code || d.franchisee_store_code));
+      setScoreFieldsLocked({
+        baiatScore: d.franchisee_ba_iat_score != null && d.franchisee_ba_iat_score !== "",
+        partnerDbStatus: !!d.partner_db_status,
+        partnerScore: d.partner_score != null && d.partner_score !== "",
+      });
+      setExpandedSections({ projectType: true, location: true, storeFormat: true, franchise: true });
+      setIsEditingLocked(true);
+    } catch (e) {
+      console.error("Failed to load existing store details for edit:", e);
+      alert("Failed to load saved store details.");
+    } finally {
+      setIsLoadingExisting(false);
+    }
+  };
+
+  // Clamps a score to the 0-100 range, defaulting invalid/empty input to 0.
+  const clampScore = (val) => {
+    const num = Number(val);
+    if (val === "" || val == null || Number.isNaN(num)) return 0;
+    return Math.min(Math.max(num, 0), 100);
+  };
+
   const onSubmitBasicDetails = async (data) => {
     const username = userLog?.name;
     try {
+      const isPartnerDbDone = data.partnerDbStatus === "Yes";
       const payload = {
         username: username,
+        roiid: roiContext?.roiId || undefined,
         projectType: data.projectType,
         historyId: data.historyId,
         existingStoreCode: data.existingStoreCode,
@@ -447,9 +552,9 @@ export default function BasicStoreDetails({ onNext }) {
         newFranchiseeStoreCode: data.newFranchiseeStoreCode,
         franchiseeStoreCode: data.franchiseeStoreCode,
         franchiseeStoreName: data.franchiseeStoreName,
-        baiatScore: data.baiatScore,
-        partnerDbStatus: data.partnerDbStatus,
-        partnerScore: data.partnerScore,
+        baiatScore: String(clampScore(data.baiatScore)),
+        partnerDbStatus: isPartnerDbDone ? "1" : "0",
+        partnerScore: String(isPartnerDbDone ? clampScore(data.partnerScore) : 0),
       };
 
       const res = await fetch(`${BASE_URL}/basic-store-details`, {
@@ -477,6 +582,79 @@ export default function BasicStoreDetails({ onNext }) {
     }
   };
 
+  // Once a ROI has already been created (roiContext.roiId set — e.g. the user
+  // navigated back here via "← Previous" from Store Retail Specifications),
+  // show a locked summary by default instead of jumping straight back into a
+  // blank creation form (which would mint a brand-new roiId on save and fork
+  // off a duplicate ROI). Clicking "Edit" loads the real saved form so other
+  // fields stay editable, while Project Type/History ID (New Store) or Store
+  // Code (other types) — the flow-defining fields — stay locked below.
+  if (roiContext?.roiId && !isEditingLocked) {
+    const lockedFields = [
+      ["Project Type", roiContext.projectType],
+      ["History ID", roiContext.historyId],
+      ["Ref Store Code", roiContext.refStoreCode || roiContext.existingStoreCode],
+      ["City", roiContext.city],
+      ["State", roiContext.state],
+      ["Region", roiContext.region],
+    ].filter(([, value]) => !!value);
+
+    return (
+      <div className='max-w-2xl mx-auto py-10'>
+        <div className='bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden'>
+          <div className='bg-gradient-to-r from-indigo-600 to-blue-600 px-8 py-6'>
+            <div className='flex items-center gap-3'>
+              <span className='text-3xl'>🔒</span>
+              <div>
+                <h2 className='text-xl font-bold text-white'>
+                  Store Details Already Created
+                </h2>
+                <p className='text-indigo-100 text-sm mt-0.5'>
+                  ROI ID: <span className='font-mono font-semibold'>{roiContext.roiId}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className='p-8 space-y-4'>
+            <p className='text-sm text-gray-500'>
+              {roiContext.projectType === "New Store"
+                ? "Project Type and History ID define this ROI and can't be changed."
+                : "The selected Store Code defines this ROI and can't be changed."}{" "}
+              Other details can still be edited.
+            </p>
+            <div className='grid grid-cols-2 gap-3'>
+              {lockedFields.map(([label, value]) => (
+                <div key={label} className='bg-gray-50 rounded-lg px-4 py-3'>
+                  <p className='text-xs text-gray-400 uppercase tracking-wide font-medium'>
+                    {label}
+                  </p>
+                  <p className='text-gray-800 font-semibold mt-0.5 text-sm'>
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className='px-8 pb-8 flex justify-end gap-3'>
+            <button
+              type='button'
+              onClick={startEditingExisting}
+              disabled={isLoadingExisting}
+              className='px-6 py-3 bg-white text-indigo-700 border border-indigo-200 rounded-xl font-semibold text-sm hover:bg-indigo-50 transition disabled:opacity-60'>
+              {isLoadingExisting ? "Loading…" : "✎ Edit Details"}
+            </button>
+            <button
+              type='button'
+              onClick={() => onNext(roiContext)}
+              className='px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition'>
+              Continue →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className='space-y-8'>
       {/* ── PROJECT TYPE ─────────────────────────────────────────────────────── */}
@@ -495,6 +673,7 @@ export default function BasicStoreDetails({ onNext }) {
           label='Project Type *'
           name='projectType'
           register={register}
+          disabled={!!roiContext?.roiId}
           rules={{ required: "Project Type is required" }}>
           <option value=''>Select Project Type</option>
           {projectTypes?.map((it) =>
@@ -536,7 +715,7 @@ export default function BasicStoreDetails({ onNext }) {
                 label='History ID *'
                 name='historyId'
                 register={register}
-                disabled={loading || historyIds.length === 0}
+                disabled={!!roiContext?.roiId || loading || historyIds.length === 0}
                 rules={{ required: "History ID is required" }}>
                 <option value=''>
                   {loading
@@ -611,7 +790,7 @@ export default function BasicStoreDetails({ onNext }) {
                 label='Store Code *'
                 name='existingStoreCode'
                 register={register}
-                disabled={loading || btqStores.length === 0}
+                disabled={!!roiContext?.roiId || loading || btqStores.length === 0}
                 rules={{ required: "Store Code is required" }}>
                 <option value=''>
                   {loading
@@ -866,24 +1045,64 @@ export default function BasicStoreDetails({ onNext }) {
                   <span className='text-gray-400 font-normal'>(Optional)</span>
                 </h4>
                 <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'>
-                  <Input
-                    label='BA-IAT Score'
-                    name='baiatScore'
-                    register={register}
-                    disabled={franchiseeFound && baiatScore !== ""}
-                  />
-                  <Input
-                    label='Partner DB Status'
+                  <div>
+                    <Input
+                      label='BA-IAT Score'
+                      name='baiatScore'
+                      type='number'
+                      register={register}
+                      disabled={scoreFieldsLocked.baiatScore}
+                      rules={{
+                        max: { value: 100, message: "Score cannot exceed 100" },
+                        min: { value: 0, message: "Score cannot be negative" },
+                      }}
+                    />
+                    {errors?.baiatScore && (
+                      <p className='text-red-500 text-xs mt-1'>
+                        {errors.baiatScore.message}
+                      </p>
+                    )}
+                    {!errors?.baiatScore && Number(baiatScore) > 100 && (
+                      <p className='text-amber-600 text-xs mt-1'>
+                        ⚠ Score cannot exceed 100
+                      </p>
+                    )}
+                  </div>
+                  <Select
+                    label='Partner D&B Done'
                     name='partnerDbStatus'
                     register={register}
-                    disabled={franchiseeFound && partnerDbStatus !== ""}
-                  />
-                  <Input
-                    label='Partner Score'
-                    name='partnerScore'
-                    register={register}
-                    disabled={franchiseeFound && partnerScore !== ""}
-                  />
+                    disabled={scoreFieldsLocked.partnerDbStatus}>
+                    <option value=''>Select</option>
+                    <option value='Yes'>Yes</option>
+                    <option value='No'>No</option>
+                  </Select>
+                  <div>
+                    <Input
+                      label='Partner Score'
+                      name='partnerScore'
+                      type='number'
+                      register={register}
+                      disabled={
+                        scoreFieldsLocked.partnerScore ||
+                        partnerDbStatus !== "Yes"
+                      }
+                      rules={{
+                        max: { value: 100, message: "Score cannot exceed 100" },
+                        min: { value: 0, message: "Score cannot be negative" },
+                      }}
+                    />
+                    {errors?.partnerScore && (
+                      <p className='text-red-500 text-xs mt-1'>
+                        {errors.partnerScore.message}
+                      </p>
+                    )}
+                    {!errors?.partnerScore && Number(partnerScore) > 100 && (
+                      <p className='text-amber-600 text-xs mt-1'>
+                        ⚠ Score cannot exceed 100
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,6 +1,6 @@
 // components/Stepper.jsx
 
-export default function Stepper({ currentStep, steps }) {
+export default function Stepper({ currentStep, steps, maxReachedStep, onStepClick }) {
   return (
     <div className="w-full flex justify-center pb-2">
       <div className="flex items-start justify-center w-full max-w-5xl">
@@ -10,13 +10,19 @@ export default function Stepper({ currentStep, steps }) {
           const active    = currentStep === stepNo;
           const label     = typeof step === "string" ? step : step.label;
           const icon      = typeof step === "object" ? step.icon : null;
+          const clickable = !!onStepClick && stepNo <= (maxReachedStep ?? currentStep) && stepNo !== currentStep;
 
           return (
             <div key={stepNo} className="flex items-start flex-1">
               {/* Circle + Label */}
-              <div className="flex flex-col items-center flex-shrink-0" style={{ minWidth: 60 }}>
+              <div
+                className={`flex flex-col items-center flex-shrink-0 ${clickable ? "cursor-pointer group" : ""}`}
+                style={{ minWidth: 60 }}
+                onClick={clickable ? () => onStepClick(stepNo) : undefined}
+                title={clickable ? `Back to ${label}` : undefined}
+              >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 shadow-md transition-all duration-300 ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 shadow-md transition-all duration-300 ${clickable ? "group-hover:scale-110 group-hover:ring-2 group-hover:ring-white/50" : ""} ${
                     completed
                       ? "bg-green-400 border-green-300 text-white"
                       : active

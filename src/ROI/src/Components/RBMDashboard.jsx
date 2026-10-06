@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { BASE_URL } from "./Forms/data/baseUrl";
+import RoiPdfReport from "./Forms/RoiPdfReport";
 
 // ─── Page definitions ─────────────────────────────────────────────────────────
 const PAGES = [
@@ -9,7 +10,8 @@ const PAGES = [
   { name: "Store Retail Specifications", group: "Store Setup", icon: "📋" },
   { name: "Sales Planning - Ref Store Code Details", group: "Sales Planning", icon: "🔗" },
   { name: "Sales Planning - Sales Summary", group: "Sales Planning", icon: "📈" },
-  { name: "Sales Planning - Stock Summary", group: "Sales Planning", icon: "📦" },
+  { name: "Sales Planning - Stock Summary - Phase 1", group: "Sales Planning", icon: "📦" },
+  { name: "Sales Planning - Stock Summary - Phase 2", group: "Sales Planning", icon: "📦" },
   { name: "Sales Planning - Discount", group: "Sales Planning", icon: "🏷️" },
   { name: "Capex Expenses", group: "Expense Planning", icon: "🏗️" },
   { name: "Resource Expenses", group: "Expense Planning", icon: "👥" },
@@ -299,7 +301,7 @@ function PageDataModal({ pageName, data, loading, onClose }) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <div className="animate-spin w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full" />
@@ -574,7 +576,7 @@ function TOTSection({ roiid, onClose }) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-5">
+        <div className="flex-1 min-h-0 overflow-auto p-5">
           {loading ? (
             <div className="flex items-center justify-center py-16 gap-3">
               <div className="animate-spin w-8 h-8 border-4 border-violet-500 border-t-transparent rounded-full" />
@@ -728,8 +730,9 @@ export default function RBMDashboard({ userRole = "RBM" }) {
         "Store Retail Specifications": () => fs("roi_store_retail_specifications"),
         "Sales Planning - Ref Store Code Details": () => sp(1),
         "Sales Planning - Sales Summary": () => sp(2),
-        "Sales Planning - Stock Summary": () => sp(3),
-        "Sales Planning - Discount": () => sp(4),
+        "Sales Planning - Stock Summary - Phase 1": () => sp(3),
+        "Sales Planning - Stock Summary - Phase 2": () => sp(4),
+        "Sales Planning - Discount": () => sp(5),
         "Capex Expenses": () => ed("CAPEX"),
         "Resource Expenses": () => ed("RESOURCE"),
         "Other Expenses": () => ed("OTHER"),
@@ -745,10 +748,11 @@ export default function RBMDashboard({ userRole = "RBM" }) {
       setPageModal(prev => ({ ...prev, loading: false }));
     }
   };
-
+      console.log(userLog)
   // ── Execute action (remark supplied by ActionModal) ───────────────────────
   const handleConfirmAction = async (remark = "") => {
     const roiid = selectedRoi?.roiid;
+
     setActionLoading(true);
     try {
       const res = await fetch(`${BASE_URL}/roi/action/${roiid}`, {
@@ -756,7 +760,7 @@ export default function RBMDashboard({ userRole = "RBM" }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: confirmAction,  // 'approve' | 'reject' | 'clarify'
-          actor_email: userLog?.name ?? "",
+          actor_email: userLog?.email ?? "",
           actor_role: userRole,
           remark: remark.trim(),
           channel: selectedRoi?.channel ?? "Tanishq",
@@ -816,7 +820,7 @@ export default function RBMDashboard({ userRole = "RBM" }) {
   };
 
   return (
-    <div className="flex flex-1 overflow-hidden bg-slate-50">
+    <div className="flex flex-1 h-full min-h-0 overflow-hidden bg-slate-50">
       {/* ══ Left Sidebar ══════════════════════════════════════════════════ */}
       <aside className="w-80 bg-white border-r border-slate-200 flex flex-col overflow-hidden shadow-sm shrink-0">
         {/* Header */}
@@ -865,7 +869,7 @@ export default function RBMDashboard({ userRole = "RBM" }) {
         </div>
 
         {/* ROI list */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {listLoading ? (
             <div className="p-3 space-y-2">
               {[1, 2, 3, 4].map(i => <div key={i} className="h-20 bg-slate-100 rounded-xl animate-pulse" />)}
@@ -904,7 +908,7 @@ export default function RBMDashboard({ userRole = "RBM" }) {
       </aside>
 
       {/* ══ Main Content ══════════════════════════════════════════════════ */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 min-h-0 overflow-y-auto">
         {!selectedRoi ? (
           /* Empty state */
           <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -937,6 +941,13 @@ export default function RBMDashboard({ userRole = "RBM" }) {
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <StatusBadge status={roiStatus} size="md" />
+                    {/* Every ROI reaching this dashboard has already been submitted */}
+                    {!!roiStatus && (
+                      <RoiPdfReport
+                        roiid={selectedRoi.roiid}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition"
+                      />
+                    )}
                     {/* PDF button shown to all roles for New Store projects */}
                     {selectedRoi.project_type === "New Store" && roiHistoryId && (
                       <button

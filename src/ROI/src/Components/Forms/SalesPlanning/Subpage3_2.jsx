@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSection3Context } from "./Section3Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
@@ -34,10 +34,10 @@ const initialInputs = {
   lcg: Array(6).fill(0),
   mcg: Array(6).fill(0),
   hcg: Array(6).fill(0),
+  gemstone: Array(6).fill(0),
   stoneShareHCG: Array(6).fill(0),
   gis: Array(6).fill(0),
   regular: Array(6).fill(0),
-  colorStones: Array(6).fill(0),
   solitaireA: Array(6).fill(0),
   solitaireB: Array(6).fill(0),
   solitaireC: Array(6).fill(0),
@@ -58,7 +58,7 @@ const computeValues = (inputs) => {
   // Buyers per day = walkInPerDay[i] × conversionPct[i] / 100
   const buyersPerDay = walkInPerDay.map((w, i) => {
     const conv = parseFloat(inputs.conversionPct[i]) || 0;
-    return Math.round((w * conv) / 100);
+    return Math.ceil((w * conv) / 100);
   });
 
   // Average Ticket Size chain: Yr.1 from user input, Yr.2–6 = prev × (1 + growthTicketSize%)
@@ -104,7 +104,8 @@ const computeValues = (inputs) => {
     const sum =
       (parseFloat(inputs.lcg[i]) || 0) +
       (parseFloat(inputs.mcg[i]) || 0) +
-      (parseFloat(inputs.hcg[i]) || 0);
+      (parseFloat(inputs.hcg[i]) || 0) +
+      (parseFloat(inputs.gemstone[i]) || 0) ;
     totalPlainMix[i] = +sum.toFixed(2);
     remainingPlainMix[i] = +(100 - sum).toFixed(2);
   }
@@ -115,7 +116,6 @@ const computeValues = (inputs) => {
     const sum =
       (parseFloat(inputs.gis[i]) || 0) +
       (parseFloat(inputs.regular[i]) || 0) +
-      (parseFloat(inputs.colorStones[i]) || 0) +
       (parseFloat(inputs.solitaireA[i]) || 0) +
       (parseFloat(inputs.solitaireB[i]) || 0) +
       (parseFloat(inputs.solitaireC[i]) || 0) +
@@ -268,10 +268,10 @@ const MIX_FIELDS = new Set([
   "lcg",
   "mcg",
   "hcg",
+  "gemstone",
   "stoneShareHCG",
   "gis",
   "regular",
-  "colorStones",
   "solitaireA",
   "solitaireB",
   "solitaireC",
@@ -293,10 +293,13 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const { storeParticulars, markStepSaved, setSubpage3_2Data, forwardDetail } =
-    useSection3Context();
+  const { storeParticulars, markStepSaved, setSubpage3_2Data, forwardDetail, savedSteps, invalidateStepsFrom, bumpSalesSummaryVersion } = useSection3Context();
   const computed = computeValues(inputs);
   const userLog = useSelector((state) => state?.user?.user);
+  // Read synchronously (unlike the `isSaved` state, which the validation-metrics
+  // effect below can otherwise still see as stale/false due to its own effect
+  // closure, wrongly overwriting a legitimately-saved 0% mix share).
+  const savedMixLoadedRef = useRef(false);
 
   // Load previously saved sales data when resuming
   useEffect(() => {
@@ -313,6 +316,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
         const json = await res.json();
         const rows = json?.data ?? [];
         if (!rows.length) return;
+        savedMixLoadedRef.current = true;
         // API returns flat { Header, Yr1..Yr6 } rows — extract by header name
         const yrs = (header) => {
           const r = rows.find((x) => x.Header === header);
@@ -338,10 +342,10 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
           lcg:           yrs("Sales Planning_LCG")                      ?? prev.lcg,
           mcg:           yrs("Sales Planning_MCG")                      ?? prev.mcg,
           hcg:           yrs("Sales Planning_HCG")                      ?? prev.hcg,
+          gemstone:      yrs("Sales Planning_Gemstone")                 ?? prev.gemstone,
           stoneShareHCG: yrs("Sales Planning_Stoneshare(HCG only)")     ?? prev.stoneShareHCG,
           gis:           yrs("Sales Planning_GIS")                      ?? prev.gis,
           regular:       yrs("Sales Planning_Regular")                  ?? prev.regular,
-          colorStones:   yrs("Sales Planning_Color Stones")             ?? prev.colorStones,
           solitaireA:    yrs("Sales Planning_Solitaire A(<70C)")        ?? prev.solitaireA,
           solitaireB:    yrs("Sales Planning_Solitaire B(70-100C)")     ?? prev.solitaireB,
           solitaireC:    yrs("Sales Planning_Solitaire C(1CRT+)")       ?? prev.solitaireC,
@@ -353,6 +357,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
       }
     })();
   }, [forwardDetail?.roiid]);
+
   const [validationMetrics, setValidationMetrics] = useState({
     plainShare: 0,
     studdedShare: 0,
@@ -360,10 +365,10 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
     lcg: 0,
     mcg: 0,
     hcg: 0,
+    gemstone:0,
     stoneShareHCG: 0,
     gis: 0,
     regular: 0,
-    colorStones: 0,
     solitaireA: 0,
     solitaireB: 0,
     solitaireC: 0,
@@ -391,60 +396,39 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
         const get = (field) =>
           d.find((x) => x.Exclusive_Field === field)?.Region_Value ?? 0;
         setValidationMetrics({
-          plainShare: get("SalesShare - Plain Share"),
-          studdedShare: get("SalesShare - Studded Share"),
-          coinsShare: get("SalesShare - Coins /Silver Share"),
-          lcg: get("SalesMix - LCG"),
-          mcg: get("SalesMix - MCG"),
-          hcg: get("SalesMix - HCG"),
-          stoneShareHCG: get("SalesMix - Stone share in plain (HCG only)"),
-          gis: get("SalesMix - GIS"),
-          regular: get("SalesMix - Regular"),
-          colorStones: get("SalesMix - Color Stones"),
-          solitaireA: get("SalesMix - Solitaire A(<70C)"),
-          solitaireB:
-            d.find(
-              (x) =>
-                x.Exclusive_Field.includes("SalesMix") &&
-                x.Exclusive_Field.includes("Solitaire") &&
-                x.Exclusive_Field.includes("B"),
-            )?.Region_Value ?? 0,
-          solitaireC: get("SalesMix - Solitaire C(1CRT+)"),
-          solitaireD: get("SalesMix - Solitaire D(2CRT+)"),
+          plainShare: get("Overall Sales Mix - Plain"),
+          studdedShare: get("Overall Sales Mix - Studded"),
+          coinsShare: get("Overall Sales Mix - Coins"),
+          lcg: get("Plain Sales Mix - LCG"),
+          mcg: get("Plain Sales Mix - MCG"),
+          hcg: get("Plain Sales Mix - HCG"),
+          gemstone: get("Plain Sales Mix - SCS"),
+          stoneShareHCG: get("Plain Sales Mix - F1 (% of HCG UCP)"),
+          gis: get("Studded Sales Mix - GIS"),
+          regular: get("Studded Sales Mix - DIA"),
+          solitaireA: get("Studded Sales Mix - SSA"),
+          solitaireB: get("Studded Sales Mix - SSB"),
+          solitaireC: get("Studded Sales Mix - SSC"),
+          solitaireD: get("Studded Sales Mix - SSD"),
         });
-        // Pre-fill mix inputs from normalized reference values when no saved data exists
-        if (!isSaved) {
-          const solitaireBVal = d.find((x) => x.Exclusive_Field.includes("SalesMix") && x.Exclusive_Field.includes("Solitaire") && x.Exclusive_Field.includes("B"))?.Region_Value ?? 0;
-
-          const [normPlain, normStudded, normCoins] = normalizeGroup([
-            get("SalesShare - Plain Share"), get("SalesShare - Studded Share"), get("SalesShare - Coins /Silver Share"),
-          ]);
-          const [normLcg, normMcg, normHcg] = normalizeGroup([
-            get("SalesMix - LCG"), get("SalesMix - MCG"), get("SalesMix - HCG"),
-          ]);
-          const [normGis, normReg, normCS, normSA, normSB, normSC, normSD, normStone] = normalizeGroup([
-            get("SalesMix - GIS"), get("SalesMix - Regular"), get("SalesMix - Color Stones"),
-            get("SalesMix - Solitaire A(<70C)"), solitaireBVal,
-            get("SalesMix - Solitaire C(1CRT+)"), get("SalesMix - Solitaire D(2CRT+)"),
-            get("SalesMix - Stone share in plain (HCG only)"),
-          ]);
-
+        // Pre-fill mix inputs with raw reference values for all 6 years when no saved data exists
+        if (!savedMixLoadedRef.current) {
           setInputs((prev) => ({
             ...prev,
-            plainShare: prev.plainShare[0] === 0 ? Array(6).fill(normPlain) : prev.plainShare,
-            studdedShare: prev.studdedShare[0] === 0 ? Array(6).fill(normStudded) : prev.studdedShare,
-            coinsShare: prev.coinsShare[0] === 0 ? Array(6).fill(normCoins) : prev.coinsShare,
-            lcg: prev.lcg[0] === 0 ? Array(6).fill(normLcg) : prev.lcg,
-            mcg: prev.mcg[0] === 0 ? Array(6).fill(normMcg) : prev.mcg,
-            hcg: prev.hcg[0] === 0 ? Array(6).fill(normHcg) : prev.hcg,
-            gis: prev.gis[0] === 0 ? Array(6).fill(normGis) : prev.gis,
-            regular: prev.regular[0] === 0 ? Array(6).fill(normReg) : prev.regular,
-            colorStones: prev.colorStones[0] === 0 ? Array(6).fill(normCS) : prev.colorStones,
-            solitaireA: prev.solitaireA[0] === 0 ? Array(6).fill(normSA) : prev.solitaireA,
-            solitaireB: prev.solitaireB[0] === 0 ? Array(6).fill(normSB) : prev.solitaireB,
-            solitaireC: prev.solitaireC[0] === 0 ? Array(6).fill(normSC) : prev.solitaireC,
-            solitaireD: prev.solitaireD[0] === 0 ? Array(6).fill(normSD) : prev.solitaireD,
-            stoneShareHCG: prev.stoneShareHCG[0] === 0 ? Array(6).fill(normStone) : prev.stoneShareHCG,
+            plainShare:    prev.plainShare[0]    === 0 ? Array(6).fill(get("Overall Sales Mix - Plain"))    : prev.plainShare,
+            studdedShare:  prev.studdedShare[0]  === 0 ? Array(6).fill(get("Overall Sales Mix - Studded"))  : prev.studdedShare,
+            coinsShare:    prev.coinsShare[0]    === 0 ? Array(6).fill(get("Overall Sales Mix - Coins"))    : prev.coinsShare,
+            lcg:           prev.lcg[0]           === 0 ? Array(6).fill(get("Plain Sales Mix - LCG"))        : prev.lcg,
+            mcg:           prev.mcg[0]           === 0 ? Array(6).fill(get("Plain Sales Mix - MCG"))        : prev.mcg,
+            hcg:           prev.hcg[0]           === 0 ? Array(6).fill(get("Plain Sales Mix - HCG"))        : prev.hcg,
+            gemstone:      prev.gemstone[0]      === 0 ? Array(6).fill(get("Plain Sales Mix - SCS"))        : prev.gemstone,
+            gis:           prev.gis[0]           === 0 ? Array(6).fill(get("Studded Sales Mix - GIS"))      : prev.gis,
+            regular:       prev.regular[0]       === 0 ? Array(6).fill(get("Studded Sales Mix - DIA"))      : prev.regular,
+            solitaireA:    prev.solitaireA[0]    === 0 ? Array(6).fill(get("Studded Sales Mix - SSA"))      : prev.solitaireA,
+            solitaireB:    prev.solitaireB[0]    === 0 ? Array(6).fill(get("Studded Sales Mix - SSB"))      : prev.solitaireB,
+            solitaireC:    prev.solitaireC[0]    === 0 ? Array(6).fill(get("Studded Sales Mix - SSC"))      : prev.solitaireC,
+            solitaireD:    prev.solitaireD[0]    === 0 ? Array(6).fill(get("Studded Sales Mix - SSD"))      : prev.solitaireD,
+            stoneShareHCG: prev.stoneShareHCG[0] === 0 ? Array(6).fill(get("Plain Sales Mix - F1 (% of HCG UCP)")) : prev.stoneShareHCG,
           }));
         }
       } catch (e) {
@@ -552,12 +536,12 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
             lcg: inputs.lcg,
             mcg: inputs.mcg,
             hcg: inputs.hcg,
+            gemstone:inputs.gemstone,
             stoneShareHCG: inputs.stoneShareHCG,
           },
           studdedMix: {
             gis: inputs.gis,
             regular: inputs.regular,
-            colorStones: inputs.colorStones,
             solitaireA: inputs.solitaireA,
             solitaireB: inputs.solitaireB,
             solitaireC: inputs.solitaireC,
@@ -583,10 +567,10 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
         lcg: inputs.lcg,
         mcg: inputs.mcg,
         hcg: inputs.hcg,
+        colorStones:inputs.gemstone,
         stoneShareHCG: inputs.stoneShareHCG,
         gis: inputs.gis,
         regular: inputs.regular,
-        colorStones: inputs.colorStones,
         solitaireA: inputs.solitaireA,
         solitaireB: inputs.solitaireB,
         solitaireC: inputs.solitaireC,
@@ -607,6 +591,16 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
       setIsSaving(false);
       setIsSaved(true);
       markStepSaved(1);
+      // Downstream steps (Pricing Metrics / TOT, Discounts) were computed from
+      // the sales mix — if either had already been saved, they're now stale
+      // and must be reviewed/re-saved to keep the flow consistent.
+      bumpSalesSummaryVersion();
+      if (savedSteps[2] || savedSteps[3]) {
+        invalidateStepsFrom(2);
+        toast.info(
+          "Sales Mix updated — Pricing Metrics and Discounts must be reviewed and re-saved to stay in sync.",
+        );
+      }
       setShowModal(true);
     } catch (e) {
       console.error(e);
@@ -691,6 +685,18 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
             </span>
           </p>
         </div>
+
+        {/* Incomplete/warning summary — shown up-front so issues are visible as soon as the page loads */}
+        {!isFormComplete && incompleteReasons.length > 0 && (
+          <div className='mb-6 bg-red-50 border border-red-300 rounded-xl px-5 py-3'>
+            <p className='text-xs font-bold text-red-700 uppercase tracking-wide mb-1'>⚠ Action Required</p>
+            <ul className='text-xs text-red-600 space-y-0.5'>
+              {incompleteReasons.map((r, i) => (
+                <li key={i}>⚠️ {r}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className='space-y-6'>
           {/* ──────────────────────────────────────────────────────────
@@ -912,6 +918,11 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
                   "hcg",
                   validationMetrics.hcg,
                 )}
+                {refInputRow(
+                  `Gemstones - (Ref = ${validationMetrics.gemstone})`,
+                  "gemstone",
+                  validationMetrics.gemstone,
+                )}
                 {/* Inline warning when any year exceeds 100% */}
                 {hasOver100Plain && (
                   <tr>
@@ -965,11 +976,6 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
                   `Regular - (Ref = ${validationMetrics.regular})`,
                   "regular",
                   validationMetrics.regular,
-                )}
-                {refInputRow(
-                  `Color Stones - (Ref = ${validationMetrics.colorStones})`,
-                  "colorStones",
-                  validationMetrics.colorStones,
                 )}
                 {refInputRow(
                   `Solitaire A (<70C) - (Ref = ${validationMetrics.solitaireA})`,
