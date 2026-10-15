@@ -334,7 +334,7 @@ export default function Subpage4_1({ handleNext }) {
         let retail_area = 0;
         if (
           storeData.project_type === "New Store" ||
-          storeData?.project_type === "Rennovation"
+          storeData?.project_type === "Rennovation" || storeData?.project_type === "Store Expansion"
         ) {
           retail_area = storeData?.new_retail_area;
         } else {
@@ -460,10 +460,16 @@ export default function Subpage4_1({ handleNext }) {
     setIsSaving(true);
 
     const payloadSelections = { ...selections };
+    // computedAmounts[key] is the DB-rate PREVIEW for every item regardless of
+    // its selection (used to show "what Yes would cost" next to the dropdown)
+    // — sending it as-is saved that rate for "No" items too, so every item
+    // looked like "Yes" on resume. Only the actually-selected amount may be sent.
+    const payloadComputedAmounts = Object.fromEntries(
+      YES_NO_ITEMS.map(({ key }) => [key, getEffectiveAmount(key)]),
+    );
     // Art & Crafts amount must be keyed by its DB column name (Type 1 vs
     // Type 2 & 3), same as payloadSelections below — computedAmounts.artAndCrafts
     // alone doesn't match what the backend looks up, so it always saved as 0.
-    const payloadComputedAmounts = { ...computedAmounts };
 
     if (payloadSelections.artAndCrafts) {
       payloadComputedAmounts[payloadSelections.artAndCrafts] =

@@ -9,7 +9,7 @@ const fmt = (n) =>
     : Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
 // Only Team Lead and Store Merchandiser roles may have Nos. = 0; every other role needs at least 1
-const ZERO_NOS_ALLOWED_KEYWORDS = ["team lead", "merchandiser"];
+const ZERO_NOS_ALLOWED_KEYWORDS = ["team lead", "merchandiser","Team-Leads","Store_Merchandiser"];
 const roleAllowsZeroNos = (role) => {
   const r = (role || "").toLowerCase();
   return ZERO_NOS_ALLOWED_KEYWORDS.some((k) => r.includes(k));
