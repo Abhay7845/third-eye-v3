@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { Input, Select } from "../FormControl";
+import { Input, Select, Combobox } from "../FormControl";
 import { BASE_URL } from "./data/baseUrl";
 import { useSelector } from "react-redux";
 
@@ -314,7 +314,7 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
           return;
         }
         const response = await res.json();
-        const data = response.data[0];
+        const data = response.data[1];
         setValue("city", data?.target_city ?? "");
         setValue("state", data?.state ?? "");
         setValue("region", data?.region ?? "");
@@ -385,10 +385,14 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
       setBtqStores([]);
       return;
     }
+    const userEmail = userLog?.email;
+    if (!userEmail) return;
     const fetchBtqStores = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${BASE_URL}/btq_details`);
+        const res = await fetch(
+          `${BASE_URL}/btq_details?user_email=${encodeURIComponent(userEmail)}`
+        );
         if (res.ok) {
           const response = await res.json();
           setBtqStores(response.data ?? []);
@@ -401,7 +405,7 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
       }
     };
     fetchBtqStores();
-  }, [selectedProjectType]);
+  }, [selectedProjectType, userLog?.email]);
 
   const fetchAttribute = async (parameter) => {
     try {
@@ -785,26 +789,22 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
             </>
           ) : (
             <>
-              {/* Store code dropdown — auto-populates location on selection */}
-              <Select
+              {/* Store code combobox — type or pick from the list; auto-populates location on match */}
+              <Combobox
                 label='Store Code *'
                 name='existingStoreCode'
                 register={register}
-                disabled={!!roiContext?.roiId || loading || btqStores.length === 0}
-                rules={{ required: "Store Code is required" }}>
-                <option value=''>
-                  {loading
+                disabled={!!roiContext?.roiId || loading}
+                placeholder={
+                  loading
                     ? "Loading..."
                     : btqStores.length === 0
                     ? "No stores found"
-                    : "Select Store Code"}
-                </option>
-                {btqStores.map((it) => (
-                  <option key={it.store_code} value={it.store_code}>
-                    {it.store_code}
-                  </option>
-                ))}
-              </Select>
+                    : "Type or select Store Code"
+                }
+                options={btqStores.map((it) => it.store_code)}
+                rules={{ required: "Store Code is required" }}
+              />
               {errors?.existingStoreCode && (
                 <p className='text-red-500 text-xs mt-1'>
                   {errors.existingStoreCode.message}

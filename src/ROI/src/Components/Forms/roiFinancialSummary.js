@@ -29,6 +29,63 @@ export function computeIRR(cashFlows, maxIter = 400, tol = 1e-10) {
   return r2(((lo + hi) / 2) * 100);
 }
 
+// export function computeIRR(cashFlows, guess = 0.1) {
+//   const maxIter = 20;
+//   const tol = 0.000001;
+
+//   if (
+//     !Array.isArray(cashFlows) ||
+//     cashFlows.length < 2 ||
+//     !cashFlows.every((cf) => Number.isFinite(cf)) ||
+//     !cashFlows.some((cf) => cf > 0) ||
+//     !cashFlows.some((cf) => cf < 0)
+//   ) {
+//     return null;
+//   }
+
+//   let rate = guess;
+
+//   for (let i = 0; i < maxIter; i++) {
+//     if (rate <= -1) return null;
+
+//     let npv = 0;
+//     let derivative = 0;
+
+//     for (let t = 0; t < cashFlows.length; t++) {
+//       const cf = cashFlows[t];
+//       const discountFactor = Math.pow(1 + rate, t);
+
+//       npv += cf / discountFactor;
+
+//       if (t > 0) {
+//         derivative -= (t * cf) / (discountFactor * (1 + rate));
+//       }
+//     }
+
+//     if (Math.abs(npv) < 1e-10) {
+//       return rate * 100;
+//     }
+
+//     if (!Number.isFinite(derivative) || derivative === 0) {
+//       return null;
+//     }
+
+//     const nextRate = rate - npv / derivative;
+
+//     if (!Number.isFinite(nextRate) || nextRate <= -1) {
+//       return null;
+//     }
+
+//     if (Math.abs(nextRate - rate) < tol) {
+//       return nextRate;
+//     }
+
+//     rate = nextRate;
+//   }
+
+//   return null;
+// }
+
 export function parseApiRows(rows, opts = {}) {
   if (!rows?.length) return null;
   const by = {};
@@ -67,7 +124,10 @@ export function parseApiRows(rows, opts = {}) {
     ? nsvFromApi
     : [null, ...ucpSales.slice(1).map((u, i) => r2((u ?? 0) - (customerDiscount[i + 1] ?? 0)))];
 
-  const stockTotal = yrs("Stock_Total")
+  // NOTE: the fetch layer (Summary.jsx) renames the Stock row's Particulars to
+  // "Stock_UCP_Total" (the real DB header — there is no plain "Stock_Total"),
+  // so this lookup key must match that, not the old "Stock_Total" name.
+  const stockTotal = yrs("Stock_UCP_Total")
   const bgCost = YEARS.map((_, i) => {
     if ((by["ROI New Store"]?.Header ?? "") === "L2" || (by["ROI New Store"]?.Header ?? "") === "L4") {
       return (stockTotal[i] * 0.2 * (0.75 / 100))
@@ -96,39 +156,48 @@ export function parseApiRows(rows, opts = {}) {
   ];
 
   // Total expenses — Excel formula:
-  // L2.5 → 0; Yr0 = Elec×20% + Staff×20% + Insurance×30% + RegnCharges_Yr0; Yr1–6 = Σ all items
+  // L2.5 → 0; Yr0 = Staff/Electricity/Insurance (their own Yr0 if the API sent one,
+  // else Yr1×20% — not applicable to L2.5) + RegnCharges_Yr0; Yr1–6 = Σ all items
   const isL2_5 = (by["ROI New Store"]?.Header ?? "") === "L2.5";
-  const _elec = expenses.find(e => e.label === "Electricity")?.values ?? Array(7).fill(0);
   const _staff = expenses.find(e => e.label === "Staff Salaries")?.values ?? Array(7).fill(0);
+  const _elec = expenses.find(e => e.label === "Electricity")?.values ?? Array(7).fill(0);
   const _ins = expenses.find(e => e.label === "Insurance")?.values ?? Array(7).fill(0);
   const _regn = expenses.find(e => e.label === "Regn Charges / Temp Store Cost")?.values ?? Array(7).fill(0);
+
+  // Fall back to Yr1×20% whenever Yr0 wasn't actually supplied for these 3 items
+  if (!isL2_5) {
+    [_staff, _elec, _ins].forEach((vals) => {
+      if (!(vals[0] > 0)) vals[0] = r2((vals[1] ?? 0) * 0.2);
+    });
+  }
+
   const totExp = Array.from({ length: 7 }, (_, i) => {
     if (isL2_5) return i === 0 ? null : 0;
-    if (i === 0) return r2((_elec[1] ?? 0) * 0.2 + (_staff[1] ?? 0) * 0.2 + (_ins[1] ?? 0) * 0.3 + (_regn[0] ?? 0));
+    if (i === 0) return r2((_staff[0] ?? 0) + (_elec[0] ?? 0) + (_ins[0] ?? 0) + (_regn[0] ?? 0));
     return r2(expenses.reduce((s, e) => s + (e.values[i] ?? 0), 0));
   });
   const storeInteriors = toLakh(yrs("Store Interiors value on Set Up"))[0]; // Rupees → Lakhs
-  const ebitda = [
-    null,
-    ...Array.from({ length: 6 }, (_, i) =>
-      r2((gross[i + 1] ?? 0) - (totExp[i + 1] ?? 0)),
-    ),
-  ];
+  // Yr0: no Gross Earnings yet, so EBITDA Yr0 is simply the negative of the Yr0 expense
+  // total above (flows through unchanged into the "Operating profit" cash-flow row,
+  // which displays this same `ebitda` array). L2.5 keeps Yr0 as null (totExp[0] is null).
+  const ebitda = YEARS.map((_, i) =>
+    (i === 0 && totExp[0] === null) ? null : r2((gross[i] ?? 0) - (totExp[i] ?? 0)),
+  );
 
   const deprn = Array(7).fill(0);
 
   const cummDepIncYr = YEARS?.map((_, i) => {
     if (i === 0) return 0;
+
     if (i === 1) {
       deprn.fill(storeInteriors * 0.2, 1, 6);
-      return (storeInteriors * 0.2)
-    };
-    if (i === 2) return deprn[2] + (storeInteriors * 0.2);
-    if (i === 3) return deprn[3] + (deprn[2] + (storeInteriors * 0.2));
-    if (i === 4) return deprn[4] + (deprn[3] + deprn[2] + (storeInteriors * 0.2));
-    if (i === 5) return deprn[5] + (deprn[4] + deprn[3] + deprn[2] + (storeInteriors * 0.2));
-    if (i === 6) return deprn[6] + (deprn[5] + deprn[4] + deprn[3] + deprn[2] + (storeInteriors * 0.2));
-  })
+    }
+
+    return deprn
+      .slice(2, i + 1)
+      .reduce((sum, value) => sum + value, 0) +
+      storeInteriors * 0.2;
+  });
 
   const pbt = [...ebitda.map((e, i) => r2((e ?? 0) - deprn[i]))];
 
@@ -236,6 +305,7 @@ export function parseApiRows(rows, opts = {}) {
     ucpSales,
     customerDiscount,
     nsvSales,
+    stockTotal,
     grossEarnings: gross,
     totalExpenses: totExp,
     expenses,

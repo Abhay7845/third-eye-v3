@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { BASE_URL } from "./Forms/data/baseUrl";
 import RoiPdfReport from "./Forms/RoiPdfReport";
+import { routes } from "../../../routes";
 
 // ─── Page definitions ─────────────────────────────────────────────────────────
 const PAGES = [
@@ -631,6 +633,7 @@ function TOTSection({ roiid, onClose }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function RBMDashboard({ userRole = "RBM" }) {
   const userLog = useSelector((state) => state?.user?.user);
+  const navigate = useNavigate();
 
   // Left panel state
   const [roiList, setRoiList] = useState([]);
@@ -825,6 +828,10 @@ export default function RBMDashboard({ userRole = "RBM" }) {
       <aside className="w-80 bg-white border-r border-slate-200 flex flex-col overflow-hidden shadow-sm shrink-0">
         {/* Header */}
         <div className="px-5 py-4 bg-gradient-to-r from-indigo-700 to-blue-600">
+          <button type="button" onClick={() => navigate(routes.NEW_STORE)}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 mb-3 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-lg transition">
+            ← Back to Third Eye
+          </button>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-2xl">📊</span>
             <h2 className="text-white font-bold text-lg tracking-wide">{userLog?.name}</h2>

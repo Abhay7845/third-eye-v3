@@ -3,6 +3,10 @@ import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { BASE_URL } from "./Forms/data/baseUrl";
 import RoiPdfReport from "./Forms/RoiPdfReport";
+import { parseApiRows } from "./Forms/roiFinancialSummary";
+import BPMFieldValuesTable from "../../../BPMSummary/BPMFieldValuesTable";
+import SNVTurnoverYearWiseTbl from "../../../BPMSummary/SNVTurnoverYearWiseTbl";
+import { buildBpmSummaryData } from "../../../BPMSummary/BPMSummaryDataMapper";
 
 // ─── Page definitions ─────────────────────────────────────────────────────────
 const PAGES = [
@@ -196,12 +200,15 @@ export default function HistoryPage({ onBack, onContinueROI }) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const userLog = useSelector((state) => state?.user?.user);
+  // BPM Summary is for Retail ops review only — hidden from every other role.
+  const isRetailRole = (userLog?.role || "").toUpperCase() === "RETAIL";
   const [viewModal, setViewModal] = useState({
     open: false,
     pageName: "",
     data: null,
     loading: false,
   });
+  const [bpmModal, setBpmModal] = useState({ open: false, loading: false, data: null });
 
   useEffect(() => {
     (async () => {
@@ -411,6 +418,46 @@ export default function HistoryPage({ onBack, onContinueROI }) {
       console.error(err);
       toast.error("Failed to load page data.");
       setViewModal((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  // BPM Summary modal — specific to whichever ROI is currently selected in history.
+  const handleViewBpmSummary = async () => {
+    if (!selectedRoi?.roiid) return;
+    setBpmModal({ open: true, loading: true, data: null });
+    try {
+      const roiid = selectedRoi.roiid;
+      const roiContext = await buildRoiContext();
+      const retailArea =
+        parseFloat(roiContext?.historyRetailArea || roiContext?.existingRetailArea) || 0;
+      const [res1, res2] = await Promise.all([
+        fetch(`${BASE_URL}/summary_screen_5/${roiid}`),
+        fetch(`${BASE_URL}/sales_planning`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ screen: 4, roiid }),
+        }),
+      ]);
+      if (!res1.ok) throw new Error("Failed to load summary data.");
+      const json1 = await res1.json();
+      let stockTotal = [];
+      if (res2.ok) {
+        const json2 = await res2.json();
+        stockTotal = json2?.data?.filter((it) => it.Header === "Stock_UCP_Total") ?? [];
+        if (stockTotal.length) {
+          stockTotal[0].Yr0 = 0;
+          stockTotal[0].Particulars = stockTotal[0].Header;
+          stockTotal[0].Header = "";
+          delete stockTotal[0].roiid;
+          delete stockTotal[0].status;
+        }
+      }
+      const financial = parseApiRows([...(json1?.data ?? []), ...stockTotal], { retailArea });
+      setBpmModal({ open: true, loading: false, data: buildBpmSummaryData(roiContext, financial) });
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to load BPM Summary.");
+      setBpmModal({ open: false, loading: false, data: null });
     }
   };
 
@@ -767,7 +814,14 @@ export default function HistoryPage({ onBack, onContinueROI }) {
 
                 {/* One-view report — only once the ROI has actually been submitted */}
                 {isSubmitted && (
-                  <div className='mt-4 flex justify-end'>
+                  <div className='mt-4 flex justify-end gap-2'>
+                    {isRetailRole && (
+                      <button
+                        onClick={handleViewBpmSummary}
+                        className='inline-flex items-center gap-2 px-4 py-2 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 rounded-lg font-semibold text-xs shadow transition'>
+                        📊 BPM Summary
+                      </button>
+                    )}
                     <RoiPdfReport
                       roiid={selectedRoi.roiid}
                       className='inline-flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow transition'
@@ -1441,6 +1495,61 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                   </div>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BPM Summary Modal — specific to the currently selected ROI ───── */}
+      {bpmModal.open && (
+        <div
+          className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-6 sm:p-10'
+          onClick={() => setBpmModal({ open: false, loading: false, data: null })}>
+          <div
+            className='bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col'
+            onClick={(e) => e.stopPropagation()}>
+            <div className='flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-r from-indigo-50 to-white rounded-t-2xl'>
+              <div>
+                <h2 className='text-base font-bold text-gray-900'>📊 BPM Summary</h2>
+                <p className='text-xs text-gray-400 mt-0.5 font-mono'>
+                  ROI: {selectedRoi?.roiid}
+                </p>
+              </div>
+              <button
+                onClick={() => setBpmModal({ open: false, loading: false, data: null })}
+                className='text-gray-400 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
+                ✕
+              </button>
+            </div>
+            <div className='flex-1 overflow-y-auto bg-slate-50 px-6 py-6 space-y-6'>
+              {bpmModal.loading ? (
+                <div className='flex flex-col items-center justify-center h-48 gap-3'>
+                  <svg className='h-8 w-8 animate-spin text-indigo-500' fill='none' viewBox='0 0 24 24'>
+                    <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4' />
+                    <path className='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z' />
+                  </svg>
+                  <span className='text-sm text-gray-500 font-medium'>Loading BPM Summary…</span>
+                </div>
+              ) : !bpmModal.data ? (
+                <div className='flex flex-col items-center justify-center h-48 text-gray-400'>
+                  <p className='text-5xl mb-3'>📭</p>
+                  <p className='text-sm font-semibold text-gray-500'>Could not load BPM Summary for this ROI</p>
+                </div>
+              ) : (
+                <>
+                  <div className='space-y-2'>
+                    <h3 className='text-xs font-bold text-gray-500 uppercase tracking-wide'>Store Details</h3>
+                    <BPMFieldValuesTable data={bpmModal.data.data} columns={bpmModal.data.columns} />
+                  </div>
+                  <div className='space-y-2'>
+                    <h3 className='text-xs font-bold text-gray-500 uppercase tracking-wide'>Year-wise Financial Summary</h3>
+                    <SNVTurnoverYearWiseTbl
+                      data={bpmModal.data.snv_turnover_years.data}
+                      columns={bpmModal.data.snv_turnover_years.columns}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

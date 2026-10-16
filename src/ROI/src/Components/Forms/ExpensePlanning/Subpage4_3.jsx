@@ -278,17 +278,18 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
           return updated;
         });
 
-        // Locked rows (Salaries/Sec & HK/Electricity) — Yr1 base + escalation %
-        // restored straight from their saved rows.
+        // Locked rows (Salaries/Sec & HK/Electricity) — only the escalation %
+        // is restored from the saved row; the Yr1 base is NEVER taken from a
+        // saved snapshot here, it must always track the live upstream total
+        // (see the subpage4_2Data/fallback sync effect below) so that editing
+        // Salaries/Sec & HK/Electricity on Subpage4_2 and coming back here
+        // always reflects the latest figures, even after this page was
+        // already saved once before.
         const LOCKED_HEADERS = { salaries: "Salaries", secHk: "Security & Housekeeping", electricity: "Electricity" };
-        const lockedYr1 = {};
         const lockedEsc = {};
         Object.entries(LOCKED_HEADERS).forEach(([key, label]) => {
-          const row = find(label);
-          lockedYr1[key] = yr1Of(row);
-          lockedEsc[key] = escOf(row, 5);
+          lockedEsc[key] = escOf(find(label), 5);
         });
-        setLockedRowYr1(lockedYr1);
         setLockedRowEsc(lockedEsc);
 
         isRestoredRef.current = true;
@@ -300,9 +301,11 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     })();
   }, [storeData?.roiid]);
 
-  // Sync locked-row Yr1 values from subpage4_2Data in the live (non-resume) flow
+  // Sync locked-row Yr1 values from subpage4_2Data in the live (non-resume) flow.
+  // Deliberately NOT gated on isRestoredRef — these three rows always mirror
+  // whatever Subpage4_2/4_1 currently report, so re-editing Salaries/Sec & HK/
+  // Electricity there and coming back here reflects the change immediately.
   useEffect(() => {
-    if (isRestoredRef.current) return; // don't clobber values restored from a saved SUMMARY row
     const sal = subpage4_2Data?.salaries?.totalAnnualTotal ?? resourceFallback?.totalAnnualTotal;
     const sec = subpage4_2Data?.securityHousekeeping?.totalAnnual ?? resourceFallback?.secHkTotalAnnual;
     const elec = subpage4_2Data?.electricity?.total ?? otherFallback?.electricityTotal;
@@ -439,19 +442,18 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     })();
   }, [storeData?.roiid]);
 
-  // Seed Yr1 for repairs/insurance/printing/consumables/staffWelfare from the
-  // defined formulas (Capex, Interiors, staff count). BTL/Credit Card
-  // Commission/GST have their own dedicated per-year effect above (each uses
-  // its own year's Total Sales, not a flat Yr1 escalation).
+  // Seed Yr1 for repairs/printing/consumables/staffWelfare from the defined
+  // formulas (Capex, staff count). Insurance is NOT seeded here — it's a pure
+  // per-year computed row (see interiorsCurrentValue/insuranceValues below).
+  // BTL/Credit Card Commission/GST have their own dedicated per-year effect
+  // above (each uses its own year's Total Sales, not a flat Yr1 escalation).
   useEffect(() => {
     if (isRestoredRef.current) return;
     const totalCapexVal = subpage4_1Data?.totalCapex ?? capexFallback?.totalCapex ?? 0;
-    const interiorsVal = subpage4_1Data?.interiors ?? capexFallback?.interiors ?? 0;
     const staffNos = subpage4_2Data?.salaries?.totalNos ?? resourceFallback?.totalNos ?? 0;
-    if (!totalCapexVal && !interiorsVal && !staffNos) return;
+    if (!totalCapexVal && !staffNos) return;
 
     const repairsYr1 = totalCapexVal * 0.01;
-    const insuranceYr1 = interiorsVal * 0.01;
     const printingYr1 = 17500 * 12;
     const consumablesYr1 = 20000 * 12;
     const staffWelfareYr1 = 3500 * staffNos * 12;
@@ -459,14 +461,12 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     setEditableRows((prev) => ({
       ...prev,
       repairs: { ...prev.repairs, yr1: repairsYr1 },
-      insurance: { ...prev.insurance, yr1: insuranceYr1 },
       printing: { ...prev.printing, yr1: printingYr1 },
       consumables: { ...prev.consumables, yr1: consumablesYr1 },
       staffWelfare: { ...prev.staffWelfare, yr1: staffWelfareYr1 },
     }));
   }, [
     subpage4_1Data?.totalCapex,
-    subpage4_1Data?.interiors,
     subpage4_2Data?.salaries?.totalNos,
     capexFallback,
     resourceFallback,
@@ -502,6 +502,15 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const totalCapex = subpage4_1Data?.totalCapex ?? capexFallback?.totalCapex ?? 0;
   const interiors = subpage4_1Data?.interiors ?? capexFallback?.interiors ?? 0;
 
+  // Current Value of Interiors (same straight-line 20%/yr depreciation over 5
+  // years used in roiFinancialSummary.js's `currentValueOfInteriors`): full
+  // value at Yr0, declining 20%/yr through Yr5, then 0 from Yr5 onward.
+  const interiorsCurrentValue = YEARS.map((_, i) => {
+    const yr = i + 1; // YEARS here is Yr1..Yr6
+    return Math.max(interiors - interiors * 0.2 * Math.min(yr, 5), 0);
+  });
+  const insuranceValues = interiorsCurrentValue.map((v) => v * 0.01);
+
   // ── Computed rent ─────────────────────────────────────────────────────────
   const annualRent = YEARS.map((_, i) => {
     const baseRent = sba[i] * ratePerSqft[i] * 12;
@@ -527,7 +536,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     { key: null, locked: true, escKey: "secHk", escEditable: true, yr1Editable: false, label: "Security & Housekeeping", basis: "as under", escalation: "", values: secHkEscalated },
     { key: null, locked: true, escKey: "electricity", escEditable: true, yr1Editable: false, label: "Electricity", basis: "as under", escalation: "", values: electricityEscalated },
     { key: "repairs", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Repairs & Maintenance", basis: "1%–3% initial capex", escalation: "% capex", values: escalate(editableRows.repairs.yr1, editableRows.repairs.esc) },
-    { key: "insurance", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Insurance", basis: "1% interiors", escalation: "% interior", values: escalate(editableRows.insurance.yr1, editableRows.insurance.esc) },
+    { key: "insurance", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Insurance", basis: "1% current value of interiors", escalation: "% interior", values: insuranceValues },
     { key: "btl", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "BTL", basis: "0.3% sale (per year)", escalation: "% sale", values: btlValues },
     { key: "travel", locked: false, escKey: null, escEditable: true, yr1Editable: true, label: "Travel & Conveyance", basis: "17.5k p.m", escalation: "", values: escalate(editableRows.travel.yr1, editableRows.travel.esc) },
     { key: "telephone", locked: false, escKey: null, escEditable: true, yr1Editable: true, label: "Telephone/Internet", basis: "11k p.m", escalation: "", values: escalate(editableRows.telephone.yr1, editableRows.telephone.esc) },
@@ -684,7 +693,13 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
                 <BlueInputCell
                   key={i}
                   value={v}
-                  onChange={(e) => setRatePerSqft(Array(6).fill(e.target.value))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Yr1 fills all 6 years; any other year only updates itself
+                    setRatePerSqft((prev) =>
+                      i === 0 ? Array(6).fill(val) : prev.map((p, idx) => (idx === i ? val : p)),
+                    );
+                  }}
                   disabled={isSaved && !isEditing}
                 />
               ))}
