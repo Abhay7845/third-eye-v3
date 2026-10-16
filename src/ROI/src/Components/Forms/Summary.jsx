@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import * as XLSX from "xlsx-js-style";
 import { BASE_URL } from "./data/baseUrl";
 import RoiPdfReport from "./RoiPdfReport";
 import { YEARS, r2, sum6y, fmt, fmtPct, parseApiRows } from "./roiFinancialSummary";
+import BPMFieldValuesTable from "../../../../BPMSummary/BPMFieldValuesTable";
+import SNVTurnoverYearWiseTbl from "../../../../BPMSummary/SNVTurnoverYearWiseTbl";
+import { buildBpmSummaryData } from "../../../../BPMSummary/BPMSummaryDataMapper";
 
 function buildSubmitPayload(d) {
   const row = (particulars, vals, header) => {
@@ -170,13 +174,18 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
   const [cashExpanded, setCashExpanded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [pdfViewed, setPdfViewed] = useState(false);
+  const [showBpmSummary, setShowBpmSummary] = useState(false);
+  const [excelGenerating, setExcelGenerating] = useState(false);
 
   const isNewStore = roiContext?.projectType === "New Store";
   const historyId = roiContext?.historyId;
+  // BPM Summary is for Retail ops review only — hidden from every other role.
+  const isRetailRole = (userLog?.role || "").toUpperCase() === "RETAIL";
 
   // The CloudFront URL redirects straight to the PDF, so it can be opened directly in a new tab.
   const pdfUrl = historyId
@@ -185,6 +194,110 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
   const handleViewPdf = () => {
     window.open(pdfUrl, "_blank", "noopener,noreferrer");
     setPdfViewed(true);
+  };
+
+  // Highlight colors for the same rows the on-screen <TotalRow> emphasizes —
+  // keeps the exported sheet visually aligned with the live table.
+  const EXCEL_TOTAL_ROW_COLORS = {
+    "NSV Sales": "DDEBF7",
+    "Gross earnings/Commission": "E2EFDA",
+    "Total expenses": "FFF2CC",
+    "EBITDA / Cash Profit / Operating Profit": "E2EFDA",
+    "PBT": "E2EFDA",
+    "Total Investment": "FFF2CC",
+    "Total": "DDEBF7",
+  };
+
+  // Exports the same rows shown on this Summary page (and submitted on
+  // Submit) as a styled, downloadable .xlsx — reuses buildSubmitPayload(d) so
+  // the sheet always matches what's on screen without duplicating row logic.
+  const handleDownloadExcel = () => {
+    if (!d) return;
+    setExcelGenerating(true);
+    try {
+      const payload = buildSubmitPayload(d);
+      const HEADERS = ["Particulars", "Category / Notes", "Yr 0", "Yr 1", "Yr 2", "Yr 3", "Yr 4", "Yr 5", "Yr 6", "6Yr Total"];
+      const COLS = HEADERS.length;
+      const TITLE_ROW = 0, SUBTITLE_ROW = 1, HEADER_ROW = 3, DATA_START = 4;
+
+      const aoa = [
+        [`ROI Summary — ${roiContext?.projectType ?? "New Store"}`],
+        [`ROI ID: ${roiContext?.roiId ?? "-"}   •   City: ${roiContext?.city ?? "-"}   •   Region: ${roiContext?.region ?? "-"}`],
+        [],
+        HEADERS,
+        ...payload.map((r) => [
+          r.particulars, r.header ?? "", r.yr0 ?? "", r.yr1 ?? "", r.yr2 ?? "",
+          r.yr3 ?? "", r.yr4 ?? "", r.yr5 ?? "", r.yr6 ?? "", r["6Yr"] ?? "",
+        ]),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+      ws["!merges"] = [
+        { s: { r: TITLE_ROW, c: 0 }, e: { r: TITLE_ROW, c: COLS - 1 } },
+        { s: { r: SUBTITLE_ROW, c: 0 }, e: { r: SUBTITLE_ROW, c: COLS - 1 } },
+      ];
+      ws["!cols"] = [{ wch: 42 }, { wch: 18 }, ...Array(7).fill({ wch: 11 }), { wch: 13 }];
+      ws["!rows"] = [{ hpt: 26 }, { hpt: 18 }, { hpt: 6 }, { hpt: 20 }];
+
+      const border = {
+        top: { style: "thin", color: { rgb: "BFBFBF" } },
+        bottom: { style: "thin", color: { rgb: "BFBFBF" } },
+        left: { style: "thin", color: { rgb: "BFBFBF" } },
+        right: { style: "thin", color: { rgb: "BFBFBF" } },
+      };
+      const setStyle = (r, c, style) => {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!ws[addr]) ws[addr] = { t: "s", v: "" };
+        ws[addr].s = style;
+      };
+
+      setStyle(TITLE_ROW, 0, {
+        font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
+        fill: { patternType: "solid", fgColor: { rgb: "1F3864" } },
+        alignment: { horizontal: "left", vertical: "center" },
+      });
+      setStyle(SUBTITLE_ROW, 0, {
+        font: { italic: true, sz: 10, color: { rgb: "595959" } },
+        alignment: { horizontal: "left", vertical: "center" },
+      });
+      for (let c = 0; c < COLS; c++) {
+        setStyle(HEADER_ROW, c, {
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { patternType: "solid", fgColor: { rgb: "2F5496" } },
+          alignment: { horizontal: c <= 1 ? "left" : "center", vertical: "center" },
+          border,
+        });
+      }
+
+      payload.forEach((r, i) => {
+        const row = DATA_START + i;
+        const isMetaRow = typeof r.yr0 === "undefined"; // header-only rows (no Yr columns)
+        const highlight = EXCEL_TOTAL_ROW_COLORS[r.particulars];
+        for (let c = 0; c < COLS; c++) {
+          const style = {
+            border,
+            alignment: { horizontal: c <= 1 ? "left" : "right", vertical: "center" },
+            font: {
+              bold: !!highlight,
+              italic: isMetaRow,
+              color: { rgb: highlight ? "1F3864" : isMetaRow ? "595959" : "000000" },
+            },
+          };
+          if (highlight) style.fill = { patternType: "solid", fgColor: { rgb: highlight } };
+          if (!isMetaRow && c >= 2) style.numFmt = "#,##0.00";
+          setStyle(row, c, style);
+        }
+      });
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "ROI Summary");
+      XLSX.writeFile(wb, `ROI_Summary_${roiContext?.roiId || "report"}.xlsx`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to generate the Summary Excel export.");
+    } finally {
+      setExcelGenerating(false);
+    }
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -305,6 +418,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
   const handleSubmit = async () => {
     if (!d || !roiContext?.roiId) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
       const saveRes = await fetch(`${BASE_URL}/summary_screen_5/save`, {
         method: "POST",
@@ -327,16 +441,22 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
             actor_email: userLog?.email ?? "",
             channel: userLog?.channel ?? "Tanishq",
             store_format: roiContext?.effectiveStoreFormat ?? roiContext?.existingStoreFormat ?? "",
-            project_type: roiContext?.projectType ?? "",
+            project_type: roiContext?.projectType === 'Store Expansion' ? "Expansion": roiContext?.projectType === 'New Store'?'NewStore':roiContext?.projectType === 'Store Expansion' ,
             region: roiContext?.region ?? "",
           }),
         },
       );
-      if (!statusRes.ok) throw new Error("Failed to update status.");
+      // Backend returns a JSON body with `message` even on failure (e.g. 422 when
+      // no RBM/Approval1 is configured for this store format+region) — surface
+      // that instead of a generic "failed" message so the ABM knows to contact admin.
+      const statusData = await statusRes.json().catch(() => null);
+      if (!statusRes.ok) {
+        throw new Error(statusData?.message || "Failed to update status.");
+      }
       setSubmitted(true);
     } catch (err) {
       console.error(err);
-      alert(err.message);
+      setSubmitError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -386,12 +506,27 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
         <div className='flex flex-wrap items-center justify-center gap-3 mt-8'>
           {/* Only shown once the ROI has actually been submitted for approval */}
           <RoiPdfReport roiid={roiContext?.roiId} />
+          {isRetailRole && (
+            <button
+              type='button'
+              onClick={() => setShowBpmSummary((v) => !v)}
+              className='px-8 py-3 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 rounded-xl font-semibold text-sm shadow-lg transition'>
+              {showBpmSummary ? "📊 Hide BPM Summary" : "📊 View BPM Summary"}
+            </button>
+          )}
           <button
             onClick={onHome}
             className='px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm shadow-lg transition'>
             ← Back to Main Page
           </button>
         </div>
+        {showBpmSummary && (
+          <BpmSummaryModal
+            roiContext={roiContext}
+            d={d}
+            onClose={() => setShowBpmSummary(false)}
+          />
+        )}
       </div>
     );
   }
@@ -858,6 +993,12 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
           ))}
         </div>
       )}
+      {/* Server-side submit failure (e.g. no RBM/Approval1 configured for this store+region) */}
+      {submitError && (
+        <div className='bg-red-50 border border-red-300 rounded-2xl px-6 py-4'>
+          <p className='text-sm text-red-700 font-semibold'>⚠ {submitError}</p>
+        </div>
+      )}
       <div className='bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-5 flex items-center justify-start gap-4'>
         <div className='flex items-center gap-3'>
           <p className='text-xs text-gray-400 hidden sm:block'>
@@ -872,6 +1013,22 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
               {pdfViewed ? "📄 View New Store PDF ✓" : "📄 View New Store PDF"}
             </button>
           )}
+          {/* Lets the ABM download this exact Summary page's data (not the full backend report) as an Excel file, once data has loaded */}
+          <button
+            type='button'
+            onClick={handleDownloadExcel}
+            disabled={excelGenerating || !d}
+            className={`px-5 py-3 rounded-xl font-bold text-sm shadow-lg transition text-white ${excelGenerating || !d ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}>
+            {excelGenerating ? "Generating..." : "Download Page Excel"}
+          </button>
+          {isRetailRole && (
+            <button
+              type='button'
+              onClick={() => setShowBpmSummary((v) => !v)}
+              className='px-5 py-3 rounded-xl font-bold text-sm shadow-lg transition bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700'>
+              {showBpmSummary ? "📊 Hide BPM Summary" : "📊 View BPM Summary"}
+            </button>
+          )}
           <button
             type='button'
             onClick={handleSubmit}
@@ -882,6 +1039,49 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
               }`}>
             {submitting ? "Submitting…" : "Submit for Approval ✓"}
           </button>
+        </div>
+      </div>
+      {showBpmSummary && (
+        <BpmSummaryModal
+          roiContext={roiContext}
+          d={d}
+          onClose={() => setShowBpmSummary(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── BPM Summary modal (reuses BPMSummary components, fed from live ROI data) ──
+function BpmSummaryModal({ roiContext, d, onClose }) {
+  const bpmData = buildBpmSummaryData(roiContext, d);
+  return (
+    <div
+      className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-6 sm:p-10'
+      onClick={onClose}>
+      <div
+        className='bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col'
+        onClick={(e) => e.stopPropagation()}>
+        <div className='flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-r from-indigo-50 to-white rounded-t-2xl'>
+          <h2 className='text-base font-bold text-gray-900'>📊 BPM Summary</h2>
+          <button
+            onClick={onClose}
+            className='text-gray-400 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
+            ✕
+          </button>
+        </div>
+        <div className='flex-1 overflow-y-auto bg-slate-50 px-6 py-6 space-y-6'>
+          <div className='space-y-2'>
+            <h3 className='text-xs font-bold text-gray-500 uppercase tracking-wide'>Store Details</h3>
+            <BPMFieldValuesTable data={bpmData.data} columns={bpmData.columns} />
+          </div>
+          <div className='space-y-2'>
+            <h3 className='text-xs font-bold text-gray-500 uppercase tracking-wide'>Year-wise Financial Summary</h3>
+            <SNVTurnoverYearWiseTbl
+              data={bpmData.snv_turnover_years.data}
+              columns={bpmData.snv_turnover_years.columns}
+            />
+          </div>
         </div>
       </div>
     </div>

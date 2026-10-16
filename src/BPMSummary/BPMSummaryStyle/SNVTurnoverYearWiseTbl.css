@@ -1,16 +1,18 @@
 .snv_turnover_year_wise_tbl_wrapper {
   width: 100%;
-  overflow: visible;
-  border-radius: 2px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
   background: #ffffff;
 }
 
 .snv_turnover_year_wise_tbl {
   width: 100%;
-  min-width: 1060px;
+  min-width: 760px;
   border-collapse: collapse;
   border: 1px solid #d6dde7;
+  border-radius: 10px;
   font-family: "Segoe UI", sans-serif;
 }
 
@@ -19,10 +21,10 @@
 .snv_turnover_year_wise_tbl thead th {
   position: sticky;
   top: 0;
-  background: linear-gradient(135deg, #0f4c81, #1565c0);
+  background: linear-gradient(135deg, #4338ca, #2563eb, #0891b2);
   color: #fff;
-  padding: 10px 8px;
-  font-size: 12px;
+  padding: 10px 10px;
+  font-size: 11.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -34,7 +36,11 @@
 
 .snv_turnover_year_wise_tbl thead th:first-child {
   text-align: left;
-  min-width: 300px;
+  min-width: 230px;
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 2;
 }
 
 /* BODY */
@@ -52,7 +58,7 @@
 }
 
 .snv_turnover_year_wise_tbl tbody td {
-  padding: 9px 8px;
+  padding: 9px 10px;
   border-bottom: 1px solid #e3e8ef;
   border-right: 1px solid #e3e8ef;
   font-size: 12px;
@@ -69,7 +75,11 @@
   font-weight: 600;
   text-align: left;
   color: #1e293b;
-  min-width: 300px;
+  min-width: 230px;
+  position: sticky;
+  left: 0;
+  background: inherit;
+  z-index: 1;
 }
 
 /* Value Columns */
@@ -116,6 +126,27 @@
   color: #d32f2f;
 }
 
+/* Scrollbar */
+
+.snv_turnover_year_wise_tbl_wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.snv_turnover_year_wise_tbl_wrapper::-webkit-scrollbar-track {
+  background: #edf2f7;
+  border-radius: 8px;
+}
+
+.snv_turnover_year_wise_tbl_wrapper::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #4338ca, #2563eb, #0891b2);
+  border-radius: 8px;
+}
+
+.snv_turnover_year_wise_tbl_wrapper {
+  scrollbar-width: thin;
+  scrollbar-color: #2563eb #edf2f7;
+}
+
 /* Responsive */
 
 @media (max-width: 992px) {
@@ -125,7 +156,8 @@
     font-size: 11px;
   }
 
-  .snv_turnover_year_wise_tbl .metric-column {
-    min-width: 240px;
+  .snv_turnover_year_wise_tbl .metric-column,
+  .snv_turnover_year_wise_tbl thead th:first-child {
+    min-width: 190px;
   }
 }

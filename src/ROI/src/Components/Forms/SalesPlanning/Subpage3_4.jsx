@@ -276,6 +276,32 @@ function AccordionSection({ title, isOpen, onToggle, children }) {
   );
 }
 
+// Mirrors the DB's Header/Yr1-6 shape (TCD_*/TGHSD_*) for the payload we just
+// saved, so the "is this stale" comparison can run immediately post-save.
+const DISCOUNT_CATEGORIES = [
+  ["LCG", "lcg"], ["MCG", "mcg"], ["HCG", "hcg"], ["Gemstones", "gemstones"],
+  ["GIS", "gis"], ["Regular", "regular"],
+  ["Solitaire A(<70C)", "solitaireA"], ["Solitaire B(70-100C)", "solitaireB"],
+  ["Solitaire C(1CRT+)", "solitaireC"], ["Solitaire D(2CRT+)", "solitaireD"],
+  ["Coins", "coins"], ["Total", "total"],
+];
+
+function buildSavedDiscountRows(payload) {
+  const rows = [];
+  const pushRows = (prefix, obj) => {
+    DISCOUNT_CATEGORIES.forEach(([label, key]) => {
+      const vals = obj?.[key] || [];
+      rows.push({
+        Header: `${prefix}_${label}`,
+        Yr1: vals[0], Yr2: vals[1], Yr3: vals[2], Yr4: vals[3], Yr5: vals[4], Yr6: vals[5],
+      });
+    });
+  };
+  pushRows("TCD", payload.totalCustomerDiscount);
+  pushRows("TGHSD", payload.totalGHSDiscount);
+  return rows;
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Subpage3_4({ handleNext, handlePrevious }) {
@@ -287,13 +313,17 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
   const [isGHSOpen, setIsGHSOpen] = useState(false);
   const { markStepSaved, subpage3_2Data, forwardDetail, salesSummaryVersion, discountSavedAtVersion, markDiscountSavedVersion } = useSection3Context();
   const [customerDiscount, setCustomerDiscount] = useState([]);
+  // Raw Header/Yr1-6 rows last fetched from the DB (TCD_*/TGHSD_* headers) — the
+  // source of truth `computed` is diffed against to decide Save vs Next.
+  const [savedDiscountRows, setSavedDiscountRows] = useState(null);
   const computed = computeValues(subpage3_2Data, customerDiscount);
   const userLog = useSelector((state) => state?.user?.user);
+  const mismatchToastShownRef = useRef(false);
 
-  // Mark as saved if screen 4 data already exists when resuming
+  // Fetch previously saved discount data (if any) when resuming/editing this ROI
   useEffect(() => {
     const roiid = forwardDetail?.roiid;
-    if (!roiid || isSaved) return;
+    if (!roiid) return;
     (async () => {
       try {
         const res = await fetch(`${BASE_URL}/sales_planning`, {
@@ -303,8 +333,8 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
         });
         if (!res.ok) return;
         const json = await res.json();
-        if (json?.data?.[0]) {
-          setIsSaved(true);
+        if (json?.data?.length) {
+          setSavedDiscountRows(json.data);
           if (discountSavedAtVersion === null) markDiscountSavedVersion();
         }
       } catch (e) {
@@ -312,6 +342,55 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
       }
     })();
   }, [forwardDetail?.roiid]);
+
+  // Source-of-truth check: diff the freshly computed values against what's actually
+  // persisted (TCD_*/TGHSD_* rows) — catches ANY upstream change (Sales Mix edits,
+  // discount master-rate updates, etc.), not just a Sales-Mix re-save.
+  useEffect(() => {
+    if (!savedDiscountRows) return;
+    const dataReady = !!subpage3_2Data && Object.keys(customerDiscount || {}).length > 0;
+    if (!dataReady) return;
+
+    const savedYears = (header) => {
+      const row = savedDiscountRows.find((r) => r.Header === header);
+      if (!row) return null;
+      return [1, 2, 3, 4, 5, 6].map((n) => Number(row[`Yr${n}`]) || 0);
+    };
+    const arraysMatch = (saved, current) =>
+      !!saved && saved.every((v, i) => Math.abs(v - (parseFloat(current[i]) || 0)) <= 0.015);
+
+    const CATEGORIES = [
+      ["LCG", computed.cdLCG, computed.ghsLCG],
+      ["MCG", computed.cdMCG, computed.ghsMCG],
+      ["HCG", computed.cdHCG, computed.ghsHCG],
+      ["Gemstones", computed.cdColorStones, computed.ghsColorStones],
+      ["GIS", computed.cdGIS, computed.ghsGIS],
+      ["Regular", computed.cdRegular, computed.ghsRegular],
+      ["Solitaire A(<70C)", computed.cdSolitaireA, computed.ghsSolitaireA],
+      ["Solitaire B(70-100C)", computed.cdSolitaireB, computed.ghsSolitaireB],
+      ["Solitaire C(1CRT+)", computed.cdSolitaireC, computed.ghsSolitaireC],
+      ["Solitaire D(2CRT+)", computed.cdSolitaireD, computed.ghsSolitaireD],
+      ["Coins", computed.cdCoins, computed.ghsCoins],
+      ["Total", computed.cdTotal, computed.ghsTotal],
+    ];
+
+    const matchesSaved = CATEGORIES.every(
+      ([label, cdVals, ghsVals]) =>
+        arraysMatch(savedYears(`TCD_${label}`), cdVals) &&
+        arraysMatch(savedYears(`TGHSD_${label}`), ghsVals),
+    );
+
+    if (matchesSaved) {
+      mismatchToastShownRef.current = false;
+      setIsSaved(true);
+    } else {
+      setIsSaved(false);
+      if (!mismatchToastShownRef.current) {
+        mismatchToastShownRef.current = true;
+        toast.info("Discount values have changed since this was last saved. Please save again to update the Summary page.");
+      }
+    }
+  }, [savedDiscountRows, subpage3_2Data, customerDiscount]);
 
   // Staleness guard: Sales Mix (Subpage3_2) drives every computed discount
   // value here — if it was edited & re-saved after Discounts was last saved,
@@ -326,9 +405,16 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
     toast.info("Sales Mix was updated — discounts were recalculated. Please review and re-save.");
   }, [salesSummaryVersion, isSaved, discountSavedAtVersion]);
   const getCustomerDiscountData = async () => {
+    const region = forwardDetail?.region;
+    const storeFormat = forwardDetail?.storeFormat;
+    if (!region || !storeFormat) return;
     try {
       setLoading(true);
-      const res = await fetch(`${BASE_URL}/cutomer_discount`);
+      const res = await fetch(
+        `${BASE_URL}/cutomer_discount?region=${encodeURIComponent(
+          region,
+        )}&store_format=${encodeURIComponent(storeFormat)}`,
+      );
       if (res.ok) {
         const response = await res.json();
         const data = response.data;
@@ -351,7 +437,7 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
 
   useEffect(() => {
     getCustomerDiscountData();
-  }, []);
+  }, [forwardDetail?.region, forwardDetail?.storeFormat]);
 
   const handleSave = async () => {
     try {
@@ -403,6 +489,8 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
       }
       setIsSaving(false);
       setIsSaved(true);
+      setSavedDiscountRows(buildSavedDiscountRows(payload));
+      mismatchToastShownRef.current = false;
       markStepSaved(3);
       markDiscountSavedVersion();
       setShowModal(true);
@@ -615,6 +703,17 @@ export default function Subpage3_4({ handleNext, handlePrevious }) {
                 </table>
               </AccordionSection>
             </div>
+
+            {/* Values changed since last save — DB row is now stale */}
+            {!isSaved && savedDiscountRows && (
+              <div className='mt-6 flex items-start gap-2 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800'>
+                <span className='mt-0.5'>⚠️</span>
+                <span>
+                  Discount values have changed since this section was last saved.
+                  Please click <strong>Save</strong> to update the figures shown on the Summary page.
+                </span>
+              </div>
+            )}
 
             {/* Navigation Buttons */}
             <div className='flex justify-start mt-10'>
