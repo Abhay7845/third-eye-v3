@@ -1,6 +1,6 @@
 # ROI (Return on Investment) Application — Complete Project Documentation
 
-**Version:** As of September 2026 — updated with TOT engine (Gemstones + 6 studded categories), Sales Planning Phase 1/2 split, edit-in-place across every screen, and the Screen-1 duplicate-ROI backend fix
+**Version:** As of October 2026 — updated with the approval-chain rewrite (stage-sequence resolution, security tightening), TOT business-formula fixes verified against the reference workbook, RBM Dashboard's rich Final Summary view, and several latent backend bugs fixed (missing `get_roi_current_status` proc, stale `get_roi_final_summary_screen` proc, misspelled DB column names)
 **Backend (active dev):** FastAPI (Python) · `f:\ROI\Dev_branch\ROI-Backend-python\server\`  
 **Backend (other copies — not kept in sync, do not edit blindly):** `f:\ROI\ROI_server\server\`, `f:\ROI\roi-be-og\roi-be-og\server\`  
 **Frontend:** React 18 embedded inside Third Eye (`third-eye-v3`) · `f:\ROI\git_ROI_THIRD_EYE\third-eye-v3\src\ROI\src\`  
@@ -32,6 +32,7 @@
 15. [Status Lifecycle](#15-status-lifecycle)
 16. [Recent Changes (August 2026)](#16-recent-changes-august-2026)
 17. [Recent Changes (September 2026)](#17-recent-changes-september-2026)
+18. [Recent Changes (October 2026)](#18-recent-changes-october-2026)
 
 ---
 
@@ -1110,6 +1111,59 @@ Editing an earlier Sales Planning substep whose downstream substeps were already
 
 ---
 
+## 18. Recent Changes (October 2026)
+
+### Backend — Approval workflow rewrite (2026-10-09)
+
+| Change | Detail |
+|---|---|
+| Stage-sequence resolution | Replaced the old flat `_STATUS_TO_APPROVAL_COL` dict (had a real bug: `Approved_byAdmin` always skipped straight to BPM_Request_By, never checking Approval4) with `_STAGE_SEQUENCE = ["Approval1","Approval2","Approval3","Approval4","BPM_Request_By"]` + `_resolve_acting_col(status, chain_row)`, which walks the sequence from the status's stage index and returns the first non-empty column — fully data-driven off the DB's approval-chain row, no `project_type` string checks |
+| Submit guard | `POST /roi/submit/{roiid}` now resolves the approval chain **first** and rejects (422) if Approval1 is empty, instead of unconditionally setting status to `Submitted_toRBM` even with no RBM configured |
+| ABM stays in the loop | `_resolve_approval_context` always pulls the ABM's info from Screen-1; every approve notification CCs the ABM, every reject/clarify goes straight to the ABM (not cascading back one level) and CCs every approver stage already touched (`_previous_stage_emails`) |
+| Security tightening | `_validate_actor` no longer special-cases `actor_role` containing "rbm" as auto-authorised (client-supplied string, not verified identity); an empty/unresolvable chain or status now hard-denies (`AuthorizationError`) instead of logging a warning and allowing the action anyway |
+| Email safety | `_valid_email()` guard added — Screen-1's `username` field is a **display name** (e.g. "Rishab Gupta (Quation)"), not an email; a real Graph API crash from sending it as a recipient led to never reusing it as `abm_email` again |
+
+### Backend — Two confirmed-broken stored procs bypassed
+
+| Endpoint | Problem found | Fix |
+|---|---|---|
+| `GET /summary_screen_5/{roiid}` | `get_roi_final_summary_screen` returned only a **stale, hardcoded 24-row subset** of the 46 rows actually saved — EBITDA, Depreciation, PBT, ROI%, Total Investment, IRR, NPV, and Payback Period were silently missing from every "view" screen (RBM Dashboard, History page) | Bypassed the proc entirely — `get_final_summary` now runs a plain `SELECT Particulars, Header, Yr0..Yr6 FROM roi_final_summary_screen WHERE roiid=...`, verified live to return the complete dataset |
+| `_fetch_roi_current_status` (used by every approve/reject/clarify) | `get_roi_current_status` **was never created on the DB side at all** (confirmed via `INFORMATION_SCHEMA.ROUTINES`) — every call silently failed, so `_run_approval_action` was unconditionally raising a 403 "could not determine this ROI's current status" for every single approval action | Reads the same status instead via the already-used `fetch_store_details(roiid, 'roi_basic_store_details')` proc — verified its `status` column holds the exact live value (e.g. `Submitted_toRBM`) |
+
+### Backend — TOT business-formula bugs fixed (2026-10-15, verified against the reference workbook)
+
+| Bug | Detail |
+|---|---|
+| Plain + Studded TOT ~100× inflated | `_pbands()`/`_sbands()` used raw whole-number-percent band rates (e.g. `45.00` meaning 45%) with no `/100` — fixed by dividing at the point each rate is cast from the DB row |
+| Coins TOT ~2.7-2.8× overstated | `_coins_year_tot()` set `tot_c = amc_c` (no banding at all) — now applies a hardcoded `_COINS_TOT_PCT` reference table (`{"L2":0.15,"L3":0.40,"L4":0.15,"L2.5":0.22}`) verified against the workbook's Coins band block |
+| DB-save path had its own separate bugs | `_compute_and_save_tot` duplicated the same double-divide-by-100 mistake independently of the Excel exporters, plus a column-shift bug in `_flat_plain`/`_flat_stud`/band-helpers (wrong category count / group-major instead of year-major ordering) — all ~30 call sites fixed and re-verified end-to-end |
+
+### Backend — Other fixes
+
+| Fix | Detail |
+|---|---|
+| `mail_service.py` Graph token retry | `get_access_token()` now retries once on transient `SSLEOFError` before failing, and only shows the "set a CA bundle" message for genuine `SSLCertVerificationError` |
+| Subpage4_x resume/restore bugs | Several Expense Planning resume-from-history bugs fixed across `Subpage4_1/4_2/4_3.jsx` (CAPEX/Resource restore reading the wrong JSON shape, Insurance formula switched to declining "Current Value of Interiors", stale `lockedRowYr1` not re-syncing after editing 4_2) |
+
+### Frontend — RBM Dashboard "Final Summary" page added and iterated
+
+| Change | Detail |
+|---|---|
+| New page added | `PAGES` list gained a "Final Summary" entry wired to `GET /summary_screen_5/{roiid}`, so RBM/Commercial/Admin/Retail can see Screen 5 data (IRR/NPV/Payback/EBITDA/etc.) — previously only the ABM's own History page exposed this |
+| Rich report view built | Replaced the generic flat-table renderer with `FinalSummaryContent` — KPI cards (NPV, Payback Period, IRR, Rev/Sq.Ft), a collapsible Income → Expenses → Profitability → Investment → Cash-Flow financial table (Yr0-Yr6 + 6-Year Total), and a "Key Metrics" grid, mirroring the ABM's own `Summary.jsx` screen |
+| Expense-table-empty bug fixed | First attempt reused `roiFinancialSummary.js`'s `parseApiRows` against the already-saved snapshot — its lookup keys are the *raw per-screen* Particulars text, which differs from ~5 of the saved snapshot's own display labels (e.g. saved as "Telephone / Internet" vs. the raw-screen key "Telephone/Internet"), silently zeroing those expense rows. Replaced with `buildFinalSummaryView`, which reads the already-computed figures straight off the saved snapshot by their exact saved label — simpler, no recompute, and immune to the label mismatch |
+| Status badge fixed | `getPageStatus("Final Summary")` was hardcoded to always show the green "Completed" badge — now mirrors the ROI's real overall status (e.g. "Submitted to RBM", "Approved_byRBM") |
+| Progress bar fixed | "Form Completion" was structurally capped at 11/12 because Final Summary never had its own row in the page-status list it was being counted from — now counted via `getPageStatus` across all `PAGES`, correctly reaching 12/12 |
+
+### Frontend — RBM Dashboard approve/reject/clarify payload bugs fixed
+
+| Bug | Detail |
+|---|---|
+| `store_format` always sent as `""` | `handleSelectRoi` read `basic.existing_store_format`/`basic.ty_history_id` from `/fetchScreen?parameter=roi_basic_store_details`, but the stored proc's real column names (confirmed via a live `CALL fetch_store_details(...)` dump) are `exsisting_store_format` (a genuine DB-side typo) and `TY_historyID` — neither ever matched. Fixed both lookups to the real column names; also fixes the "View New Store PDF" button, which depended on the same `TY_historyID` field |
+| Error messaging | `handleConfirmAction`/`handleViewPageData`/the ROI-list fetch now always parse the JSON body and surface the backend's own `message` (AuthorizationError text, 404 "No saved data found...", etc.) instead of hardcoded generic strings |
+
+---
+
 ## Environment Setup
 
 ### Backend
@@ -1137,4 +1191,4 @@ DB_PASSWORD=...
 
 ---
 
-*Documentation last updated: September 2026*
+*Documentation last updated: October 2026*
