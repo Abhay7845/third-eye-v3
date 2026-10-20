@@ -27,7 +27,7 @@ function ROIMainPage() {
         if (!res.ok) { setUserRole("ABM"); return; }
         const json = await res.json();
         // API returns array; first entry is the logged-in user's role
-        const role = (json.data?.[1]?.Role ?? "ABM");
+        const role = (json.data?.[0]?.Role ?? "ABM");
         setUserRole(role);
       } catch {
         setUserRole("ABM"); // fallback to ABM on error
