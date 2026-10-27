@@ -52,13 +52,13 @@ const computeValues = (inputs) => {
   for (let i = 1; i <= 5; i++) {
     const prev = walkInPerDay[i - 1];
     const pct = parseFloat(inputs.increaseWalkIns[i]) || 0;
-    walkInPerDay[i] = Math.round(prev * (1 + pct / 100));
+    walkInPerDay[i] = Math.ceil(prev * (1 + pct / 100));
   }
 
   // Buyers per day = walkInPerDay[i] × conversionPct[i] / 100
   const buyersPerDay = walkInPerDay.map((w, i) => {
     const conv = parseFloat(inputs.conversionPct[i]) || 0;
-    return Math.ceil((w * conv) / 100);
+    return Math.round((w * conv) / 100);
   });
 
   // Average Ticket Size chain: Yr.1 from user input, Yr.2–6 = prev × (1 + growthTicketSize%)
@@ -67,7 +67,7 @@ const computeValues = (inputs) => {
   for (let i = 1; i <= 5; i++) {
     const prev = avgTicketSize[i - 1];
     const pct = parseFloat(inputs.growthTicketSize[i]) || 0;
-    avgTicketSize[i] = Math.ceil(prev * (1 + pct / 100));
+    avgTicketSize[i] = Math.round(prev * (1 + pct / 100));
   }
 
   const totalSales = Array(6);

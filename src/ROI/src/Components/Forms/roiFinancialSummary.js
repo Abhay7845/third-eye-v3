@@ -242,8 +242,8 @@ export function parseApiRows(rows, opts = {}) {
   for (let i = 1; i <= 5; i++) {
     calIncWorkingCapitalCashOutflow[i] = (workingCapital_atRate_1per[i] - workingCapital_atRate_1per[i + 1])
   }
-  // Formula : Yr 6 => sum of Yr0 till Yr5
-  calIncWorkingCapitalCashOutflow[6] = calIncWorkingCapitalCashOutflow.slice(0, 5).reduce((sum, val) => (sum + val), 0);
+  // Formula : Yr 6 => recovery of the full accumulated working capital (positive inflow, Yr0-Yr5)
+  calIncWorkingCapitalCashOutflow[6] = -calIncWorkingCapitalCashOutflow.slice(0, 6).reduce((sum, val) => (sum + val), 0);
 
   // Net Cash Flow
   const calCapexTotal = Array(7).fill(0)
