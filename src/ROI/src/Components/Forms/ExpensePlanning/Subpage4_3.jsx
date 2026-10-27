@@ -444,7 +444,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
 
   // Seed Yr1 for repairs/printing/consumables/staffWelfare from the defined
   // formulas (Capex, staff count). Insurance is NOT seeded here — it's a pure
-  // per-year computed row (see interiorsCurrentValue/insuranceValues below).
+  // per-year computed row (see capexCurrentValue/insuranceValues below).
   // BTL/Credit Card Commission/GST have their own dedicated per-year effect
   // above (each uses its own year's Total Sales, not a flat Yr1 escalation).
   useEffect(() => {
@@ -500,16 +500,15 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const secHkYr1 = lockedRowYr1.secHk;
   const electricityYr1 = lockedRowYr1.electricity;
   const totalCapex = subpage4_1Data?.totalCapex ?? capexFallback?.totalCapex ?? 0;
-  const interiors = subpage4_1Data?.interiors ?? capexFallback?.interiors ?? 0;
 
-  // Current Value of Interiors (same straight-line 20%/yr depreciation over 5
-  // years used in roiFinancialSummary.js's `currentValueOfInteriors`): full
-  // value at Yr0, declining 20%/yr through Yr5, then 0 from Yr5 onward.
-  const interiorsCurrentValue = YEARS.map((_, i) => {
-    const yr = i + 1; // YEARS here is Yr1..Yr6
-    return Math.max(interiors - interiors * 0.2 * Math.min(yr, 5), 0);
+  // Current Value of Capex (same straight-line 20%/yr depreciation used in
+  // roiFinancialSummary.js's `currentValueOfInteriors`, shifted so Yr1 here
+  // lines up with that function's Yr0 slot): Yr1 = full value (undepreciated),
+  // then declining 20%/yr through Yr5, staying 0 from Yr6 onward.
+  const capexCurrentValue = YEARS.map((_, i) => {
+    return Math.max(totalCapex - totalCapex * 0.2 * Math.min(i, 5), 0);
   });
-  const insuranceValues = interiorsCurrentValue.map((v) => v * 0.01);
+  const insuranceValues = capexCurrentValue.map((v) => v * 0.01);
 
   // ── Computed rent ─────────────────────────────────────────────────────────
   const annualRent = YEARS.map((_, i) => {
@@ -536,7 +535,7 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     { key: null, locked: true, escKey: "secHk", escEditable: true, yr1Editable: false, label: "Security & Housekeeping", basis: "as under", escalation: "", values: secHkEscalated },
     { key: null, locked: true, escKey: "electricity", escEditable: true, yr1Editable: false, label: "Electricity", basis: "as under", escalation: "", values: electricityEscalated },
     { key: "repairs", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Repairs & Maintenance", basis: "1%–3% initial capex", escalation: "% capex", values: escalate(editableRows.repairs.yr1, editableRows.repairs.esc) },
-    { key: "insurance", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Insurance", basis: "1% current value of interiors", escalation: "% interior", values: insuranceValues },
+    { key: "insurance", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "Insurance", basis: "1% current value of capex", escalation: "% capex", values: insuranceValues },
     { key: "btl", locked: false, escKey: null, escEditable: false, yr1Editable: false, label: "BTL", basis: "0.3% sale (per year)", escalation: "% sale", values: btlValues },
     { key: "travel", locked: false, escKey: null, escEditable: true, yr1Editable: true, label: "Travel & Conveyance", basis: "17.5k p.m", escalation: "", values: escalate(editableRows.travel.yr1, editableRows.travel.esc) },
     { key: "telephone", locked: false, escKey: null, escEditable: true, yr1Editable: true, label: "Telephone/Internet", basis: "11k p.m", escalation: "", values: escalate(editableRows.telephone.yr1, editableRows.telephone.esc) },

@@ -237,7 +237,23 @@ function SingleRowContent({ row }) {
 
 // ─ Renders multiple rows as a scrollable table (e.g. RESOURCE expenses, one row per role)
 function MultiRowContent({ rows }) {
-  const allKeys = [...new Set(rows.flatMap(r => Object.keys(r)))].filter(k => !HIDDEN.has(k));
+  // Role/Level/count up front, money figures next, status/dates last.
+  const PREFERRED_ORDER = [
+    "Role", "Level", "No_of_Resource", "Commercial Ref salary",
+    "Monthly Fixed", "Annual Fixed", "Variable Component",
+    "Annual Variable", "Annual Total", "Status", "Inserted_date", "Updated_date",
+  ];
+  const rawKeys = [...new Set(rows.flatMap(r => Object.keys(r)))].filter(k => !HIDDEN.has(k));
+  const allKeys = [
+    ...PREFERRED_ORDER.filter(k => rawKeys.includes(k)),
+    ...rawKeys.filter(k => !PREFERRED_ORDER.includes(k)),
+  ];
+  const isDateCol = (k) => /date/i.test(k);
+  const NON_SUMMABLE = /variable component|%|rate|level|status/i;
+  const isNumericCol = (k) => !isDateCol(k) && rows.some(r => { const v = r[k]; return v != null && v !== "" && !parseYearly(String(v ?? "")) && !isNaN(parseFloat(v)); });
+  const isSummableCol = (k) => isNumericCol(k) && !NON_SUMMABLE.test(k);
+  const colTotal = (k) => rows.reduce((s, r) => s + (parseFloat(r[k]) || 0), 0);
+
   return (
     <div className="p-6">
       <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pb-1.5 border-b border-slate-200">
@@ -247,25 +263,25 @@ function MultiRowContent({ rows }) {
         <table className="min-w-full border-collapse text-xs">
           <thead>
             <tr className="bg-amber-600 text-white">
-              <th className="px-3 py-2.5 text-left font-bold w-8">#</th>
+              <th className="px-3 py-2.5 text-left font-bold w-8 sticky left-0 bg-amber-600 z-10">#</th>
               {allKeys.map(k => (
-                <th key={k} className="px-3 py-2.5 text-left font-bold whitespace-nowrap">{formatLabel(k)}</th>
+                <th key={k} className={`px-3 py-2.5 font-bold whitespace-nowrap ${isNumericCol(k) ? "text-right" : "text-left"}`}>{formatLabel(k)}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map((row, idx) => (
               <tr key={idx} className={idx % 2 === 0 ? "bg-white hover:bg-amber-50" : "bg-amber-50/50 hover:bg-amber-50"}>
-                <td className="px-3 py-2 text-slate-400 font-bold border-b border-slate-100">{idx + 1}</td>
+                <td className="px-3 py-2 text-slate-400 font-bold border-b border-slate-100 sticky left-0 bg-inherit z-10">{idx + 1}</td>
                 {allKeys.map(k => {
                   const v = row[k];
-                  const yv = parseYearly(String(v ?? ""));
+                  const yv = !isDateCol(k) && parseYearly(String(v ?? ""));
                   const display = yv
                     ? yv.slice(0, 6).map(n => fmtN(n)).join(" │ ")
                     : (formatValue(v) ?? "—");
-                  const isNum = !yv && !isNaN(parseFloat(v)) && String(v ?? "").trim() !== "";
+                  const isNum = !yv && isNumericCol(k) && !isNaN(parseFloat(v)) && String(v ?? "").trim() !== "";
                   return (
-                    <td key={k} className={`px-3 py-2 border-b border-slate-100 ${isNum ? "text-indigo-700 font-bold" : "text-slate-700"}`}>
+                    <td key={k} className={`px-3 py-2 border-b border-slate-100 whitespace-nowrap ${isNum ? "text-right tabular-nums text-indigo-700 font-bold" : "text-slate-700"}`}>
                       {display}
                     </td>
                   );
@@ -273,11 +289,24 @@ function MultiRowContent({ rows }) {
               </tr>
             ))}
           </tbody>
+          {allKeys.some(isSummableCol) && (
+            <tfoot>
+              <tr className="bg-amber-100 font-bold text-amber-900">
+                <td className="px-3 py-2.5 sticky left-0 bg-amber-100 z-10">Total</td>
+                {allKeys.map(k => (
+                  <td key={k} className="px-3 py-2.5 text-right tabular-nums">
+                    {isSummableCol(k) ? fmtN(colTotal(k)) : ""}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     </div>
   );
 }
+
 
 // ─── Final Summary rich view ──────────────────────────────────────────────────
 // Reads the already-computed figures straight off the saved /summary_screen_5
@@ -609,7 +638,140 @@ function FinalSummaryContent({ d }) {
   );
 }
 
-function PageDataModal({ pageName, data, loading, onClose }) {
+// ─ Sales Planning - Ref Store Code Details: two-section layout mirroring
+// Subpage3_1.jsx — Store Particulars (ref data) + Key Expenses, side by side.
+const REF_PARTICULARS_FIELDS = [
+  "Super Built Up Area", "Carpet area", "Sales", "Inventory",
+  "Sales Plain share", "Sales Studded share", "Sales Coin Silver share",
+  "Inventory Plain share", "Inventory Studded share",
+  "Plain Stock Turns", "Studded Stock Turns",
+  "LCG mix", "MCG mix", "HCG mix", "Btg AMC%", "City AMC%",
+];
+const REF_PARTICULARS_UNITS = {
+  "Super Built Up Area": "sqft", "Carpet area": "sqft",
+  Sales: "₹ [in Cr.]", Inventory: "₹ [in Cr.]",
+  "Sales Plain share": "%", "Sales Studded share": "%", "Sales Coin Silver share": "%",
+  "Inventory Plain share": "%", "Inventory Studded share": "%",
+  "Plain Stock Turns": "×", "Studded Stock Turns": "×",
+  "LCG mix": "%", "MCG mix": "%", "HCG mix": "%", "Btg AMC%": "%", "City AMC%": "%",
+};
+const REF_EXPENSE_FIELDS = [
+  "Rent", "Staff Salaries", "Security & Housekeeping", "Electricity",
+  "Repairs & Maintenance", "Insurance", "BTL", "Travel & Conveyance",
+  "Telephone/Internet", "Credit Card Commission", "GST (primarily rental)",
+  "Store - Printing/Pantry etc", "Consumables", "Other - Staff welfare/Uniforms etc",
+];
+// Column names returned by the view proc don't always match these human
+// labels exactly — fall back to a case/punctuation-insensitive match.
+const normRefKey = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, "");
+function getRefField(row, label) {
+  if (row == null) return null;
+  if (label in row) return row[label];
+  const target = normRefKey(label);
+  const k = Object.keys(row).find((key) => normRefKey(key) === target);
+  return k !== undefined ? row[k] : null;
+}
+function asRefNum(v) {
+  if (v && typeof v === "object") return parseFloat(v.monthly ?? v.value ?? 0) || 0;
+  return parseFloat(v) || 0;
+}
+
+function RefStoreCodeContent({ row }) {
+  const monthlyValues = REF_EXPENSE_FIELDS.map((f) => asRefNum(getRefField(row, f)));
+  const totalMonthly = monthlyValues.reduce((s, v) => s + v, 0);
+  const totalAnnual = totalMonthly * 12;
+
+  return (
+    <div className="p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left — Store Particulars (ref store data) */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col border border-slate-100">
+          <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50/60 to-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📊</span>
+                <div>
+                  <h3 className="text-base font-bold text-gray-800 leading-tight">Store Particulars</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Values sourced from the reference store</p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full whitespace-nowrap">
+                🔒 Read only
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-[2fr_1fr_56px] gap-x-2 px-5 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
+            <span>Field</span>
+            <span className="text-right">Value</span>
+            <span className="text-center">Unit</span>
+          </div>
+          <div>
+            {REF_PARTICULARS_FIELDS.map((field, i) => (
+              <div key={field} className={`grid grid-cols-[2fr_1fr_56px] gap-x-2 items-center px-5 py-2 ${i % 2 === 0 ? "bg-white" : "bg-blue-50/40"}`}>
+                <span className="text-sm font-semibold text-gray-700 truncate" title={field}>{field}</span>
+                <span className="text-sm font-bold text-gray-800 text-right tabular-nums">
+                  {formatValue(getRefField(row, field)) ?? "—"}
+                </span>
+                <span className="text-xs font-medium text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded text-center">
+                  {REF_PARTICULARS_UNITS[field] ?? ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right — Key Expenses (benchmark expense data) */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col border border-slate-100">
+          <div className="border-b border-gray-100 bg-gradient-to-r from-green-50/60 to-white">
+            <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💰</span>
+                <div>
+                  <h3 className="text-base font-bold text-gray-800 leading-tight">Key Expenses</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Monthly values saved for this ROI — annual is ×12</p>
+                </div>
+              </div>
+              <div className="flex gap-2.5 text-xs text-gray-500 shrink-0 mt-0.5">
+                <span className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded px-2 py-0.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-blue-200 inline-block" />
+                  Monthly
+                </span>
+                <span className="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded px-2 py-0.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-gray-300 inline-block" />
+                  Annual ×12
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-[2fr_1fr_1fr] gap-x-2 px-5 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
+            <span>Expense</span>
+            <span className="text-right">Monthly (₹)</span>
+            <span className="text-right">Annual (₹)</span>
+          </div>
+          <div>
+            {REF_EXPENSE_FIELDS.map((field, i) => {
+              const monthly = asRefNum(getRefField(row, field));
+              return (
+                <div key={field} className={`grid grid-cols-[2fr_1fr_1fr] gap-x-2 items-center px-5 py-2 ${i % 2 === 0 ? "bg-white" : "bg-green-50/30"}`}>
+                  <span className="text-sm font-semibold text-gray-700 truncate" title={field}>{field}</span>
+                  <span className="text-sm text-right tabular-nums text-gray-800 font-semibold">{monthly > 0 ? fmtN(monthly) : "—"}</span>
+                  <span className="text-sm text-right tabular-nums text-gray-600 font-semibold">{monthly > 0 ? fmtN(monthly * 12) : "—"}</span>
+                </div>
+              );
+            })}
+            <div className="grid grid-cols-[2fr_1fr_1fr] gap-x-2 px-5 py-2.5 bg-blue-100 border-t-2 border-blue-300">
+              <span className="text-sm font-bold text-gray-800">Total</span>
+              <span className="text-sm font-bold text-right text-blue-800 tabular-nums">{fmtN(totalMonthly)}</span>
+              <span className="text-sm font-bold text-right text-blue-800 tabular-nums">{fmtN(totalAnnual)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PageDataModal({ pageName, data, loading, onClose, onNavigate }) {
   const pageInfo = PAGES.find(p => p.name === pageName);
   const grad = GROUP_GRADIENT[pageInfo?.group] ?? "from-indigo-600 to-blue-700";
   const isFinalSummary = pageName === "Final Summary";
@@ -621,27 +783,67 @@ function PageDataModal({ pageName, data, loading, onClose }) {
     [isFinalSummary, rows]
   );
 
+  // Sibling sections in the same group (Sales Planning / Expense Planning /
+  // Store Setup) so Prev/Next can flow through them without closing the modal.
+  const groupPages = pageInfo ? PAGES.filter(p => p.group === pageInfo.group) : [];
+  const groupIndex = groupPages.findIndex(p => p.name === pageName);
+  const prevPage = groupIndex > 0 ? groupPages[groupIndex - 1] : null;
+  const nextPage = groupIndex !== -1 && groupIndex < groupPages.length - 1 ? groupPages[groupIndex + 1] : null;
+  const shortLabel = (n) => n.replace(/^.*?-\s*/, "");
+  const isRefStoreCode = pageName === "Sales Planning - Ref Store Code Details";
+  const [isMaximized, setIsMaximized] = useState(false);
+
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+    <div className={`fixed inset-0 bg-black/70 flex items-center justify-center z-50 ${isMaximized ? "p-0" : "p-4"}`}>
+      <div className={`bg-white shadow-2xl w-full flex flex-col overflow-hidden ${isMaximized ? "h-full max-w-none max-h-none rounded-none" : "rounded-2xl max-w-7xl max-h-[95vh]"}`}>
 
         {/* Gradient header */}
         <div className={`bg-gradient-to-r ${grad} px-6 py-5 shrink-0`}>
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <span className="text-4xl drop-shadow">{pageInfo?.icon ?? "📄"}</span>
-              <div>
-                <p className="text-white/60 text-xs font-semibold uppercase tracking-widest">{pageInfo?.group}</p>
-                <h3 className="text-white font-bold text-xl leading-tight">{pageName}</h3>
+              <div className="min-w-0">
+                <p className="text-white/60 text-xs font-semibold uppercase tracking-widest">
+                  {pageInfo?.group}
+                  {groupPages.length > 1 && ` · Section ${groupIndex + 1} of ${groupPages.length}`}
+                </p>
+                <h3 className="text-white font-bold text-xl leading-tight truncate">{pageName}</h3>
                 {rows.length > 1 && <p className="text-white/60 text-xs mt-0.5">{rows.length} records</p>}
               </div>
             </div>
-            <button onClick={onClose}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 text-white text-xl font-bold transition shrink-0">
-              ×
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setIsMaximized(m => !m)}
+                title={isMaximized ? "Restore" : "Full screen"}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 text-white text-base transition">
+                {isMaximized ? "🗗" : "⛶"}
+              </button>
+              <button onClick={onClose}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 text-white text-xl font-bold transition">
+                ×
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Section quick-jump bar — only for pages that belong to a multi-section group */}
+        {groupPages.length > 1 && (
+          <div className="flex items-center gap-2 px-6 py-2.5 border-b border-slate-100 bg-white shrink-0 overflow-x-auto">
+            {groupPages.map((p, i) => (
+              <button
+                key={p.name}
+                onClick={() => onNavigate?.(p.name)}
+                title={p.name}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition shrink-0 ${
+                  p.name === pageName
+                    ? "bg-indigo-600 text-white shadow"
+                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                }`}>
+                <span>{p.icon}</span>
+                <span className="hidden sm:inline">{i + 1}. {shortLabel(p.name)}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Body */}
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -657,6 +859,8 @@ function PageDataModal({ pageName, data, loading, onClose }) {
               <span className="text-5xl">📭</span>
               <p className="text-sm font-medium">No data submitted for this page yet.</p>
             </div>
+          ) : isRefStoreCode ? (
+            <RefStoreCodeContent row={rows[0]} />
           ) : rows.length > 1 ? (
             <MultiRowContent rows={rows} />
           ) : (
@@ -665,15 +869,37 @@ function PageDataModal({ pageName, data, loading, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
-          <p className="text-xs text-slate-400">
+        <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-between items-center gap-3 shrink-0">
+          <button
+            onClick={() => prevPage && onNavigate?.(prevPage.name)}
+            disabled={!prevPage}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition truncate max-w-[32%] ${
+              prevPage
+                ? "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                : "bg-slate-100 text-slate-300 cursor-not-allowed"
+            }`}>
+            ← {prevPage ? shortLabel(prevPage.name) : "Previous"}
+          </button>
+          <p className="text-xs text-slate-400 hidden md:block whitespace-nowrap">
             {rows.length} record{rows.length !== 1 ? "s" : ""}
             {totalFields > 0 ? ` · ${totalFields} fields` : ""}
           </p>
-          <button onClick={onClose}
-            className="px-5 py-2 bg-slate-700 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg transition">
-            Close
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => nextPage && onNavigate?.(nextPage.name)}
+              disabled={!nextPage}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition truncate max-w-[180px] ${
+                nextPage
+                  ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                  : "bg-slate-100 text-slate-300 cursor-not-allowed"
+              }`}>
+              {nextPage ? shortLabel(nextPage.name) : "Next"} →
+            </button>
+            <button onClick={onClose}
+              className="px-5 py-2 bg-slate-700 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg transition">
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1453,6 +1679,7 @@ export default function RBMDashboard({ userRole = "RBM" }) {
           data={pageModal.data}
           loading={pageModal.loading}
           onClose={() => setPageModal({ open: false, pageName: "", data: [], loading: false })}
+          onNavigate={handleViewPageData}
         />
       )}
 

@@ -208,6 +208,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
     data: null,
     loading: false,
   });
+  const [viewModalMaximized, setViewModalMaximized] = useState(false);
   const [bpmModal, setBpmModal] = useState({ open: false, loading: false, data: null });
 
   useEffect(() => {
@@ -1072,18 +1073,36 @@ export default function HistoryPage({ onBack, onContinueROI }) {
       </div>
 
       {/* ── View Page Modal ────────────────────────────────────── */}
-      {viewModal.open && (
-        <div className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-6 sm:p-10'>
-          <div className='bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col'>
+      {viewModal.open && (() => {
+        // Sibling sections in the same group (Sales Planning / Expense Planning /
+        // Store Setup) so Prev/Next can flow through them without closing the modal.
+        const currentPageInfo = PAGES.find((p) => p.name === viewModal.pageName);
+        const groupPages = currentPageInfo
+          ? PAGES.filter((p) => p.group === currentPageInfo.group)
+          : [];
+        const groupIndex = groupPages.findIndex((p) => p.name === viewModal.pageName);
+        const prevPage = groupIndex > 0 ? groupPages[groupIndex - 1] : null;
+        const nextPage =
+          groupIndex !== -1 && groupIndex < groupPages.length - 1
+            ? groupPages[groupIndex + 1]
+            : null;
+
+        return (
+        <div className={`fixed inset-0 bg-black/60 flex items-center justify-center z-50 ${viewModalMaximized ? "p-0" : "p-4 sm:p-8"}`}>
+          <div className={`bg-white shadow-2xl w-full flex flex-col ${viewModalMaximized ? "h-full max-w-none max-h-none rounded-none" : "rounded-2xl max-w-6xl max-h-[94vh]"}`}>
             {/* Modal header */}
             <div className='flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-r from-indigo-50 to-white rounded-t-2xl'>
-              <div className='flex items-center gap-3'>
-                <span className='text-2xl'>
-                  {PAGES.find((p) => p.name === viewModal.pageName)?.icon ??
-                    "📄"}
-                </span>
-                <div>
-                  <h2 className='text-base font-bold text-gray-900'>
+              <div className='flex items-center gap-3 min-w-0'>
+                <span className='text-2xl'>{currentPageInfo?.icon ?? "📄"}</span>
+                <div className='min-w-0'>
+                  {currentPageInfo?.group && (
+                    <p className='text-[10px] font-bold uppercase tracking-widest text-indigo-400'>
+                      {currentPageInfo.group}
+                      {groupPages.length > 1 &&
+                        ` · Section ${groupIndex + 1} of ${groupPages.length}`}
+                    </p>
+                  )}
+                  <h2 className='text-base font-bold text-gray-900 truncate'>
                     {viewModal.pageName}
                   </h2>
                   <p className='text-xs text-gray-400 mt-0.5 font-mono'>
@@ -1091,19 +1110,50 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() =>
-                  setViewModal({
-                    open: false,
-                    pageName: "",
-                    data: null,
-                    loading: false,
-                  })
-                }
-                className='text-gray-400 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
-                ✕
-              </button>
+              <div className='flex items-center gap-2 flex-shrink-0'>
+                <button
+                  onClick={() => setViewModalMaximized((m) => !m)}
+                  title={viewModalMaximized ? "Restore" : "Full screen"}
+                  className='text-gray-400 hover:text-gray-700 text-base w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
+                  {viewModalMaximized ? "🗗" : "⛶"}
+                </button>
+                <button
+                  onClick={() => {
+                    setViewModal({
+                      open: false,
+                      pageName: "",
+                      data: null,
+                      loading: false,
+                    });
+                    setViewModalMaximized(false);
+                  }}
+                  className='text-gray-400 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
+                  ✕
+                </button>
+              </div>
             </div>
+
+            {/* Section quick-jump bar — only for pages that belong to a multi-section group */}
+            {groupPages.length > 1 && (
+              <div className='flex items-center gap-2 px-6 py-2.5 border-b border-gray-100 bg-white flex-shrink-0 overflow-x-auto'>
+                {groupPages.map((p, i) => (
+                  <button
+                    key={p.name}
+                    onClick={() => handleViewPage(p.name)}
+                    title={p.name}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition flex-shrink-0 ${
+                      p.name === viewModal.pageName
+                        ? "bg-indigo-600 text-white shadow"
+                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    }`}>
+                    <span>{p.icon}</span>
+                    <span className='hidden sm:inline'>
+                      {i + 1}. {p.name.replace(/^.*?-\s*/, "")}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Modal body */}
             <div className='flex-1 overflow-y-auto bg-slate-50'>
@@ -1151,6 +1201,141 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     <div className='h-px flex-1 bg-gray-200' />
                   </div>
                 );
+
+                // ── Sales Planning - Ref Store Code Details: two-section layout
+                // mirroring Subpage3_1.jsx — Store Particulars (ref data) + Key Expenses ──
+                if (pageName === "Sales Planning - Ref Store Code Details") {
+                  const REF_PARTICULARS_FIELDS = [
+                    "Super Built Up Area", "Carpet area", "Sales", "Inventory",
+                    "Sales Plain share", "Sales Studded share", "Sales Coin Silver share",
+                    "Inventory Plain share", "Inventory Studded share",
+                    "Plain Stock Turns", "Studded Stock Turns",
+                    "LCG mix", "MCG mix", "HCG mix", "Btg AMC%", "City AMC%",
+                  ];
+                  const REF_PARTICULARS_UNITS = {
+                    "Super Built Up Area": "sqft", "Carpet area": "sqft",
+                    Sales: "₹ [in Cr.]", Inventory: "₹ [in Cr.]",
+                    "Sales Plain share": "%", "Sales Studded share": "%", "Sales Coin Silver share": "%",
+                    "Inventory Plain share": "%", "Inventory Studded share": "%",
+                    "Plain Stock Turns": "×", "Studded Stock Turns": "×",
+                    "LCG mix": "%", "MCG mix": "%", "HCG mix": "%", "Btg AMC%": "%", "City AMC%": "%",
+                  };
+                  const REF_EXPENSE_FIELDS = [
+                    "Rent", "Staff Salaries", "Security & Housekeeping", "Electricity",
+                    "Repairs & Maintenance", "Insurance", "BTL", "Travel & Conveyance",
+                    "Telephone/Internet", "Credit Card Commission", "GST (primarily rental)",
+                    "Store - Printing/Pantry etc", "Consumables", "Other - Staff welfare/Uniforms etc",
+                  ];
+                  // Column names returned by the view proc don't always match these
+                  // human labels exactly — fall back to a case/punctuation-insensitive match.
+                  const normKey = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+                  const getField = (row, label) => {
+                    if (row == null) return null;
+                    if (label in row) return row[label];
+                    const target = normKey(label);
+                    const k = Object.keys(row).find((key) => normKey(key) === target);
+                    return k !== undefined ? row[k] : null;
+                  };
+                  const asNum = (v) => {
+                    if (v && typeof v === 'object') return parseFloat(v.monthly ?? v.value ?? 0) || 0;
+                    return parseFloat(v) || 0;
+                  };
+
+                  const monthlyValues = REF_EXPENSE_FIELDS.map((f) => asNum(getField(first, f)));
+                  const totalMonthly = monthlyValues.reduce((s, v) => s + v, 0);
+                  const totalAnnual = totalMonthly * 12;
+
+                  return (
+                    <div className='p-5'>
+                      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+                        {/* Left — Store Particulars (ref store data) */}
+                        <div className='bg-white rounded-xl shadow-lg overflow-hidden flex flex-col'>
+                          <div className='px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50/60 to-white'>
+                            <div className='flex items-center justify-between'>
+                              <div className='flex items-center gap-2'>
+                                <span className='text-lg'>📊</span>
+                                <div>
+                                  <h3 className='text-base font-bold text-gray-800 leading-tight'>Store Particulars</h3>
+                                  <p className='text-xs text-gray-400 mt-0.5'>Values sourced from the reference store</p>
+                                </div>
+                              </div>
+                              <span className='inline-flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full whitespace-nowrap'>
+                                🔒 Read only
+                              </span>
+                            </div>
+                          </div>
+                          <div className='grid grid-cols-[2fr_1fr_56px] gap-x-2 px-5 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100'>
+                            <span>Field</span>
+                            <span className='text-right'>Value</span>
+                            <span className='text-center'>Unit</span>
+                          </div>
+                          <div>
+                            {REF_PARTICULARS_FIELDS.map((field, i) => (
+                              <div
+                                key={field}
+                                className={`grid grid-cols-[2fr_1fr_56px] gap-x-2 items-center px-5 py-2 ${i % 2 === 0 ? "bg-white" : "bg-blue-50/40"}`}>
+                                <span className='text-sm font-semibold text-gray-700 truncate' title={field}>{field}</span>
+                                <span className='text-sm font-bold text-gray-800 text-right tabular-nums'>
+                                  {fmtVal(getField(first, field))}
+                                </span>
+                                <span className='text-xs font-medium text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded text-center'>
+                                  {REF_PARTICULARS_UNITS[field] ?? ""}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Right — Key Expenses (benchmark expense data) */}
+                        <div className='bg-white rounded-xl shadow-lg overflow-hidden flex flex-col'>
+                          <div className='border-b border-gray-100 bg-gradient-to-r from-green-50/60 to-white'>
+                            <div className='px-5 pt-4 pb-3 flex items-start justify-between gap-4'>
+                              <div className='flex items-center gap-2'>
+                                <span className='text-lg'>💰</span>
+                                <div>
+                                  <h3 className='text-base font-bold text-gray-800 leading-tight'>Key Expenses</h3>
+                                  <p className='text-xs text-gray-400 mt-0.5'>Monthly values saved for this ROI — annual is ×12</p>
+                                </div>
+                              </div>
+                              <div className='flex gap-2.5 text-xs text-gray-500 shrink-0 mt-0.5'>
+                                <span className='inline-flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded px-2 py-0.5'>
+                                  <span className='w-2.5 h-2.5 rounded-sm bg-blue-200 inline-block' />
+                                  Monthly
+                                </span>
+                                <span className='inline-flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded px-2 py-0.5'>
+                                  <span className='w-2.5 h-2.5 rounded-sm bg-gray-300 inline-block' />
+                                  Annual ×12
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className='grid grid-cols-[2fr_1fr_1fr] gap-x-2 px-5 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100'>
+                            <span>Expense</span>
+                            <span className='text-right'>Monthly (₹)</span>
+                            <span className='text-right'>Annual (₹)</span>
+                          </div>
+                          <div>
+                            {REF_EXPENSE_FIELDS.map((field, i) => {
+                              const monthly = asNum(getField(first, field));
+                              return (
+                                <div key={field} className={`grid grid-cols-[2fr_1fr_1fr] gap-x-2 items-center px-5 py-2 ${i % 2 === 0 ? "bg-white" : "bg-green-50/30"}`}>
+                                  <span className='text-sm font-semibold text-gray-700 truncate' title={field}>{field}</span>
+                                  <span className='text-sm text-right tabular-nums text-gray-800 font-semibold'>{monthly > 0 ? fmtModalNum(monthly) : "—"}</span>
+                                  <span className='text-sm text-right tabular-nums text-gray-600 font-semibold'>{monthly > 0 ? fmtModalNum(monthly * 12) : "—"}</span>
+                                </div>
+                              );
+                            })}
+                            <div className='grid grid-cols-[2fr_1fr_1fr] gap-x-2 px-5 py-2.5 bg-blue-100 border-t-2 border-blue-300'>
+                              <span className='text-sm font-bold text-gray-800'>Total</span>
+                              <span className='text-sm font-bold text-right text-blue-800 tabular-nums'>{fmtModalNum(totalMonthly)}</span>
+                              <span className='text-sm font-bold text-right text-blue-800 tabular-nums'>{fmtModalNum(totalAnnual)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
 
                 // ── Year-wise table (Sales Planning pages) ─────────────────────────
                 // Data format: [{ Header: "Sales Planning_Total Sales", Yr1: N, … }]
@@ -1456,6 +1641,82 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                   );
                 }
 
+                // ── Uniform flat multi-row data (e.g. Resource Expenses — one row per
+                // role/line-item) renders as a single readable table instead of stacked cards.
+                {
+                  const flatRows = data.map((r) =>
+                    Object.fromEntries(
+                      Object.entries(r).filter(([k]) => !HIDDEN_MODAL_KEYS.has(k)),
+                    ),
+                  );
+                  const isFlatRow = (r) =>
+                    Object.values(r).every((v) => typeof v !== "object" || v == null);
+                  if (data.length > 1 && flatRows.every(isFlatRow) && flatRows.every(r => Object.keys(r).length > 0)) {
+                    // Role/Level/count up front, money figures next, status/dates last.
+                    const PREFERRED_ORDER = [
+                      "Role", "Level", "No_of_Resource", "Commercial Ref salary",
+                      "Monthly Fixed", "Annual Fixed", "Variable Component",
+                      "Annual Variable", "Annual Total", "Status", "Inserted_date", "Updated_date",
+                    ];
+                    const allKeys = Array.from(new Set(flatRows.flatMap((r) => Object.keys(r))));
+                    const colKeys = [
+                      ...PREFERRED_ORDER.filter((k) => allKeys.includes(k)),
+                      ...allKeys.filter((k) => !PREFERRED_ORDER.includes(k)),
+                    ];
+                    const isDateCol = (k) => /date/i.test(k);
+                    const NON_SUMMABLE = /variable component|%|rate|level|status/i;
+                    const isNumericCol = (k) =>
+                      !isDateCol(k) &&
+                      flatRows.some((r) => r[k] != null && r[k] !== "" && !isNaN(parseFloat(r[k])));
+                    const isSummableCol = (k) => isNumericCol(k) && !NON_SUMMABLE.test(k);
+
+                    return (
+                      <div className='p-5'>
+                        <div className='overflow-x-auto rounded-2xl border border-gray-200 shadow-md bg-white'>
+                          <table className='min-w-full border-collapse text-xs'>
+                            <thead>
+                              <tr className='bg-[#1e3a5f] text-white'>
+                                <th className='px-4 py-3.5 text-left font-bold text-sm sticky left-0 bg-[#1e3a5f] z-10 w-12'>#</th>
+                                {colKeys.map((k) => (
+                                  <th key={k} className={`px-4 py-3.5 font-bold whitespace-nowrap ${isNumericCol(k) ? "text-right" : "text-left"}`}>
+                                    {fmtLabel(k)}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {flatRows.map((row, i) => (
+                                <tr key={i} className={`transition-colors ${i % 2 === 0 ? "bg-white hover:bg-slate-50" : "bg-slate-50/60 hover:bg-slate-100/60"}`}>
+                                  <td className='px-4 py-2.5 border-b border-gray-100 font-bold text-gray-400 sticky left-0 bg-inherit z-10'>{i + 1}</td>
+                                  {colKeys.map((k) => (
+                                    <td key={k} className={`px-4 py-2.5 border-b border-gray-100 whitespace-nowrap ${isNumericCol(k) ? "text-right tabular-nums text-gray-700" : "font-medium text-gray-700"}`}>
+                                      {isNumericCol(k) ? fmtModalNum(row[k]) : fmtVal(row[k])}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                            {colKeys.some(isSummableCol) && (
+                              <tfoot>
+                                <tr className='bg-amber-50 font-bold text-amber-900'>
+                                  <td className='px-4 py-3 sticky left-0 bg-amber-50 z-10'>Total</td>
+                                  {colKeys.map((k) => (
+                                    <td key={k} className='px-4 py-3 text-right tabular-nums'>
+                                      {isSummableCol(k)
+                                        ? fmtModalNum(flatRows.reduce((s, r) => s + (parseFloat(r[k]) || 0), 0))
+                                        : ""}
+                                    </td>
+                                  ))}
+                                </tr>
+                              </tfoot>
+                            )}
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  }
+                }
+
                 // Generic fallback for multiple rows (e.g., ref store details)
                 return (
                   <div className='p-5 space-y-4'>
@@ -1496,9 +1757,39 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 );
               })()}
             </div>
+
+            {/* Footer navigation — move between sections without closing the modal */}
+            {groupPages.length > 1 && (
+              <div className='flex items-center justify-between gap-3 px-6 py-3 border-t border-gray-100 bg-white rounded-b-2xl flex-shrink-0'>
+                <button
+                  onClick={() => prevPage && handleViewPage(prevPage.name)}
+                  disabled={!prevPage}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition truncate max-w-[40%] ${
+                    prevPage
+                      ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      : "bg-gray-50 text-gray-300 cursor-not-allowed"
+                  }`}>
+                  ← {prevPage ? prevPage.name.replace(/^.*?-\s*/, "") : "Previous"}
+                </button>
+                <span className='text-xs text-gray-400 font-medium whitespace-nowrap'>
+                  Section {groupIndex + 1} of {groupPages.length}
+                </span>
+                <button
+                  onClick={() => nextPage && handleViewPage(nextPage.name)}
+                  disabled={!nextPage}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition truncate max-w-[40%] ${
+                    nextPage
+                      ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                      : "bg-gray-50 text-gray-300 cursor-not-allowed"
+                  }`}>
+                  {nextPage ? nextPage.name.replace(/^.*?-\s*/, "") : "Next"} →
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ── BPM Summary Modal — specific to the currently selected ROI ───── */}
       {bpmModal.open && (
