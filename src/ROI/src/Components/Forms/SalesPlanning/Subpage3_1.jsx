@@ -62,34 +62,10 @@ const particularsUnits = {
 };
 
 // ─── react-hook-form validation rules (blocking — shown in red) ───────────────
-const getValidationRules = (field) => {
-  const base = {
-    required: "This field is required",
-    min: { value: 0, message: "Value cannot be negative" },
-  };
-  switch (field) {
-    case "Rent":
-      return {
-        ...base,
-        min: { value: 1, message: "Rent must be greater than ₹0" },
-      };
-    case "Staff Salaries":
-      return {
-        ...base,
-        min: { value: 1, message: "Staff salaries must be greater than ₹0" },
-      };
-    case "Security & Housekeeping":
-      return {
-        ...base,
-        min: {
-          value: 1,
-          message: "Security & Housekeeping must be greater than ₹0",
-        },
-      };
-    default:
-      return { ...base };
-  }
-};
+// Fields are optional (can be skipped) but must not be negative when filled.
+const getValidationRules = () => ({
+  min: { value: 0, message: "Value cannot be negative" },
+});
 
 // ─── Labour-law & business soft warnings (non-blocking — shown in yellow) ─────
 // References: Code on Wages, 2019 (national floor min wage ≈ ₹15,000/month
@@ -120,24 +96,6 @@ const fmt = (n) =>
     ? "—"
     : Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
-// Sensible monthly defaults for a premium jewelry boutique (Tanishq-scale)
-const EXPENSE_DEFAULTS = {
-  "Rent":                              "200000",
-  "Staff Salaries":                    "120000",
-  "Security & Housekeeping":           "25000",
-  "Electricity":                       "18000",
-  "Repairs & Maintenance":             "5000",
-  "Insurance":                         "15000",
-  "BTL":                               "12000",
-  "Travel & Conveyance":               "5000",
-  "Telephone/Internet":                "3000",
-  "Credit Card Commission":            "10000",
-  "GST (primarily rental)":            "36000",
-  "Store - Printing/Pantry etc":       "4000",
-  "Consumables":                       "4000",
-  "Other - Staff welfare/Uniforms etc":"6000",
-};
-
 export default function Subpage3_1({ handleNext }) {
   // ── Store particulars come from the outer Section3 context ────────────
   const { storeParticulars, forwardDetail, markStepSaved } =
@@ -150,15 +108,15 @@ export default function Subpage3_1({ handleNext }) {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      expenses: Object.fromEntries(
-        expensesFields.map((f) => [f, EXPENSE_DEFAULTS[f] ?? ""])
-      ),
+      expenses: Object.fromEntries(expensesFields.map((f) => [f, ""])),
     },
   });
   const userLog = useSelector((state) => state?.user?.user);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [skippedFields, setSkippedFields] = useState([]);
+  const [pendingData, setPendingData] = useState(null);
 
   // Load previously saved expenses when resuming
   useEffect(() => {
@@ -191,12 +149,6 @@ export default function Subpage3_1({ handleNext }) {
 
   const userExpenses = useWatch({ control, name: "expenses" });
 
-  // All fields filled with a non-empty, non-negative value
-  const isFormComplete = expensesFields.every(
-    (field) =>
-      userExpenses?.[field] !== "" && userExpenses?.[field] !== undefined,
-  );
-
   // Per-field: annual = monthly × 12
   const annualValues = Object.fromEntries(
     expensesFields.map((field) => [
@@ -210,6 +162,26 @@ export default function Subpage3_1({ handleNext }) {
     0,
   );
   const totalAnnual = totalMonthly * 12;
+
+  // Validate first; if some fields were left blank, ask for confirmation before saving.
+  const handleSaveClick = handleSubmit((data) => {
+    const missing = expensesFields.filter(
+      (field) => data.expenses[field] === "" || data.expenses[field] === undefined,
+    );
+    if (missing.length > 0) {
+      setSkippedFields(missing);
+      setPendingData(data);
+      return;
+    }
+    onSubmit(data);
+  });
+
+  const confirmSaveWithSkippedFields = () => {
+    const data = pendingData;
+    setSkippedFields([]);
+    setPendingData(null);
+    if (data) onSubmit(data);
+  };
 
   const onSubmit = async (data) => {
     setIsSaving(true);
@@ -379,7 +351,7 @@ export default function Subpage3_1({ handleNext }) {
                         disabled={isSaved}
                         {...register(
                           `expenses.${field}`,
-                          getValidationRules(field),
+                          getValidationRules(),
                         )}
                         className={`w-full px-2 py-1.5 border rounded-md text-sm text-right focus:outline-none transition ${
                           isSaved
@@ -418,17 +390,15 @@ export default function Subpage3_1({ handleNext }) {
               })}
 
               {/* Totals row */}
-              {isFormComplete && (
-                <div className='grid grid-cols-[2fr_1fr_1fr] gap-x-2 px-5 py-2.5 bg-blue-100 border-t-2 border-blue-300'>
-                  <span className='text-sm font-bold text-gray-800'>Total</span>
-                  <span className='text-sm font-bold text-right text-blue-800 tabular-nums'>
-                    {fmt(totalMonthly)}
-                  </span>
-                  <span className='text-sm font-bold text-right text-blue-800 tabular-nums'>
-                    {fmt(totalAnnual)}
-                  </span>
-                </div>
-              )}
+              <div className='grid grid-cols-[2fr_1fr_1fr] gap-x-2 px-5 py-2.5 bg-blue-100 border-t-2 border-blue-300'>
+                <span className='text-sm font-bold text-gray-800'>Total</span>
+                <span className='text-sm font-bold text-right text-blue-800 tabular-nums'>
+                  {fmt(totalMonthly)}
+                </span>
+                <span className='text-sm font-bold text-right text-blue-800 tabular-nums'>
+                  {fmt(totalAnnual)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -438,10 +408,10 @@ export default function Subpage3_1({ handleNext }) {
           {!isSaved ? (
             <button
               type='button'
-              disabled={!isFormComplete || isSaving}
-              onClick={handleSubmit(onSubmit)}
+              disabled={isSaving}
+              onClick={handleSaveClick}
               className={`font-semibold px-8 py-3 rounded-lg shadow-lg transition transform ${
-                isFormComplete && !isSaving
+                !isSaving
                   ? "bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 cursor-pointer"
                   : "bg-gray-400 text-gray-200 cursor-not-allowed"
               }`}>
@@ -465,6 +435,51 @@ export default function Subpage3_1({ handleNext }) {
           )}
         </div>
       </div>
+
+      {/* ── Skipped Fields Warning ──────────────────────────────── */}
+      {skippedFields.length > 0 && (
+        <div className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white rounded-2xl shadow-2xl w-full max-w-md'>
+            <div className='px-8 py-6 border-b border-gray-100'>
+              <div className='flex items-center gap-3'>
+                <span className='text-3xl'>⚠️</span>
+                <div>
+                  <h2 className='text-xl font-bold text-gray-800'>
+                    Some expenses are empty
+                  </h2>
+                  <p className='text-gray-500 text-sm mt-0.5'>
+                    Do you want to save without filling these in?
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className='px-8 py-5 max-h-60 overflow-y-auto'>
+              <ul className='list-disc list-inside space-y-1 text-sm text-gray-700'>
+                {skippedFields.map((field) => (
+                  <li key={field}>{field}</li>
+                ))}
+              </ul>
+            </div>
+            <div className='px-8 pb-8 flex justify-end gap-3'>
+              <button
+                type='button'
+                onClick={() => {
+                  setSkippedFields([]);
+                  setPendingData(null);
+                }}
+                className='px-5 py-2.5 bg-white text-gray-600 border border-gray-300 rounded-lg font-medium text-sm hover:bg-gray-100 transition'>
+                Go Back
+              </button>
+              <button
+                type='button'
+                onClick={confirmSaveWithSkippedFields}
+                className='px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition'>
+                Save & Proceed
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Summary Modal ───────────────────────────────────────── */}
       {showModal && (

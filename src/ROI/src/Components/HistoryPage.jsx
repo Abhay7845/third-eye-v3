@@ -3,10 +3,9 @@ import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { BASE_URL } from "./Forms/data/baseUrl";
 import RoiPdfReport from "./Forms/RoiPdfReport";
-import { parseApiRows } from "./Forms/roiFinancialSummary";
 import BPMFieldValuesTable from "../../../BPMSummary/BPMFieldValuesTable";
 import SNVTurnoverYearWiseTbl from "../../../BPMSummary/SNVTurnoverYearWiseTbl";
-import { buildBpmSummaryData } from "../../../BPMSummary/BPMSummaryDataMapper";
+import { mapBpmSummaryResponse } from "../../../BPMSummary/BPMSummaryDataMapper";
 
 // ─── Page definitions ─────────────────────────────────────────────────────────
 const PAGES = [
@@ -210,6 +209,10 @@ export default function HistoryPage({ onBack, onContinueROI }) {
   });
   const [viewModalMaximized, setViewModalMaximized] = useState(false);
   const [bpmModal, setBpmModal] = useState({ open: false, loading: false, data: null });
+  const [bpmModalMaximized, setBpmModalMaximized] = useState(false);
+  const [bpmModalMinimized, setBpmModalMinimized] = useState(false);
+  const [bpmRequestNo, setBpmRequestNo] = useState("");
+  const [savingBpmRequestNo, setSavingBpmRequestNo] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -423,42 +426,52 @@ export default function HistoryPage({ onBack, onContinueROI }) {
   };
 
   // BPM Summary modal — specific to whichever ROI is currently selected in history.
+  // Fetches the backend's own computed BPM Summary directly (no client-side recompute).
   const handleViewBpmSummary = async () => {
     if (!selectedRoi?.roiid) return;
     setBpmModal({ open: true, loading: true, data: null });
+    setBpmRequestNo("");
     try {
       const roiid = selectedRoi.roiid;
-      const roiContext = await buildRoiContext();
-      const retailArea =
-        parseFloat(roiContext?.historyRetailArea || roiContext?.existingRetailArea) || 0;
-      const [res1, res2] = await Promise.all([
-        fetch(`${BASE_URL}/summary_screen_5/${roiid}`),
-        fetch(`${BASE_URL}/sales_planning`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ screen: 4, roiid }),
-        }),
-      ]);
-      if (!res1.ok) throw new Error("Failed to load summary data.");
-      const json1 = await res1.json();
-      let stockTotal = [];
-      if (res2.ok) {
-        const json2 = await res2.json();
-        stockTotal = json2?.data?.filter((it) => it.Header === "Stock_UCP_Total") ?? [];
-        if (stockTotal.length) {
-          stockTotal[0].Yr0 = 0;
-          stockTotal[0].Particulars = stockTotal[0].Header;
-          stockTotal[0].Header = "";
-          delete stockTotal[0].roiid;
-          delete stockTotal[0].status;
-        }
+      const res = await fetch(`${BASE_URL}/bpm_sumarry/${roiid}`);
+      const json = await res.json().catch(() => null);
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Failed to load BPM Summary.");
       }
-      const financial = parseApiRows([...(json1?.data ?? []), ...stockTotal], { retailArea });
-      setBpmModal({ open: true, loading: false, data: buildBpmSummaryData(roiContext, financial) });
+      const row = json?.data?.[0] ?? null;
+      setBpmModal({ open: true, loading: false, data: row ? mapBpmSummaryResponse(row) : null });
     } catch (err) {
       console.error(err);
       toast.error(err.message || "Failed to load BPM Summary.");
       setBpmModal({ open: false, loading: false, data: null });
+    }
+  };
+
+  // Saves the Retail-entered BPM Request No against the selected ROI.
+  // TODO: backend endpoint for persisting this is not built yet — wire up once available.
+  const handleSaveBpmRequestNo = async () => {
+    if (!selectedRoi?.roiid) return;
+    if (!bpmRequestNo.trim()) {
+      toast.error("Enter a BPM Request No. before saving.");
+      return;
+    }
+    setSavingBpmRequestNo(true);
+    try {
+      const res = await fetch(`${BASE_URL}/bpm_summary/save_request_no`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roiid: selectedRoi.roiid, bpm_request_no: bpmRequestNo.trim() }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Failed to save BPM Request No.");
+      }
+      toast.success("BPM Request No. saved.");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to save BPM Request No.");
+    } finally {
+      setSavingBpmRequestNo(false);
     }
   };
 
@@ -1337,6 +1350,278 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                   );
                 }
 
+                // ── Sectioned view for Sales Summary — mirrors Subpage3_2.jsx's own
+                // sections (Sales Planning / Sales Mix % / Plain Sales Mix % /
+                // Studded Sales Mix %) instead of one flat Header/Yr table.
+                if (pageName === "Sales Planning - Sales Summary") {
+                  const SALES_SUMMARY_SECTIONS = [
+                    { title: 'Sales Planning', rows: [
+                        ['Total Area  ( SBA )', 'Total Area (SBA)'],
+                        ['Total Area - Carpet Sqft.', 'Total Area – Carpet Sqft.'],
+                        ['Walk-in per day', 'Walk-in per day'],
+                        ['Increase in Wallk ins per day', 'Increase in Walk-ins % per day'],
+                        ['Conv.%', 'Conv. %'],
+                        ['Buyers per day', 'Buyers per day'],
+                        ['Average Ticket Size (Rs)', 'Average Ticket Size (Rs)'],
+                        ['Growth in Ticket Size', 'Growth in Ticket Size %'],
+                        ['No. of store days in a year', 'No. of store days in a year'],
+                        ['Total Sales', 'Total Sales (in Lakhs)'],
+                        ['Sales Growth %', 'Sales Growth %'],
+                      ]},
+                    { title: 'Sales Mix %', rows: [
+                        ['Plain Share', 'Plain Share %'],
+                        ['Studded Share', 'Studded Share %'],
+                        ['Coins /Silver Share', 'Coins / Silver Share %'],
+                        ['Total share', 'Total Share'],
+                      ]},
+                    { title: 'Plain Sales Mix %', rows: [
+                        ['LCG', 'LCG'],
+                        ['MCG', 'MCG'],
+                        ['HCG', 'HCG'],
+                        ['Gemstones', 'Gemstones'],
+                        ['Total plain mix', 'Total Plain Mix'],
+                        ['Stoneshare(HCG only)', 'Stone Share in Plain (HCG only)'],
+                      ]},
+                    { title: 'Studded Sales Mix %', rows: [
+                        ['GIS', 'GIS'],
+                        ['Regular', 'Regular'],
+                        ['Solitaire A(<70C)', 'Solitaire A (<70C)'],
+                        ['Solitaire B(70-100C)', 'Solitaire B (70–100C)'],
+                        ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+)'],
+                        ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+)'],
+                        ['Totalstuddedmix', 'Total Studded Mix'],
+                      ]},
+                  ];
+                  // Robust match against DB header quirks (trailing period, HTML-encoded "<", prefix)
+                  const normKey = (s) => (s ?? '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').replace(/\.$/, '').trim().toLowerCase();
+                  const stripSP = (h) => (h ?? '').replace(/^Sales Planning_/, '');
+                  const findRow = (key) => data.find((r) => normKey(stripSP(r.Header)) === normKey(key));
+                  const usedHeaders = new Set();
+                  const isTotalLabel = (label) => label.toLowerCase().includes('total');
+
+                  const renderSection = (title, rows) => {
+                    if (!rows.length) return null;
+                    return (
+                      <div key={title} className='overflow-x-auto rounded-2xl border border-gray-200 shadow-md bg-white'>
+                        <div className='px-5 py-3 bg-gradient-to-r from-[#1e3a5f] to-[#2d5f8a]'>
+                          <h4 className='text-xs font-black text-white uppercase tracking-widest'>{title}</h4>
+                        </div>
+                        <table className='min-w-full border-collapse text-xs'>
+                          <thead>
+                            <tr className='bg-slate-100'>
+                              <th className='px-4 py-2.5 text-left font-bold text-gray-500 min-w-[220px]'>Metric</th>
+                              {YR_LABELS.map((y) => (
+                                <th key={y} className='px-4 py-2.5 text-right font-bold text-gray-500 min-w-[90px]'>{y}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rows.map(({ label, row }, i) => {
+                              const tot = isTotalLabel(label);
+                              return (
+                                <tr key={i} className={tot ? 'bg-amber-50' : i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                                  <td className={`px-4 py-2.5 border-b border-gray-100 ${tot ? 'font-bold text-amber-900' : 'font-medium text-gray-700'}`}>{label}</td>
+                                  {YR_KEYS.map((y) => (
+                                    <td key={y} className={`px-4 py-2.5 text-right border-b border-gray-100 tabular-nums ${tot ? 'font-bold text-amber-800' : 'text-gray-700'}`}>
+                                      {row[y] != null ? fmtVal(row[y]) : '—'}
+                                    </td>
+                                  ))}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  };
+
+                  const sectionsRendered = SALES_SUMMARY_SECTIONS.map(({ title, rows }) => {
+                    const resolved = rows
+                      .map(([key, label]) => {
+                        const row = findRow(key);
+                        if (!row) return null;
+                        usedHeaders.add(row.Header);
+                        return { label, row };
+                      })
+                      .filter(Boolean);
+                    return renderSection(title, resolved);
+                  });
+
+                  const otherRows = data
+                    .filter((r) => !usedHeaders.has(r.Header))
+                    .map((r) => ({ label: stripSP(r.Header), row: r }));
+
+                  return (
+                    <div className='p-5 space-y-5'>
+                      {sectionsRendered}
+                      {renderSection('Other', otherRows)}
+                    </div>
+                  );
+                }
+
+                // ── Sectioned view for Stock Summary Phase 1/2 — mirrors the form's
+                // own sections (Pricing Metrics / Stock Turn / Stock / Stock UCP Terms /
+                // Stock Turn Brand Guidelines) instead of one flat Header/Yr table.
+                const STOCK_SUMMARY_SECTIONS = {
+                  "Sales Planning - Stock Summary - Phase 1": [
+                    { title: "Pricing Metrics", prefix: "Pricing Metrics_", rows: [
+                        ["BaseRate", "Retail Gold Rate – 22K (in Rs)"],
+                        ["LCG", "LCG"],
+                        ["MCG", "MCG"],
+                        ["HCG", "HCG"],
+                        ["Gemstones", "Gemstones"],
+                        ["Coins AMC%", "Coins AMC%"],
+                      ] },
+                  ],
+                  "Sales Planning - Stock Summary - Phase 2": [
+                    { title: "Stock Turn (UCP Terms)", prefix: "Stock turn_", test: (h) => h?.startsWith("Stock turn_") },
+                    { title: "Stock", prefix: "Stock_", test: (h) => h?.startsWith("Stock_") && !h.startsWith("Stock_UCP_") },
+                    { title: "Stock (UCP Terms - ₹ Lakhs)", prefix: "Stock_UCP_", test: (h) => h?.startsWith("Stock_UCP_") },
+                    { title: "Stock Turn - Brand Guidelines", prefix: "Stockturn-Brandguide_", test: (h) => h?.startsWith("Stockturn-Brandguide_") },
+                  ],
+                };
+                if (pageName in STOCK_SUMMARY_SECTIONS) {
+                  const ROW_ORDER = ['plain', 'studded', 'coins', 'total'];
+                  const rowRank = (label) => {
+                    const l = label.toLowerCase();
+                    const idx = ROW_ORDER.findIndex((k) => l.includes(k));
+                    return idx === -1 ? ROW_ORDER.length : idx;
+                  };
+                  const normKey = (s) => (s ?? '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').replace(/\.$/, '').trim().toLowerCase();
+                  return (
+                    <div className='p-5 space-y-5'>
+                      {STOCK_SUMMARY_SECTIONS[pageName].map((section) => {
+                        const { title, prefix } = section;
+                        const sectionRows = section.rows
+                          ? section.rows
+                              .map(([key, label]) => {
+                                const r = data.find((d) => d.Header?.startsWith(prefix) && normKey(d.Header.slice(prefix.length)) === normKey(key));
+                                return r ? { ...r, _label: label } : null;
+                              })
+                              .filter(Boolean)
+                          : data
+                              .filter((r) => section.test(r.Header))
+                              .map((r) => ({ ...r, _label: r.Header.slice(prefix.length) }))
+                              .sort((a, b) => rowRank(a._label) - rowRank(b._label));
+                        if (!sectionRows.length) return null;
+                        return (
+                          <div key={title} className='overflow-x-auto rounded-2xl border border-gray-200 shadow-md bg-white'>
+                            <div className='px-5 py-3 bg-gradient-to-r from-[#1e3a5f] to-[#2d5f8a]'>
+                              <h4 className='text-xs font-black text-white uppercase tracking-widest'>{title}</h4>
+                            </div>
+                            <table className='min-w-full border-collapse text-xs'>
+                              <thead>
+                                <tr className='bg-slate-100'>
+                                  <th className='px-4 py-2.5 text-left font-bold text-gray-500 min-w-[200px]'>Metric</th>
+                                  {YR_LABELS.map((y) => (
+                                    <th key={y} className='px-4 py-2.5 text-right font-bold text-gray-500 min-w-[90px]'>{y}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {sectionRows.map((row, i) => {
+                                  const tot = row._label.toLowerCase().includes('total');
+                                  return (
+                                    <tr key={i} className={tot ? 'bg-amber-50' : i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                                      <td className={`px-4 py-2.5 border-b border-gray-100 ${tot ? 'font-bold text-amber-900' : 'font-medium text-gray-700'}`}>{row._label}</td>
+                                      {YR_KEYS.map((y) => (
+                                        <td key={y} className={`px-4 py-2.5 text-right border-b border-gray-100 tabular-nums ${tot ? 'font-bold text-amber-800' : 'text-gray-700'}`}>
+                                          {row[y] != null ? fmtVal(row[y]) : '—'}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }
+
+                // ── Sectioned view for Discount — mirrors Subpage3_4.jsx's own
+                // sections (Total Customer Discount / Total GHS Discount).
+                if (pageName === "Sales Planning - Discount") {
+                  const DISCOUNT_ROWS = [
+                    ['LCG', 'LCG'], ['MCG', 'MCG'], ['HCG', 'HCG'], ['Gemstones', 'Gemstones'],
+                    ['GIS', 'GIS'], ['Regular', 'Regular'],
+                    ['Solitaire A(<70C)', 'Solitaire A (<70C)'],
+                    ['Solitaire B(70-100C)', 'Solitaire B (70–100C)'],
+                    ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+)'],
+                    ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+)'],
+                    ['Coins', 'Coins'],
+                    ['Total', 'Total'],
+                    ['% of UCP', '% of UCP'],
+                  ];
+                  const DISCOUNT_SECTIONS = [
+                    { title: 'Total Customer Discount', prefix: 'TCD_', rows: DISCOUNT_ROWS },
+                    { title: 'Total GHS Discount', prefix: 'TGHSD_', rows: DISCOUNT_ROWS },
+                  ];
+                  const normKey = (s) => (s ?? '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').replace(/\.$/, '').trim().toLowerCase();
+                  const usedHeaders = new Set();
+                  const isHighlight = (label) => /total|% of ucp/i.test(label);
+
+                  const renderSection = (title, rows) => {
+                    if (!rows.length) return null;
+                    return (
+                      <div key={title} className='overflow-x-auto rounded-2xl border border-gray-200 shadow-md bg-white'>
+                        <div className='px-5 py-3 bg-gradient-to-r from-[#1e3a5f] to-[#2d5f8a]'>
+                          <h4 className='text-xs font-black text-white uppercase tracking-widest'>{title}</h4>
+                        </div>
+                        <table className='min-w-full border-collapse text-xs'>
+                          <thead>
+                            <tr className='bg-slate-100'>
+                              <th className='px-4 py-2.5 text-left font-bold text-gray-500 min-w-[200px]'>Category</th>
+                              {YR_LABELS.map((y) => (
+                                <th key={y} className='px-4 py-2.5 text-right font-bold text-gray-500 min-w-[90px]'>{y}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rows.map(({ label, row }, i) => {
+                              const hl = isHighlight(label);
+                              return (
+                                <tr key={i} className={hl ? 'bg-amber-50' : i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                                  <td className={`px-4 py-2.5 border-b border-gray-100 ${hl ? 'font-bold text-amber-900' : 'font-medium text-gray-700'}`}>{label}</td>
+                                  {YR_KEYS.map((y) => (
+                                    <td key={y} className={`px-4 py-2.5 text-right border-b border-gray-100 tabular-nums ${hl ? 'font-bold text-amber-800' : 'text-gray-700'}`}>
+                                      {row[y] != null ? fmtVal(row[y]) : '—'}
+                                    </td>
+                                  ))}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  };
+
+                  const sectionsRendered = DISCOUNT_SECTIONS.map(({ title, prefix, rows: defs }) => {
+                    const resolved = defs
+                      .map(([key, label]) => {
+                        const row = data.find((d) => d.Header?.startsWith(prefix) && normKey(d.Header.slice(prefix.length)) === normKey(key));
+                        if (!row) return null;
+                        usedHeaders.add(row.Header);
+                        return { label, row };
+                      })
+                      .filter(Boolean);
+                    return renderSection(title, resolved);
+                  });
+                  const otherRows = data
+                    .filter((r) => !usedHeaders.has(r.Header))
+                    .map((r) => ({ label: r.Header, row: r }));
+
+                  return (
+                    <div className='p-5 space-y-5'>
+                      {sectionsRendered}
+                      {renderSection('Other', otherRows)}
+                    </div>
+                  );
+                }
+
                 // ── Year-wise table (Sales Planning pages) ─────────────────────────
                 // Data format: [{ Header: "Sales Planning_Total Sales", Yr1: N, … }]
                 if ('Header' in first && !('Particulars' in first)) {
@@ -1480,6 +1765,18 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     { title: 'Architecture', keys: ['frontage', 'ceiling_height', 'facade_led', 'terrace_branding', 'totem_pole', 'display_type', 'flooring_type', 'floors_for_facade'] },
                     { title: 'Facilities', keys: ['cashier_count', 'karatmeter_count', 'strong_room', 'franchise_room', 'manager_room', 'conference_room', 'pvr_room', 'additional_workstation', 'regional_service_centre'] },
                     { title: 'Notes', keys: ['remarks'] },
+                  ],
+                  'Capex Expenses': [
+                    { title: 'Store Reference', keys: ['Flooring Type', 'Property type', 'Retail Area'] },
+                    { title: 'Capex Items', keys: ['Interiors', 'Additional Civil Works', 'Corner Property Work', 'Lift Installation', 'Increase Façade Height per Floor', 'EHV zone addition (Furniture & Interior)', 'DxC (Equipment and Interiors)', 'Art and Crafts(Type 1 (Crafts)', 'Art and Crafts(Type 2 (Crafts)', 'Art and Crafts(Type 3 (Crafts)', 'LED Screen', 'Solar Installation', 'Engraving Machine'] },
+                    { title: 'IT Equipment', keys: ['IT (Equipments and Installation)'] },
+                    { title: 'Other Items', keys: ['Other Expenses'] },
+                    { title: 'Totals', keys: ['Total capex', 'Rate /Sqft'] },
+                  ],
+                  'Other Expenses': [
+                    { title: 'Salary Stats', keys: ['Sqft/emp', 'Cost/emp'] },
+                    { title: 'Electricity', keys: ['Electricity_Rate/sqft', 'Electricity_Total'] },
+                    { title: 'Registration & Relocation', keys: ['Registration Charges', 'Temp_cost'] },
                   ],
                 };
 
@@ -1792,25 +2089,55 @@ export default function HistoryPage({ onBack, onContinueROI }) {
       })()}
 
       {/* ── BPM Summary Modal — specific to the currently selected ROI ───── */}
-      {bpmModal.open && (
+      {bpmModal.open && bpmModalMinimized && (
         <div
-          className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-6 sm:p-10'
+          className='fixed bottom-4 right-4 z-50 bg-white border border-indigo-200 rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:shadow-indigo-200 transition'
+          onClick={() => setBpmModalMinimized(false)}>
+          <span className='text-sm font-bold text-gray-800'>📊 BPM Summary</span>
+          <span className='text-xs text-indigo-600 font-semibold'>Click to restore ⬆</span>
+          <button
+            type='button'
+            onClick={(e) => { e.stopPropagation(); setBpmModal({ open: false, loading: false, data: null }); setBpmModalMinimized(false); }}
+            className='text-gray-400 hover:text-gray-700 text-sm font-bold w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 transition'>
+            ✕
+          </button>
+        </div>
+      )}
+      {bpmModal.open && !bpmModalMinimized && (
+        <div
+          className={`fixed inset-0 bg-black/60 flex items-center justify-center z-50 ${bpmModalMaximized ? "p-0" : "p-6 sm:p-10"}`}
           onClick={() => setBpmModal({ open: false, loading: false, data: null })}>
           <div
-            className='bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col'
+            className={`bg-white shadow-2xl w-full flex flex-col ${bpmModalMaximized ? "h-full max-w-none max-h-none rounded-none" : "rounded-2xl max-w-6xl max-h-[90vh]"}`}
             onClick={(e) => e.stopPropagation()}>
-            <div className='flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-r from-indigo-50 to-white rounded-t-2xl'>
+            <div className={`flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-r from-indigo-50 to-white ${bpmModalMaximized ? "" : "rounded-t-2xl"}`}>
               <div>
                 <h2 className='text-base font-bold text-gray-900'>📊 BPM Summary</h2>
                 <p className='text-xs text-gray-400 mt-0.5 font-mono'>
                   ROI: {selectedRoi?.roiid}
                 </p>
               </div>
-              <button
-                onClick={() => setBpmModal({ open: false, loading: false, data: null })}
-                className='text-gray-400 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
-                ✕
-              </button>
+              <div className='flex items-center gap-1'>
+                <button
+                  type='button'
+                  onClick={() => setBpmModalMinimized(true)}
+                  title='Minimize'
+                  className='text-gray-400 hover:text-gray-700 text-lg font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
+                  ➖
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setBpmModalMaximized((m) => !m)}
+                  title={bpmModalMaximized ? "Restore" : "Maximize"}
+                  className='text-gray-400 hover:text-gray-700 text-lg font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
+                  {bpmModalMaximized ? "🗗" : "⬜"}
+                </button>
+                <button
+                  onClick={() => setBpmModal({ open: false, loading: false, data: null })}
+                  className='text-gray-400 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
+                  ✕
+                </button>
+              </div>
             </div>
             <div className='flex-1 overflow-y-auto bg-slate-50 px-6 py-6 space-y-6'>
               {bpmModal.loading ? (
@@ -1839,6 +2166,29 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                       columns={bpmModal.data.snv_turnover_years.columns}
                     />
                   </div>
+                  {isRetailRole && (
+                    <div className='bg-white rounded-xl border border-indigo-100 p-4 flex flex-col sm:flex-row sm:items-end gap-3'>
+                      <div className='flex-1'>
+                        <label className='block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1'>
+                          BPM Request No.
+                        </label>
+                        <input
+                          type='text'
+                          value={bpmRequestNo}
+                          onChange={(e) => setBpmRequestNo(e.target.value)}
+                          placeholder='Enter BPM Request No.'
+                          className='w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
+                        />
+                      </div>
+                      <button
+                        type='button'
+                        onClick={handleSaveBpmRequestNo}
+                        disabled={savingBpmRequestNo}
+                        className='px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow transition'>
+                        {savingBpmRequestNo ? "Saving…" : "💾 Save"}
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </div>

@@ -1,12 +1,13 @@
 ﻿import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import { toast } from "react-toastify";
 import * as XLSX from "xlsx-js-style";
 import { BASE_URL } from "./data/baseUrl";
 import RoiPdfReport from "./RoiPdfReport";
 import { YEARS, r2, sum6y, fmt, fmtPct, parseApiRows } from "./roiFinancialSummary";
 import BPMFieldValuesTable from "../../../../BPMSummary/BPMFieldValuesTable";
 import SNVTurnoverYearWiseTbl from "../../../../BPMSummary/SNVTurnoverYearWiseTbl";
-import { buildBpmSummaryData } from "../../../../BPMSummary/BPMSummaryDataMapper";
+import { mapBpmSummaryResponse } from "../../../../BPMSummary/BPMSummaryDataMapper";
 
 function buildSubmitPayload(d) {
   const row = (particulars, vals, header) => {
@@ -441,7 +442,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
             actor_email: userLog?.email ?? "",
             channel: userLog?.channel ?? "Tanishq",
             store_format: roiContext?.effectiveStoreFormat ?? roiContext?.existingStoreFormat ?? "",
-            project_type: roiContext?.projectType === 'Store Expansion' ? "Expansion": roiContext?.projectType === 'New Store'?'NewStore':roiContext?.projectType === 'Store Expansion' ,
+            project_type: roiContext?.projectType === 'Store Expansion' ? "Expansion": roiContext?.projectType === 'New Store'?'NewStore':roiContext?.projectType ,
             region: roiContext?.region ?? "",
           }),
         },
@@ -522,8 +523,8 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
         </div>
         {showBpmSummary && (
           <BpmSummaryModal
-            roiContext={roiContext}
-            d={d}
+            roiid={roiContext?.roiId}
+            isRetailRole={isRetailRole}
             onClose={() => setShowBpmSummary(false)}
           />
         )}
@@ -1043,8 +1044,8 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
       </div>
       {showBpmSummary && (
         <BpmSummaryModal
-          roiContext={roiContext}
-          d={d}
+          roiid={roiContext?.roiId}
+          isRetailRole={isRetailRole}
           onClose={() => setShowBpmSummary(false)}
         />
       )}
@@ -1052,36 +1053,163 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
   );
 }
 
-// ─── BPM Summary modal (reuses BPMSummary components, fed from live ROI data) ──
-function BpmSummaryModal({ roiContext, d, onClose }) {
-  const bpmData = buildBpmSummaryData(roiContext, d);
+// ─── BPM Summary modal (fetches the backend's own computed BPM Summary) ───
+function BpmSummaryModal({ roiid, isRetailRole, onClose }) {
+  const [state, setState] = useState({ loading: true, data: null, error: "" });
+  const [bpmRequestNo, setBpmRequestNo] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+
+  useEffect(() => {
+    if (!roiid) {
+      setState({ loading: false, data: null, error: "No ROI selected." });
+      return;
+    }
+    (async () => {
+      setState({ loading: true, data: null, error: "" });
+      try {
+        const res = await fetch(`${BASE_URL}/bpm_sumarry/${roiid}`);
+        const json = await res.json().catch(() => null);
+        if (!res.ok || json?.success === false) {
+          throw new Error(json?.message || "Failed to load BPM Summary.");
+        }
+        const row = json?.data?.[0] ?? null;
+        setState({
+          loading: false,
+          data: row ? mapBpmSummaryResponse(row) : null,
+          error: row ? "" : "No BPM Summary data found for this ROI.",
+        });
+      } catch (err) {
+        setState({ loading: false, data: null, error: err.message || "Failed to load BPM Summary." });
+      }
+    })();
+  }, [roiid]);
+
+  // Saves the Retail-entered BPM Request No against this ROI.
+  // TODO: backend endpoint for persisting this is not built yet — wire up once available.
+  const handleSave = async () => {
+    if (!bpmRequestNo.trim()) {
+      toast.error("Enter a BPM Request No. before saving.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`${BASE_URL}/bpm_summary/save_request_no`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roiid, bpm_request_no: bpmRequestNo.trim() }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || "Failed to save BPM Request No.");
+      }
+      toast.success("BPM Request No. saved.");
+    } catch (err) {
+      toast.error(err.message || "Failed to save BPM Request No.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Collapses to a small floating bar instead of unmounting, so the save-request-no
+  // form state isn't lost while the user looks at the rest of the Summary page.
+  if (isMinimized) {
+    return (
+      <div
+        className='fixed bottom-4 right-4 z-50 bg-white border border-indigo-200 rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:shadow-indigo-200 transition'
+        onClick={() => setIsMinimized(false)}>
+        <span className='text-sm font-bold text-gray-800'>📊 BPM Summary</span>
+        <span className='text-xs text-indigo-600 font-semibold'>Click to restore ⬆</span>
+        <button
+          type='button'
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          className='text-gray-400 hover:text-gray-700 text-sm font-bold w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 transition'>
+          ✕
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
-      className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-6 sm:p-10'
+      className={`fixed inset-0 bg-black/60 flex items-center justify-center z-50 ${isMaximized ? "p-0" : "p-6 sm:p-10"}`}
       onClick={onClose}>
       <div
-        className='bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col'
+        className={`bg-white shadow-2xl w-full flex flex-col ${isMaximized ? "h-full max-w-none max-h-none rounded-none" : "rounded-2xl max-w-6xl max-h-[90vh]"}`}
         onClick={(e) => e.stopPropagation()}>
-        <div className='flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-r from-indigo-50 to-white rounded-t-2xl'>
+        <div className={`flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-r from-indigo-50 to-white ${isMaximized ? "" : "rounded-t-2xl"}`}>
           <h2 className='text-base font-bold text-gray-900'>📊 BPM Summary</h2>
-          <button
-            onClick={onClose}
-            className='text-gray-400 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
-            ✕
-          </button>
+          <div className='flex items-center gap-1'>
+            <button
+              type='button'
+              onClick={() => setIsMinimized(true)}
+              title='Minimize'
+              className='text-gray-400 hover:text-gray-700 text-lg font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
+              ➖
+            </button>
+            <button
+              type='button'
+              onClick={() => setIsMaximized((m) => !m)}
+              title={isMaximized ? "Restore" : "Maximize"}
+              className='text-gray-400 hover:text-gray-700 text-lg font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
+              {isMaximized ? "🗗" : "⬜"}
+            </button>
+            <button
+              onClick={onClose}
+              className='text-gray-400 hover:text-gray-700 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition'>
+              ✕
+            </button>
+          </div>
         </div>
         <div className='flex-1 overflow-y-auto bg-slate-50 px-6 py-6 space-y-6'>
-          <div className='space-y-2'>
-            <h3 className='text-xs font-bold text-gray-500 uppercase tracking-wide'>Store Details</h3>
-            <BPMFieldValuesTable data={bpmData.data} columns={bpmData.columns} />
-          </div>
-          <div className='space-y-2'>
-            <h3 className='text-xs font-bold text-gray-500 uppercase tracking-wide'>Year-wise Financial Summary</h3>
-            <SNVTurnoverYearWiseTbl
-              data={bpmData.snv_turnover_years.data}
-              columns={bpmData.snv_turnover_years.columns}
-            />
-          </div>
+          {state.loading ? (
+            <div className='flex items-center justify-center h-48 text-sm text-gray-500 font-medium'>
+              Loading BPM Summary…
+            </div>
+          ) : state.error || !state.data ? (
+            <div className='flex flex-col items-center justify-center h-48 text-gray-400'>
+              <p className='text-5xl mb-3'>📭</p>
+              <p className='text-sm font-semibold text-gray-500'>{state.error || "Could not load BPM Summary."}</p>
+            </div>
+          ) : (
+            <>
+              <div className='space-y-2'>
+                <h3 className='text-xs font-bold text-gray-500 uppercase tracking-wide'>Store Details</h3>
+                <BPMFieldValuesTable data={state.data.data} columns={state.data.columns} />
+              </div>
+              <div className='space-y-2'>
+                <h3 className='text-xs font-bold text-gray-500 uppercase tracking-wide'>Year-wise Financial Summary</h3>
+                <SNVTurnoverYearWiseTbl
+                  data={state.data.snv_turnover_years.data}
+                  columns={state.data.snv_turnover_years.columns}
+                />
+              </div>
+              {isRetailRole && (
+                <div className='bg-white rounded-xl border border-indigo-100 p-4 flex flex-col sm:flex-row sm:items-end gap-3'>
+                  <div className='flex-1'>
+                    <label className='block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1'>
+                      BPM Request No.
+                    </label>
+                    <input
+                      type='text'
+                      value={bpmRequestNo}
+                      onChange={(e) => setBpmRequestNo(e.target.value)}
+                      placeholder='Enter BPM Request No.'
+                      className='w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400'
+                    />
+                  </div>
+                  <button
+                    type='button'
+                    onClick={handleSave}
+                    disabled={saving}
+                    className='px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow transition'>
+                    {saving ? "Saving…" : "💾 Save"}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

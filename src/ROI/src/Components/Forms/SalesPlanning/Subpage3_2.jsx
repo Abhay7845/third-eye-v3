@@ -293,6 +293,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showDefaultsNotice, setShowDefaultsNotice] = useState(false);
   const { storeParticulars, markStepSaved, setSubpage3_2Data, forwardDetail, savedSteps, invalidateStepsFrom, bumpSalesSummaryVersion } = useSection3Context();
   const computed = computeValues(inputs);
   const userLog = useSelector((state) => state?.user?.user);
@@ -304,7 +305,11 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
   // Load previously saved sales data when resuming
   useEffect(() => {
     const roiid = forwardDetail?.roiid;
-    if (!roiid || isSaved) return;
+    if (!roiid || isSaved) {
+      // No ROI yet to resume from — the form is showing default values.
+      if (!roiid) setShowDefaultsNotice(true);
+      return;
+    }
     (async () => {
       try {
         const res = await fetch(`${BASE_URL}/sales_planning`, {
@@ -312,10 +317,16 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ screen: 2, roiid }),
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+          setShowDefaultsNotice(true);
+          return;
+        }
         const json = await res.json();
         const rows = json?.data ?? [];
-        if (!rows.length) return;
+        if (!rows.length) {
+          setShowDefaultsNotice(true);
+          return;
+        }
         savedMixLoadedRef.current = true;
         // API returns flat { Header, Yr1..Yr6 } rows — extract by header name
         const yrs = (header) => {
@@ -354,6 +365,7 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
         setIsSaved(true);
       } catch (e) {
         console.error("Failed to load saved sales data:", e);
+        setShowDefaultsNotice(true);
       }
     })();
   }, [forwardDetail?.roiid]);
@@ -1069,6 +1081,43 @@ export default function Subpage3_2({ handleNext, handlePrevious }) {
           </div>
         </div>
       </div>
+      {/* ── Default Values Notice ─────────────────────────────── */}
+      {showDefaultsNotice && (
+        <div className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white rounded-2xl shadow-2xl w-full max-w-md'>
+            <div className='px-8 py-6 border-b border-gray-100'>
+              <div className='flex items-center gap-3'>
+                <span className='text-3xl'>ℹ️</span>
+                <div>
+                  <h2 className='text-xl font-bold text-gray-800'>
+                    Default/Reference Values Pre-filled
+                  </h2>
+                  <p className='text-gray-500 text-sm mt-0.5'>
+                    For your convenience
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className='px-8 py-5'>
+              <p className='text-sm text-gray-700'>
+                The values shown on this screen are default/reference values,
+                filled in for convenience. Please review and change them
+                according to your store's actual projections — make sure you
+                fill in the values carefully before saving.
+              </p>
+            </div>
+            <div className='px-8 pb-8 flex justify-end'>
+              <button
+                type='button'
+                onClick={() => setShowDefaultsNotice(false)}
+                className='px-5 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition'>
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Summary Modal ─────────────────────────────────────── */}
       {showModal && (
         <div className='fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4'>
