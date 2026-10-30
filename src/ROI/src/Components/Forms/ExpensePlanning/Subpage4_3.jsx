@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSection4Context } from "./Section4Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
+import * as XLSX from "xlsx-js-style";
 
 const YEARS = ["Yr. 1", "Yr. 2", "Yr. 3", "Yr. 4", "Yr. 5", "Yr. 6"];
 
@@ -501,12 +502,10 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
   const electricityYr1 = lockedRowYr1.electricity;
   const totalCapex = subpage4_1Data?.totalCapex ?? capexFallback?.totalCapex ?? 0;
 
-  // Current Value of Capex (same straight-line 20%/yr depreciation used in
-  // roiFinancialSummary.js's `currentValueOfInteriors`, shifted so Yr1 here
-  // lines up with that function's Yr0 slot): Yr1 = full value (undepreciated),
-  // then declining 20%/yr through Yr5, staying 0 from Yr6 onward.
+  // Current Value of Capex (straight-line 20%/yr depreciation): Yr1 already
+  // one year depreciated (80%), declining 20%/yr through Yr4, 0 from Yr5 onward.
   const capexCurrentValue = YEARS.map((_, i) => {
-    return Math.max(totalCapex - totalCapex * 0.2 * Math.min(i, 5), 0);
+    return Math.max(totalCapex - totalCapex * 0.2 * Math.min(i + 1, 5), 0);
   });
   const insuranceValues = capexCurrentValue.map((v) => v * 0.01);
 
@@ -554,6 +553,88 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     revenueSharing !== "" &&
     sba.every((v) => parseFloat(v) > 0) &&
     ratePerSqft.every((v) => parseFloat(v) > 0);
+
+  // Exports the Expense Summary table exactly as shown on screen to a styled .xlsx
+  const handleDownloadExpenseExcel = () => {
+    try {
+      const HEADERS = ["Expense Item", "Basis", "Escalation %", ...YEARS];
+      const COLS = HEADERS.length;
+      const dataRows = expenseRows.map(({ key, label, basis, escalation, values, locked, escKey }) => {
+        const escDisplay = locked
+          ? `${lockedRowEsc[escKey]}%`
+          : NO_ESCALATION_ROWS.has(key)
+          ? `${escalation}`
+          : `${editableRows[key]?.esc ?? ""}%`;
+        return [label, basis, escDisplay, ...values.map((v) => Math.round(parseFloat(v) || 0))];
+      });
+      const totalRow = ["Total", "", "", ...totalExpenses.map((v) => Math.round(v))];
+
+      const TITLE_ROW = 0, HEADER_ROW = 2, DATA_START = 3;
+      const aoa = [
+        [`Expense Summary — Value in ₹ Terms — ROI ${storeData?.roiid ?? ""}`],
+        [],
+        HEADERS,
+        ...dataRows,
+        totalRow,
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws["!merges"] = [{ s: { r: TITLE_ROW, c: 0 }, e: { r: TITLE_ROW, c: COLS - 1 } }];
+      ws["!cols"] = [{ wch: 32 }, { wch: 26 }, { wch: 14 }, ...Array(6).fill({ wch: 13 })];
+
+      const border = {
+        top: { style: "thin", color: { rgb: "BFBFBF" } },
+        bottom: { style: "thin", color: { rgb: "BFBFBF" } },
+        left: { style: "thin", color: { rgb: "BFBFBF" } },
+        right: { style: "thin", color: { rgb: "BFBFBF" } },
+      };
+      const setStyle = (r, c, style) => {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!ws[addr]) ws[addr] = { t: "s", v: "" };
+        ws[addr].s = style;
+      };
+
+      setStyle(TITLE_ROW, 0, {
+        font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
+        fill: { patternType: "solid", fgColor: { rgb: "92400E" } },
+        alignment: { horizontal: "left", vertical: "center" },
+      });
+      for (let c = 0; c < COLS; c++) {
+        setStyle(HEADER_ROW, c, {
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { patternType: "solid", fgColor: { rgb: "233044" } },
+          alignment: { horizontal: c <= 1 ? "left" : "center", vertical: "center" },
+          border,
+        });
+      }
+      dataRows.forEach((_, i) => {
+        const row = DATA_START + i;
+        for (let c = 0; c < COLS; c++) {
+          setStyle(row, c, {
+            border,
+            alignment: { horizontal: c <= 1 ? "left" : "right", vertical: "center" },
+            ...(c >= 3 ? { numFmt: "#,##0" } : {}),
+          });
+        }
+      });
+      const totalRowIdx = DATA_START + dataRows.length;
+      for (let c = 0; c < COLS; c++) {
+        setStyle(totalRowIdx, c, {
+          font: { bold: true, color: { rgb: "92400E" } },
+          fill: { patternType: "solid", fgColor: { rgb: "FEF3C7" } },
+          alignment: { horizontal: c <= 1 ? "left" : "right", vertical: "center" },
+          border,
+          ...(c >= 3 ? { numFmt: "#,##0" } : {}),
+        });
+      }
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Expense Summary");
+      XLSX.writeFile(wb, `Expense_Summary_${storeData?.roiid || "report"}.xlsx`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate the Expense Summary Excel export.");
+    }
+  };
 
   const handleInputArray = (setter, index, value) => {
     setter((prev) => {
@@ -839,9 +920,17 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
           <h3 className='text-lg font-bold text-gray-800'>
             Expense Summary — Value in ₹ Terms
           </h3>
-          <span className='text-xs text-gray-400'>
-            6-year projection with escalation
-          </span>
+          <div className='flex items-center gap-3'>
+            <span className='text-xs text-gray-400'>
+              6-year projection with escalation
+            </span>
+            <button
+              type='button'
+              onClick={handleDownloadExpenseExcel}
+              className='flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-300 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition'>
+              ⬇ Download Excel
+            </button>
+          </div>
         </div>
         <table className='min-w-full border-collapse text-sm'>
           <SectionHeaderNoSD label='Expense Item' extraCol='Basis' />

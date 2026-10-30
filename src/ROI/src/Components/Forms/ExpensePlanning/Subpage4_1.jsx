@@ -333,8 +333,8 @@ export default function Subpage4_1({ handleNext }) {
         setIsLoading(true);
         let retail_area = 0;
         if (
-          storeData.project_type === "New Store" ||
-          storeData?.project_type === "Rennovation" || storeData?.project_type === "Store Expansion"
+          storeData.project_type === "New Store" || storeData.project_type === "Relocation" ||
+          storeData?.project_type === "Renovation" || storeData?.project_type === "Store Expansion"
         ) {
           retail_area = storeData?.new_retail_area;
         } else {

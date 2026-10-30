@@ -15,6 +15,17 @@ const roleAllowsZeroNos = (role) => {
   return ZERO_NOS_ALLOWED_KEYWORDS.some((k) => r.includes(k));
 };
 
+// Shared default shape for a salary row — used both for render fallback and as a
+// merge base in handleSalaryChange, so editing one field (e.g. Nos) before the
+// role has a real state entry never drops the other fields (monthly/variablePct/etc).
+const DEFAULT_SALARY_ROW = {
+  level: "",
+  nos: 0,
+  refSalary: 0,
+  monthly: 0,
+  variablePct: 15,
+};
+
 // ─── Salary Row Component ─────────────────────────────────────────────────────
 function SalaryRow({ role, levelOptions, row, onChange, disabled }) {
   const minNos = roleAllowsZeroNos(role) ? 0 : 1;
@@ -353,6 +364,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
       const updated = {
         ...prev,
         [role]: {
+          ...DEFAULT_SALARY_ROW,
           ...prev[role],
           [field]: value,
         },
@@ -582,13 +594,7 @@ export default function Subpage4_2({ handleNext, handlePrevious }) {
                 role={role}
                 levelOptions={roleLevels[role] || []}
                 row={
-                  salaryRows[role] ?? {
-                    level: "",
-                    nos: 0,
-                    refSalary: 0,
-                    monthly: 0,
-                    variablePct: 15,
-                  }
+                  salaryRows[role] ?? DEFAULT_SALARY_ROW
                 }
                 onChange={handleSalaryChange}
                 disabled={isSaved && !isEditing}

@@ -385,7 +385,7 @@ export default function StoreRetailSpecifications({
           <span className='text-amber-500 text-xl mt-0.5'>⚠️</span>
           <div>
             <p className='font-semibold text-amber-800 text-sm'>
-              New Retail Area too low ({roiContext.historyRetailArea} sq ft)
+              New Carpet Area too low ({roiContext.historyRetailArea} sq ft)
             </p>
             <p className='text-amber-700 text-sm mt-1'>
               The retail area from History ID must be at least{" "}
@@ -438,7 +438,7 @@ export default function StoreRetailSpecifications({
       )}
 
       {/* Once saved, every field below is locked until "Edit Details" is clicked
-          (Store Type / New Overall Area / New Retail Area stay locked even then). */}
+          (Store Type / New Overall Area / New Carpet Area stay locked even then). */}
       <fieldset disabled={isSaved && !isEditingLocked} className='contents'>
       {/* SECTION 1: Store Specification */}
       <Section
@@ -495,7 +495,7 @@ export default function StoreRetailSpecifications({
                 rules={{
                   validate: (v) =>
                     !v ||
-                    Number(v) > 3000 ||
+                    Number(v) >= 3000 ||
                     "Existing Overall Area SBA must be greater than 3000",
                 }}
               />
@@ -509,10 +509,13 @@ export default function StoreRetailSpecifications({
               )}
             </div>
             <Input
-              label='Existing Retail Area'
+              label='Existing Carpet Area *'
               name='existingRetailArea'
               type='number'
               register={register}
+              rules={{
+                min: { value: 0, message: "Cannot be negative" },
+              }}
               disabled={!!roiContext?.existingRetailArea}
             />
           </>
@@ -531,7 +534,7 @@ export default function StoreRetailSpecifications({
                 rules={{
                   required: "New Overall Area is required",
                   validate: (v) =>
-                    Number(v) > 3000 ||
+                    Number(v) >= 3000 ||
                     "New Overall Area SBA must be more than 3000",
                 }}
               />
@@ -547,10 +550,10 @@ export default function StoreRetailSpecifications({
           </>
         )}
 
-        {/* New Retail Area — all types */}
+        {/* New Carpet Area — all types */}
         <>
           <Input
-            label={`New Retail Area *${
+            label={`New Carpet Area *${
               isNewStore && roiContext?.historyRetailArea
                 ? " (from History ID)"
                 : ""
@@ -559,12 +562,13 @@ export default function StoreRetailSpecifications({
             type='number'
             register={register}
             rules={{
-              required: "New Retail Area is required",
+              required: "New Carpet Area is required",
+              min: { value: 0, message: "Cannot be negative" },
               validate: (v) =>
                 isNewStore ||
                 !newOverallArea ||
                 Number(v) <= Number(newOverallArea) ||
-                "New Retail Area cannot exceed New Overall Area",
+                "New Carpet Area cannot exceed New Overall Area",
             }}
             disabled={isSaved || (isNewStore && !!roiContext?.historyRetailArea)}
           />
@@ -579,7 +583,7 @@ export default function StoreRetailSpecifications({
                 <span className='text-amber-500 text-xl mt-0.5'>⚠️</span>
                 <div>
                   <p className='font-semibold text-amber-800 text-sm'>
-                    New Retail Area too low ({roiContext.historyRetailArea} sq
+                    New Carpet Area too low ({roiContext.historyRetailArea} sq
                     ft)
                   </p>
                   <p className='text-amber-700 text-sm mt-1'>
@@ -631,7 +635,10 @@ export default function StoreRetailSpecifications({
                   name={`floorPlate.${floor}`}
                   type='number'
                   register={register}
-                  rules={{ required: `${floor} Area is required` }}
+                  rules={{
+                    required: `${floor} Area is required`,
+                    min: { value: 0, message: "Cannot be negative" },
+                  }}
                 />
               ))}
             </div>
@@ -665,12 +672,18 @@ export default function StoreRetailSpecifications({
           name='frontage'
           type='number'
           register={register}
+          rules={{
+            min: { value: 0, message: "Cannot be negative" },
+          }}
         />
         <Input
           label='Ceiling Height (in ft)*'
           name='ceilingHeight'
           type='number'
           register={register}
+          rules={{
+            min: { value: 0, message: "Cannot be negative" },
+          }}
         />
 
         {[
@@ -929,7 +942,7 @@ export default function StoreRetailSpecifications({
                   ["Store Type", savedSummary.storeType],
                   !isNewStore &&
                     savedSummary.existingRetailArea && [
-                      "Existing Retail Area",
+                      "Existing Carpet Area",
                       savedSummary.existingRetailArea,
                     ],
                   !isNewStore &&
@@ -942,7 +955,7 @@ export default function StoreRetailSpecifications({
                       "New Overall Area (SBA)",
                       savedSummary.newOverallArea,
                     ],
-                  ["New Retail Area", savedSummary.newRetailArea],
+                  ["New Carpet Area", savedSummary.newRetailArea],
                   ["No. of Floors", savedSummary.noOfFloors],
                   savedSummary.flooringType && [
                     "Flooring Type",

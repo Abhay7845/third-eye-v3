@@ -45,38 +45,81 @@ const initialInputs = {
 // from the backend's TOT calculation (stockSectionData), refreshed after the
 // Phase 1 save (reference stock-turn preview) and the Phase 2 save (authoritative,
 // driven by the user's own Stock Turn selections).
-const computeValues = (inputs, stockSectionData) => {
-  const totalStockTurn = Array(6);
-  for (let i = 0; i < 6; i++) {
-    const sum =
-      (parseFloat(inputs.stockTurnPlain[i]) || 0) +
-      (parseFloat(inputs.stockTurnStudded[i]) || 0) +
-      (parseFloat(inputs.stockTurnCoins[i]) || 0);
-    totalStockTurn[i] = +sum.toFixed(2);
+const computeValues = (inputs, stockSectionData, subpage3_2Data, storeFormat) => {
+  // Retail Gold Rate (22K): Yr.1 from user input, Yr.2–6 = prev × 1.05 (5% YoY growth)
+  const baseRate22K = Array(6);
+  baseRate22K[0] = parseFloat(inputs.baseRate22K[0]) || 0;
+  for (let i = 1; i <= 5; i++) {
+    baseRate22K[i] = Math.round(baseRate22K[i - 1] * 1.05);
   }
 
-  const dash6 = Array(6).fill("-");
   const zero6 = Array(6).fill(0);
 
-  // Section 3 — Stock (display-only; not sent back to the API)
-  const physicalStockPlain = stockSectionData?.stock?.plain ?? dash6;
-  const physicalStockStudded = stockSectionData?.stock?.studded ?? dash6;
-  const physicalStockCoins = stockSectionData?.stock?.coins ?? dash6;
+  // Section 4 — Stock (UCP Terms - ₹ Lakhs); per year = Sales Mix % × Total
+  // Sales × that year's Stock Turn (UCP Terms) input, for each of Plain /
+  // Studded / Coins-Silver Share.
+  const plainShareArr = subpage3_2Data?.plainShare ?? zero6;
+  const studdedShareArr = subpage3_2Data?.studdedShare ?? zero6;
+  const coinsShareArr = subpage3_2Data?.coinsShare ?? zero6;
+  const totalSalesArr = subpage3_2Data?.total_sales_data ?? zero6;
 
-  // Section 4 — Stock (UCP Terms - ₹ Lakhs); numeric fallback since these are
-  // submitted to /sales_planning_page_3_phase_2 (List[float] on the backend)
-  const stockPlain = stockSectionData?.stock_ucp?.plain ?? zero6;
-  const stockStudded = stockSectionData?.stock_ucp?.studded ?? zero6;
-  const stockCoins = stockSectionData?.stock_ucp?.coins ?? zero6;
-  const totalStock = stockSectionData?.stock_ucp?.overall ?? zero6;
+  const stockPlain = Array(6);
+  const stockStudded = Array(6);
+  const stockCoins = Array(6);
+  const totalStock = Array(6);
+  for (let i = 0; i < 6; i++) {
+    const sales = parseFloat(totalSalesArr[i]) || 0;
+    const plainPct = (parseFloat(plainShareArr[i]) || 0) / 100;
+    const studdedPct = (parseFloat(studdedShareArr[i]) || 0) / 100;
+    const coinsPct = (parseFloat(coinsShareArr[i]) || 0) / 100;
+
+    stockPlain[i] = +((plainPct * sales) / (parseFloat(inputs.stockTurnPlain[i]) || 0)).toFixed(2);
+    stockStudded[i] = +((studdedPct * sales) / (parseFloat(inputs.stockTurnStudded[i]) || 0)).toFixed(2);
+    stockCoins[i] = +((coinsPct * sales) / (parseFloat(inputs.stockTurnCoins[i]) || 0)).toFixed(2);
+    totalStock[i] = +(stockPlain[i] + stockStudded[i] + stockCoins[i]).toFixed(2);
+  }
+
+  // Stock Turn Total (per year) = Total Sales ÷ Total Stock (UCP Terms - ₹ Lakhs)
+  const totalStockTurn = totalSalesArr.map((_, i) => {
+    const stock = totalStock[i];
+    return stock === 0 ? 0 : +((parseFloat(totalSalesArr[i]) || 0) / stock).toFixed(2);
+  });
+
+  // Section 3 — Stock (physical units); Plain/Coins = Section 4 Stock (UCP
+  // Terms - ₹ Lakhs) × (6-Yr Horizon Summary KG Sales (22Kt Terms) ÷ (6-Yr
+  // Horizon Summary UCP in ₹ Cr × 100)). Studded is conditional on Store
+  // Format: L3/L2.5 reuse the Section 4 UCP Lakhs value directly; otherwise
+  // it's recomputed using the Brand Guideline achieved Stock Turn (Section 5)
+  // as the divisor instead of the user's own Stock Turn input.
+  const kgSalesArr = stockSectionData?.ucp_kg_sales?.kg_sales ?? {};
+  const ucpCrArr = stockSectionData?.ucp_kg_sales?.ucp ?? {};
+  const bgStuddedStockTurnArr = stockSectionData?.stock_turn_brand_guideline?.studded ?? zero6;
+  const toPhysicalStock = (stockLakhs, kg, ucpCr) => {
+    const denom = (parseFloat(ucpCr) || 0) * 100;
+    return denom === 0 ? 0 : +((stockLakhs * (parseFloat(kg) || 0)) / denom).toFixed(2);
+  };
+  const physicalStockPlain = stockPlain.map((v, i) =>
+    toPhysicalStock(v, (kgSalesArr.plain ?? zero6)[i], (ucpCrArr.plain ?? zero6)[i]),
+  );
+  const isL3OrL25 = storeFormat === "L3" || storeFormat === "L2.5";
+  const physicalStockStudded = stockStudded.map((v, i) => {
+    if (isL3OrL25) return v;
+    const sales = parseFloat(totalSalesArr[i]) || 0;
+    const studdedPct = (parseFloat(studdedShareArr[i]) || 0) / 100;
+    return +((studdedPct * sales) / (parseFloat(bgStuddedStockTurnArr[i]) || 0)).toFixed(2);
+  });
+  const physicalStockCoins = stockCoins.map((v, i) =>
+    toPhysicalStock(v, (kgSalesArr.coins ?? zero6)[i], (ucpCrArr.coins ?? zero6)[i]),
+  );
 
   // Section 5 — Stock Turn - Brand Guidelines (achieved turns on the floored stock)
   const bgPlainStockTurn = stockSectionData?.stock_turn_brand_guideline?.plain ?? zero6;
-  const bgStuddedStockTurn = stockSectionData?.stock_turn_brand_guideline?.studded ?? zero6;
+  const bgStuddedStockTurn = bgStuddedStockTurnArr;
   const bgCoinsStockTurn = stockSectionData?.stock_turn_brand_guideline?.coins ?? zero6;
   const bgTotalStockTurn = stockSectionData?.stock_turn_brand_guideline?.overall ?? zero6;
 
   return {
+    baseRate22K,
     totalStockTurn,
     stockPlain,
     stockStudded,
@@ -263,7 +306,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
     phase1SavedAtVersion,
     markPhase1SavedVersion,
   } = useSection3Context();
-  const computed = computeValues(inputs, stockSectionData);
+  const computed = computeValues(inputs, stockSectionData, subpage3_2Data, forwardDetail?.storeFormat);
   const userLog = useSelector((state) => state?.user?.user);
   // Once Phase 1 is (or was already) saved, fetch the latest Stock section data
   // (TOT-calculation output) so Sections 3-5 aren't stuck on placeholders when
@@ -427,18 +470,31 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
         });
         if (!res.ok) return;
         const json = await res.json();
-        const row = json?.data?.[0];
-        if (!row) return;
-        const inp = row.inputs ?? row;
+        const rows = json?.data ?? [];
+        if (!rows.length) return;
+        // Backend returns one row per metric: { Header, Yr1..Yr6, status }
+        const yrs = (header) => {
+          const r = rows.find((x) => x.Header === header);
+          if (!r) return null;
+          return [r.Yr1, r.Yr2, r.Yr3, r.Yr4, r.Yr5, r.Yr6].map((v) => parseFloat(v) || 0);
+        };
+        const baseRate = yrs("Pricing Metrics_BaseRate");
+        const markup = yrs("Pricing Metrics_Mark-up%");
+        const lcg = yrs("Pricing Metrics_LCG");
+        const mcg = yrs("Pricing Metrics_MCG");
+        const hcg = yrs("Pricing Metrics_HCG");
+        const gemstone = yrs("Pricing Metrics_Gemstones");
+        const coins = yrs("Pricing Metrics_Coins AMC%");
+        if (!baseRate && !lcg && !mcg && !hcg && !gemstone && !coins) return;
         setInputs((prev) => ({
           ...prev,
-          baseRate22K: inp.baseRate22K ?? prev.baseRate22K,
-          markupPct: inp.markupPct ?? prev.markupPct,
-          lcgAMC: inp.plainAMC?.lcg ?? prev.lcgAMC,
-          mcgAMC: inp.plainAMC?.mcg ?? prev.mcgAMC,
-          hcgAMC: inp.plainAMC?.hcg ?? prev.hcgAMC,
-          gemstoneAMC: inp.plainAMC?.gemstone ?? prev.gemstoneAMC,
-          coinsAMC: inp.coinsAMC ?? prev.coinsAMC,
+          baseRate22K: baseRate ?? prev.baseRate22K,
+          markupPct: markup ?? prev.markupPct,
+          lcgAMC: lcg ?? prev.lcgAMC,
+          mcgAMC: mcg ?? prev.mcgAMC,
+          hcgAMC: hcg ?? prev.hcgAMC,
+          gemstoneAMC: gemstone ?? prev.gemstoneAMC,
+          coinsAMC: coins ?? prev.coinsAMC,
         }));
         setisPhase1FormSaved(true);
         if (phase1SavedAtVersion === null) markPhase1SavedVersion();
@@ -465,15 +521,23 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
         });
         if (!res.ok) return;
         const json = await res.json();
-        const row = json?.data?.[0];
-        if (!row) return;
-        const inp = row.inputs ?? row;
+        const rows = json?.data ?? [];
+        if (!rows.length) return;
+        // Backend returns one row per metric: { Header, Yr1..Yr6, status }
+        const yrs = (header) => {
+          const r = rows.find((x) => x.Header === header);
+          if (!r) return null;
+          return [r.Yr1, r.Yr2, r.Yr3, r.Yr4, r.Yr5, r.Yr6].map((v) => parseFloat(v) || 0);
+        };
+        const plain = yrs("Stock turn_Plain");
+        const studded = yrs("Stock turn_Studded");
+        const coins = yrs("Stock turn_Coins /Silver Share");
+        if (!plain && !studded && !coins) return;
         setInputs((prev) => ({
           ...prev,
-          stockTurnPlain: inp.stockTurnPlain ?? prev.stockTurnPlain,
-          stockTurnStudded: inp.stockTurnStudded ?? prev.stockTurnStudded,
-          stockTurnCoins: inp.stockTurnCoins ?? prev.stockTurnCoins,
-          bgCoinsStockTurn: inp.bgCoinsStockTurn ?? prev.bgCoinsStockTurn,
+          stockTurnPlain: plain ?? prev.stockTurnPlain,
+          stockTurnStudded: studded ?? prev.stockTurnStudded,
+          stockTurnCoins: coins ?? prev.stockTurnCoins,
         }));
         stockTurnInitialisedRef.current = true; // real saved values — never overwrite with defaults
         setIsSaved(true);
@@ -642,7 +706,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
         username: userLog?.name,
         store_format: forwardDetail?.storeFormat,
         inputs: {
-          baseRate22K: inputs.baseRate22K,
+          baseRate22K: computed.baseRate22K,
           plainAMC: {
             lcg: inputs.lcgAMC,
             mcg: inputs.mcgAMC,
@@ -691,7 +755,6 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
     "stockTurnPlain",
     "stockTurnStudded",
     "stockTurnCoins",
-    "baseRate22K",
     "markupPct",
     "lcgAMC",
     "mcgAMC",
@@ -824,7 +887,7 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                       disabled={isPhase1Saving}
                     />
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <AutoCell key={i} value={inputs.baseRate22K[0]} />
+                      <AutoCell key={i} value={fmt(computed.baseRate22K[i])} />
                     ))}
                   </tr>
 
@@ -982,19 +1045,19 @@ export default function Subpage3_3({ handleNext, handlePrevious }) {
                     <tr>
                       <LabelCell label='Plain (KGs - 22Kt Terms)' />
                       {computed.physicalStockPlain.map((v, i) => (
-                        <AutoCell key={i} value={fmtDec(v)} />
+                        <AutoCell key={i} value={fmtDec(v, 1)} />
                       ))}
                     </tr>
                     <tr>
                       <LabelCell label='Studded (₹ Lakhs)' />
                       {computed.physicalStockStudded.map((v, i) => (
-                        <AutoCell key={i} value={fmtDec(v)} />
+                        <AutoCell key={i} value={fmtDec(v, 0)} />
                       ))}
                     </tr>
                     <tr>
                       <LabelCell label='Coins (KGs - 24Kt Terms)' />
                       {computed.physicalStockCoins.map((v, i) => (
-                        <AutoCell key={i} value={fmtDec(v)} />
+                        <AutoCell key={i} value={fmtDec(v, 1)} />
                       ))}
                     </tr>
                   </tbody>

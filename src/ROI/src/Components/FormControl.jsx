@@ -9,6 +9,22 @@ export function Input({
   type = "text",
   maxLength
 }) {
+  const isNumber = type === "number";
+  const { onChange, ...fieldProps } = register(name, rules);
+
+  // Block "-" / "+" / "e" keystrokes so negative numbers can't be typed at all.
+  const handleKeyDown = (e) => {
+    if (isNumber && ["-", "+", "e", "E"].includes(e.key)) e.preventDefault();
+  };
+
+  // Also strip any negative sign that slips in via paste/autofill.
+  const handleChange = (e) => {
+    if (isNumber && e.target.value.includes("-")) {
+      e.target.value = e.target.value.replace(/-/g, "");
+    }
+    onChange(e);
+  };
+
   return (
     <div>
       <label className="block mb-1 text-sm font-semibold text-gray-700">
@@ -18,7 +34,10 @@ export function Input({
         type={type}
         disabled={disabled}
         maxLength={maxLength}
-        {...register(name, rules)}
+        min={isNumber ? 0 : undefined}
+        onKeyDown={handleKeyDown}
+        onChange={handleChange}
+        {...fieldProps}
         className={`w-full rounded-lg p-2.5 text-sm border transition-colors
           ${disabled
             ? "bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed"

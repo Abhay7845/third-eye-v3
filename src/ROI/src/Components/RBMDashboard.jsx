@@ -141,8 +141,308 @@ const fmtN = (n) =>
   n === null || n === undefined || isNaN(n) ? "—"
     : Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
+// Groups Sales Planning Stock Summary Phase 1/2 rows into the same sections
+// shown on Subpage3_3.jsx (Pricing Metrics / Stock Turn / Stock / Stock UCP
+// Terms / Stock Turn Brand Guidelines) instead of one flat Header/Yr table.
+const STOCK_SUMMARY_SECTIONS = {
+  "Sales Planning - Stock Summary - Phase 1": [
+    { title: "Pricing Metrics", prefix: "Pricing Metrics_", rows: [
+        ["BaseRate", "Retail Gold Rate – 22K (in Rs)"],
+        ["LCG", "LCG"],
+        ["MCG", "MCG"],
+        ["HCG", "HCG"],
+        ["Gemstones", "Gemstones"],
+        ["Coins AMC%", "Coins AMC%"],
+      ] },
+  ],
+  "Sales Planning - Stock Summary - Phase 2": [
+    { title: "Stock Turn (UCP Terms)", prefix: "Stock turn_", test: (h) => h?.startsWith("Stock turn_") },
+    { title: "Stock", prefix: "Stock_", test: (h) => h?.startsWith("Stock_") && !h.startsWith("Stock_UCP_") },
+    { title: "Stock (UCP Terms - ₹ Lakhs)", prefix: "Stock_UCP_", test: (h) => h?.startsWith("Stock_UCP_") },
+    { title: "Stock Turn - Brand Guidelines", prefix: "Stockturn-Brandguide_", test: (h) => h?.startsWith("Stockturn-Brandguide_") },
+  ],
+};
+const ROW_ORDER = ["plain", "studded", "coins", "total"];
+const rowRank = (label) => {
+  const l = label.toLowerCase();
+  const idx = ROW_ORDER.findIndex((k) => l.includes(k));
+  return idx === -1 ? ROW_ORDER.length : idx;
+};
+const normStockKey = (s) => (s ?? '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').replace(/\.$/, '').trim().toLowerCase();
+
+function StockSummarySectionedContent({ pageName, rows }) {
+  const sections = STOCK_SUMMARY_SECTIONS[pageName] ?? [];
+  return (
+    <div className="p-6 space-y-5">
+      {sections.map((section) => {
+        const { title, prefix } = section;
+        const sectionRows = section.rows
+          ? section.rows
+              .map(([key, label]) => {
+                const r = rows.find((d) => d.Header?.startsWith(prefix) && normStockKey(d.Header.slice(prefix.length)) === normStockKey(key));
+                return r ? { ...r, _label: label } : null;
+              })
+              .filter(Boolean)
+          : rows
+              .filter((r) => section.test(r.Header))
+              .map((r) => ({ ...r, _label: r.Header.slice(prefix.length) }))
+              .sort((a, b) => rowRank(a._label) - rowRank(b._label));
+        if (!sectionRows.length) return null;
+        return (
+          <div key={title} className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+            <div className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600">
+              <h4 className="text-xs font-black text-white uppercase tracking-widest">{title}</h4>
+            </div>
+            <table className="min-w-full border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-100">
+                  <th className="px-3 py-2.5 text-left font-bold text-slate-500 min-w-[180px]">Metric</th>
+                  {YEARS.map((y) => (
+                    <th key={y} className="px-3 py-2.5 text-right font-bold text-slate-500 min-w-[90px]">{y}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sectionRows.map((row, i) => {
+                  const tot = row._label.toLowerCase().includes("total");
+                  return (
+                    <tr key={i} className={tot ? "bg-amber-50" : i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
+                      <td className={`px-3 py-2 border-b border-slate-100 ${tot ? "font-bold text-amber-900" : "font-medium text-slate-700"}`}>{row._label}</td>
+                      {[1, 2, 3, 4, 5, 6].map((n) => (
+                        <td key={n} className={`px-3 py-2 text-right border-b border-slate-100 tabular-nums ${tot ? "font-bold text-amber-800" : "text-slate-700"}`}>
+                          {row[`Yr${n}`] != null ? fmtN(row[`Yr${n}`]) : "—"}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Groups Sales Planning Sales Summary rows into the same sections shown on
+// Subpage3_2.jsx (Sales Planning / Sales Mix % / Plain Sales Mix % / Studded
+// Sales Mix %) instead of one flat Header/Yr table.
+const SALES_SUMMARY_SECTIONS = [
+  { title: 'Sales Planning', rows: [
+      ['Total Area  ( SBA )', 'Total Area (SBA)'],
+      ['Total Area - Carpet Sqft.', 'Total Area – Carpet Sqft.'],
+      ['Walk-in per day', 'Walk-in per day'],
+      ['Increase in Wallk ins per day', 'Increase in Walk-ins % per day'],
+      ['Conv.%', 'Conv. %'],
+      ['Buyers per day', 'Buyers per day'],
+      ['Average Ticket Size (Rs)', 'Average Ticket Size (Rs)'],
+      ['Growth in Ticket Size', 'Growth in Ticket Size %'],
+      ['No. of store days in a year', 'No. of store days in a year'],
+      ['Total Sales', 'Total Sales (in Lakhs)'],
+      ['Sales Growth %', 'Sales Growth %'],
+    ]},
+  { title: 'Sales Mix %', rows: [
+      ['Plain Share', 'Plain Share %'],
+      ['Studded Share', 'Studded Share %'],
+      ['Coins /Silver Share', 'Coins / Silver Share %'],
+      ['Total share', 'Total Share'],
+    ]},
+  { title: 'Plain Sales Mix %', rows: [
+      ['LCG', 'LCG'],
+      ['MCG', 'MCG'],
+      ['HCG', 'HCG'],
+      ['Gemstones', 'Gemstones'],
+      ['Total plain mix', 'Total Plain Mix'],
+      ['Stoneshare(HCG only)', 'Stone Share in Plain (HCG only)'],
+    ]},
+  { title: 'Studded Sales Mix %', rows: [
+      ['GIS', 'GIS'],
+      ['Regular', 'Regular'],
+      ['Solitaire A(<70C)', 'Solitaire A (<70C)'],
+      ['Solitaire B(70-100C)', 'Solitaire B (70–100C)'],
+      ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+)'],
+      ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+)'],
+      ['Totalstuddedmix', 'Total Studded Mix'],
+    ]},
+];
+// Robust match against DB header quirks (trailing period, HTML-encoded "<", prefix)
+const normSalesKey = (s) => (s ?? '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').replace(/\.$/, '').trim().toLowerCase();
+const stripSalesPrefix = (h) => (h ?? '').replace(/^Sales Planning_/, '');
+
+function SalesSummarySectionedContent({ rows }) {
+  const findRow = (key) => rows.find((r) => normSalesKey(stripSalesPrefix(r.Header)) === normSalesKey(key));
+  const usedHeaders = new Set();
+  const renderSection = (title, sectionRows) => {
+    if (!sectionRows.length) return null;
+    return (
+      <div key={title} className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+        <div className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600">
+          <h4 className="text-xs font-black text-white uppercase tracking-widest">{title}</h4>
+        </div>
+        <table className="min-w-full border-collapse text-xs">
+          <thead>
+            <tr className="bg-slate-100">
+              <th className="px-3 py-2.5 text-left font-bold text-slate-500 min-w-[200px]">Metric</th>
+              {YEARS.map((y) => (
+                <th key={y} className="px-3 py-2.5 text-right font-bold text-slate-500 min-w-[90px]">{y}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sectionRows.map(({ label, row }, i) => {
+              const tot = label.toLowerCase().includes('total');
+              return (
+                <tr key={i} className={tot ? "bg-amber-50" : i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
+                  <td className={`px-3 py-2 border-b border-slate-100 ${tot ? "font-bold text-amber-900" : "font-medium text-slate-700"}`}>{label}</td>
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <td key={n} className={`px-3 py-2 text-right border-b border-slate-100 tabular-nums ${tot ? "font-bold text-amber-800" : "text-slate-700"}`}>
+                      {row[`Yr${n}`] != null ? fmtN(row[`Yr${n}`]) : "—"}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const sectionsRendered = SALES_SUMMARY_SECTIONS.map(({ title, rows: defs }) => {
+    const resolved = defs
+      .map(([key, label]) => {
+        const row = findRow(key);
+        if (!row) return null;
+        usedHeaders.add(row.Header);
+        return { label, row };
+      })
+      .filter(Boolean);
+    return renderSection(title, resolved);
+  });
+  const otherRows = rows
+    .filter((r) => !usedHeaders.has(r.Header))
+    .map((r) => ({ label: stripSalesPrefix(r.Header), row: r }));
+
+  return (
+    <div className="p-6 space-y-5">
+      {sectionsRendered}
+      {renderSection('Other', otherRows)}
+    </div>
+  );
+}
+
+// Groups Discount rows into the same sections shown on Subpage3_4.jsx (Total
+// Customer Discount / Total GHS Discount) instead of one flat Header/Yr table.
+const DISCOUNT_ROWS = [
+  ['LCG', 'LCG'], ['MCG', 'MCG'], ['HCG', 'HCG'], ['Gemstones', 'Gemstones'],
+  ['GIS', 'GIS'], ['Regular', 'Regular'],
+  ['Solitaire A(<70C)', 'Solitaire A (<70C)'],
+  ['Solitaire B(70-100C)', 'Solitaire B (70–100C)'],
+  ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+)'],
+  ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+)'],
+  ['Coins', 'Coins'],
+  ['Total', 'Total'],
+  ['% of UCP', '% of UCP'],
+];
+const DISCOUNT_SECTIONS = [
+  { title: 'Total Customer Discount', prefix: 'TCD_', rows: DISCOUNT_ROWS },
+  { title: 'Total GHS Discount', prefix: 'TGHSD_', rows: DISCOUNT_ROWS },
+];
+
+function DiscountSectionedContent({ rows }) {
+  const usedHeaders = new Set();
+  const isHighlight = (label) => /total|% of ucp/i.test(label);
+  const renderSection = (title, sectionRows) => {
+    if (!sectionRows.length) return null;
+    return (
+      <div key={title} className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+        <div className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600">
+          <h4 className="text-xs font-black text-white uppercase tracking-widest">{title}</h4>
+        </div>
+        <table className="min-w-full border-collapse text-xs">
+          <thead>
+            <tr className="bg-slate-100">
+              <th className="px-3 py-2.5 text-left font-bold text-slate-500 min-w-[200px]">Category</th>
+              {YEARS.map((y) => (
+                <th key={y} className="px-3 py-2.5 text-right font-bold text-slate-500 min-w-[90px]">{y}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {sectionRows.map(({ label, row }, i) => {
+              const hl = isHighlight(label);
+              return (
+                <tr key={i} className={hl ? "bg-amber-50" : i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
+                  <td className={`px-3 py-2 border-b border-slate-100 ${hl ? "font-bold text-amber-900" : "font-medium text-slate-700"}`}>{label}</td>
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <td key={n} className={`px-3 py-2 text-right border-b border-slate-100 tabular-nums ${hl ? "font-bold text-amber-800" : "text-slate-700"}`}>
+                      {row[`Yr${n}`] != null ? fmtN(row[`Yr${n}`]) : "—"}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const sectionsRendered = DISCOUNT_SECTIONS.map(({ title, prefix, rows: defs }) => {
+    const resolved = defs
+      .map(([key, label]) => {
+        const row = rows.find((d) => d.Header?.startsWith(prefix) && normStockKey(d.Header.slice(prefix.length)) === normStockKey(key));
+        if (!row) return null;
+        usedHeaders.add(row.Header);
+        return { label, row };
+      })
+      .filter(Boolean);
+    return renderSection(title, resolved);
+  });
+  const otherRows = rows
+    .filter((r) => !usedHeaders.has(r.Header))
+    .map((r) => ({ label: r.Header, row: r }));
+
+  return (
+    <div className="p-6 space-y-5">
+      {sectionsRendered}
+      {renderSection('Other', otherRows)}
+    </div>
+  );
+}
+
+// Groups flat single-row pages into logical sections — mirrors HistoryPage.jsx's
+// PAGE_SECTIONS mapping so both views present the same fields the same way.
+const PAGE_SECTIONS = {
+  "Basic Store Details": [
+    { title: "Project", keys: ["project_type", "ty_history_id", "history_id", "TY_historyID"] },
+    { title: "Location", keys: ["city", "state", "region", "new_city"] },
+    { title: "Store Format", keys: ["existing_store_code", "existing_store_format", "store_format_change", "new_store_format", "store_type", "retail_area"] },
+    { title: "Franchise Details", keys: ["new_franchise", "new_franchisee_storename", "new_franchisee_storecode", "existing_franchisee_store_name", "existing_franchisee_store_code", "franchisee_ba_iat_score", "partner_db_status", "partner_score"] },
+  ],
+  "Store Retail Specifications": [
+    { title: "Store Type & Areas", keys: ["store_type", "existing_overall_area_SBA", "existing_retail_area", "new_over_all_area_SBA", "new_retail_area", "no_of_floors", "floor_plate"] },
+    { title: "Architecture", keys: ["frontage", "ceiling_height", "facade_led", "terrace_branding", "totem_pole", "display_type", "flooring_type", "floors_for_facade"] },
+    { title: "Facilities", keys: ["cashier_count", "karatmeter_count", "strong_room", "franchise_room", "manager_room", "conference_room", "pvr_room", "additional_workstation", "regional_service_centre"] },
+    { title: "Notes", keys: ["remarks"] },
+  ],
+  "Capex Expenses": [
+    { title: "Store Reference", keys: ["Flooring Type", "Property type", "Retail Area"] },
+    { title: "Capex Items", keys: ["Interiors", "Additional Civil Works", "Corner Property Work", "Lift Installation", "Increase Façade Height per Floor", "EHV zone addition (Furniture & Interior)", "DxC (Equipment and Interiors)", "Art and Crafts(Type 1 (Crafts)", "Art and Crafts(Type 2 (Crafts)", "Art and Crafts(Type 3 (Crafts)", "LED Screen", "Solar Installation", "Engraving Machine"] },
+    { title: "IT Equipment", keys: ["IT (Equipments and Installation)"] },
+    { title: "Other Items", keys: ["Other Expenses"] },
+    { title: "Totals", keys: ["Total capex", "Rate /Sqft"] },
+  ],
+  "Other Expenses": [
+    { title: "Salary Stats", keys: ["Sqft/emp", "Cost/emp"] },
+    { title: "Electricity", keys: ["Electricity_Rate/sqft", "Electricity_Total"] },
+    { title: "Registration & Relocation", keys: ["Registration Charges", "Temp_cost"] },
+  ],
+};
+
 // ─ Renders one object row split into scalar fields + 6-year projection table
-function SingleRowContent({ row }) {
+function SingleRowContent({ row, pageName }) {
   const simple = [], yearly = [], nested = [];
   for (const [k, v] of Object.entries(row)) {
     if (HIDDEN.has(k)) continue;
@@ -153,26 +453,75 @@ function SingleRowContent({ row }) {
   }
   return (
     <div className="p-6 space-y-8">
-      {/* Scalar fields */}
-      {simple.length > 0 && (
-        <section>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pb-1.5 border-b border-slate-200">
-            📋 Field Values
-          </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {simple.map(({ key, value }) => {
-              const fv = formatValue(value);
-              const isNum = !isNaN(parseFloat(value)) && String(value ?? "").trim() !== "";
+      {/* Scalar fields — grouped into named sections when a mapping exists for this page */}
+      {simple.length > 0 && (() => {
+        const sectionDefs = PAGE_SECTIONS[pageName];
+        if (!sectionDefs) {
+          return (
+            <section>
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 pb-1.5 border-b border-slate-200">
+                📋 Field Values
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {simple.map(({ key, value }) => {
+                  const fv = formatValue(value);
+                  const isNum = !isNaN(parseFloat(value)) && String(value ?? "").trim() !== "";
+                  return (
+                    <div key={key} className="bg-slate-50 hover:bg-white rounded-xl border border-slate-100 hover:border-indigo-200 hover:shadow-sm transition p-3">
+                      <p className="text-xs text-slate-400 font-semibold uppercase tracking-wide mb-1 leading-tight">{formatLabel(key)}</p>
+                      <p className={`text-sm font-bold break-words leading-snug ${isNum ? "text-indigo-700" : "text-slate-800"}`}>{fv ?? "—"}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        }
+        const byKey = Object.fromEntries(simple.map((f) => [f.key, f]));
+        const usedKeys = new Set();
+        const fieldCard = ({ key, value }) => {
+          const fv = formatValue(value);
+          const isNum = !isNaN(parseFloat(value)) && String(value ?? "").trim() !== "";
+          return (
+            <div key={key} className="bg-white rounded-xl border border-slate-100 p-3">
+              <p className="text-xs text-slate-400 font-semibold uppercase tracking-wide mb-1 leading-tight">{formatLabel(key)}</p>
+              <p className={`text-sm font-bold break-words leading-snug ${isNum ? "text-indigo-700" : "text-slate-800"}`}>{fv ?? "—"}</p>
+            </div>
+          );
+        };
+        return (
+          <div className="space-y-4">
+            {sectionDefs.map(({ title, keys }) => {
+              const fields = keys.map((k) => byKey[k]).filter(Boolean);
+              if (!fields.length) return null;
+              fields.forEach((f) => usedKeys.add(f.key));
               return (
-                <div key={key} className="bg-slate-50 hover:bg-white rounded-xl border border-slate-100 hover:border-indigo-200 hover:shadow-sm transition p-3">
-                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wide mb-1 leading-tight">{formatLabel(key)}</p>
-                  <p className={`text-sm font-bold break-words leading-snug ${isNum ? "text-indigo-700" : "text-slate-800"}`}>{fv ?? "—"}</p>
-                </div>
+                <section key={title} className="rounded-xl border border-slate-200 overflow-hidden">
+                  <div className="px-4 py-2.5 bg-gradient-to-r from-[#1e3a5f] to-[#2d5f8a]">
+                    <h4 className="text-xs font-black text-white uppercase tracking-widest">{title}</h4>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-slate-100 p-px">
+                    {fields.map(fieldCard)}
+                  </div>
+                </section>
               );
             })}
+            {(() => {
+              const rem = simple.filter((f) => !usedKeys.has(f.key));
+              return rem.length > 0 ? (
+                <section className="rounded-xl border border-slate-200 overflow-hidden">
+                  <div className="px-4 py-2.5 bg-slate-100">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Other</h4>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-slate-100 p-px">
+                    {rem.map(fieldCard)}
+                  </div>
+                </section>
+              ) : null;
+            })()}
           </div>
-        </section>
-      )}
+        );
+      })()}
 
       {/* 6-year projection table */}
       {yearly.length > 0 && (
@@ -791,6 +1140,9 @@ function PageDataModal({ pageName, data, loading, onClose, onNavigate }) {
   const nextPage = groupIndex !== -1 && groupIndex < groupPages.length - 1 ? groupPages[groupIndex + 1] : null;
   const shortLabel = (n) => n.replace(/^.*?-\s*/, "");
   const isRefStoreCode = pageName === "Sales Planning - Ref Store Code Details";
+  const isStockSummary = Object.prototype.hasOwnProperty.call(STOCK_SUMMARY_SECTIONS, pageName);
+  const isSalesSummary = pageName === "Sales Planning - Sales Summary";
+  const isDiscount = pageName === "Sales Planning - Discount";
   const [isMaximized, setIsMaximized] = useState(false);
 
   return (
@@ -861,10 +1213,16 @@ function PageDataModal({ pageName, data, loading, onClose, onNavigate }) {
             </div>
           ) : isRefStoreCode ? (
             <RefStoreCodeContent row={rows[0]} />
+          ) : isStockSummary ? (
+            <StockSummarySectionedContent pageName={pageName} rows={rows} />
+          ) : isSalesSummary ? (
+            <SalesSummarySectionedContent rows={rows} />
+          ) : isDiscount ? (
+            <DiscountSectionedContent rows={rows} />
           ) : rows.length > 1 ? (
             <MultiRowContent rows={rows} />
           ) : (
-            <SingleRowContent row={rows[0]} />
+            <SingleRowContent row={rows[0]} pageName={pageName} />
           )}
         </div>
 
