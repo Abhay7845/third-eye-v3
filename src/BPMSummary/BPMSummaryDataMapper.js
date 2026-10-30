@@ -1,48 +1,31 @@
 // Builds the BPMSummary tables (same shape as BPMDummyData.bpm_dummy_data)
-// from the live ROI flow's roiContext + parsed financial summary (`d` from
-// roiFinancialSummary.parseApiRows), instead of the hardcoded dummy values.
-// Fields with no real data source in the current ROI model are left blank
-// ("-") rather than guessed.
+// directly from the backend's GET /bpm_sumarry/{roiId} response row — this is
+// now the single source of truth for BPM Summary figures (replaces the old
+// client-side derivation from roiContext/parseApiRows output).
 
-const r2 = (n) => (n === null || n === undefined ? null : Math.round(n * 100) / 100);
-const pct = (num, den) => (den ? r2((num / den) * 100) : null);
-
-export function buildBpmSummaryData(roiContext = {}, d = null) {
-  const field = (field, remarks) => ({ field, remarks: remarks ?? "" });
-
-  const isNewStore = (roiContext?.projectType ?? "New Store") === "New Store";
+export function mapBpmSummaryResponse(row = {}) {
+  const field = (field, remarks) => ({ field, remarks: remarks ?? "-" });
 
   const data = [
-    field("ROIID", roiContext?.roiId ?? ""),
-    field("Division", "Jewellery"),
-    field("Brand", "Tanishq"),
-    field("Region", roiContext?.region ?? ""),
-    field("Sub Region", ""),
-    field("State", roiContext?.state ?? ""),
-    field("City", roiContext?.newCity || roiContext?.city || ""),
-    field("Subcity", ""),
-    field(
-      "Store Classification",
-      roiContext?.existingStoreFormat || roiContext?.storeType || "",
-    ),
-    field("Add to an Existing Store", isNewStore ? "No" : "Yes"),
-    field("Property Selection By", ""),
-    field("Property Lease By", ""),
-    field("Asset By", ""),
-    field("Inventory By", ""),
-    field("Operations By", ""),
+    field("ROIID", row.roiid),
+    field("Division", row.division),
+    field("Brand", row.brand),
+    field("Region", row.region),
+    field("Sub Region", row.sub_region),
+    field("State", row.state),
+    field("City", row.city),
+    field("Subcity", row.subcity),
+    field("Store Classification", row.store_classification),
+    field("Add to an Existing Store", row.add_to_existing_store),
+    field("Property Selection By", row.property_selection_by),
+    field("Property Lease By", row.property_lease_by),
+    field("Asset By", row.asset_by),
+    field("Inventory By", row.inventory_by),
+    field("Operations By", row.operations_by),
   ];
 
-  const yr = (arr, i) => (Array.isArray(arr) ? arr[i] ?? null : null);
-  // Yr0..Yr6 indices → Year1..Year5 = Yr1..Yr5
-  const row5 = (arr) => [1, 2, 3, 4, 5].map((i) => yr(arr, i));
-
-  const additionalDiscountPct = [1, 2, 3, 4, 5].map((i) =>
-    pct(yr(d?.customerDiscount, i), yr(d?.ucpSales, i)),
-  );
-
-  const capexYr0 = d ? Math.abs(yr(d.capex, 0) ?? 0) : null;
-  const securityDepositYr0 = d ? Math.abs(yr(d.securityDeposit, 0) ?? 0) : null;
+  // Pulls Yr1..Yr5 for a given `{prefix}_y1`..`{prefix}_y5` column family.
+  const years = (prefix) => [1, 2, 3, 4, 5].map((y) => row[`${prefix}_y${y}`] ?? null);
 
   const yearRow = (metric, values) => ({
     metric,
@@ -53,22 +36,20 @@ export function buildBpmSummaryData(roiContext = {}, d = null) {
     year5: values[4] ?? null,
   });
 
-  const snvData = d
-    ? [
-        yearRow("Turnover NSV (Lakhs Rs.) (Total Sales)", row5(d.nsvSales)),
-        yearRow("Payout (Lakhs Rs.)", row5(d.grossEarnings)),
-        yearRow("PBT (Lakhs Rs.)", row5(d.pbt)),
-        yearRow("Inventory (Lakhs Rs.) (Stock)", row5(d.stockTotal)),
-        yearRow("Capital Investment by Company (Lakhs Rs.)", [capexYr0]),
-        yearRow("Capital Investment by Franchise (Lakhs Rs.)", [0]),
-        yearRow("Initial Security Deposit (Lakhs Rs.)", [securityDepositYr0]),
-        yearRow("IRR Computation - 5 years (%)", [d.kpis?.irr ?? null]),
-        yearRow("NPV Computation - 5 years (Lakhs Rs.)", [d.kpis?.npv ?? null]),
-        yearRow("CTC (Cost to Company) - 5 years (%)", [null]),
-        yearRow("Rent to Revenue - 5 years (%)", [d.kpis?.rentRevenue5yr ?? null]),
-        yearRow("Additional Discount (%)", additionalDiscountPct),
-      ]
-    : [];
+  const snvData = [
+    yearRow("Turnover NSV (Lakhs Rs.) (Total Sales)", years("turnover_nsv")),
+    yearRow("Payout (Lakhs Rs.)", years("payout")),
+    yearRow("PBT (Lakhs Rs.)", years("pbt")),
+    yearRow("Inventory (Lakhs Rs.) (Stock)", years("inventory")),
+    yearRow("Capital Investment by Company (Lakhs Rs.)", [row.company_capital_investment]),
+    yearRow("Capital Investment by Franchise (Lakhs Rs.)", [row.franchise_capital_investment]),
+    yearRow("Initial Security Deposit (Lakhs Rs.)", [row.initial_security_deposit]),
+    yearRow("IRR Computation - 5 years (%)", [row.irr_5_years]),
+    yearRow("NPV Computation - 5 years (Lakhs Rs.)", [row.npv_5_years]),
+    yearRow("CTC (Cost to Company) - 5 years (%)", [row.ctc_5_years]),
+    yearRow("Rent to Revenue - 5 years (%)", [row.rent_to_revenue_5_years]),
+    yearRow("Additional Discount (%)", years("additional_discount")),
+  ];
 
   return {
     columns: ["Fields to be Given in BPM Summary", "Values"],
