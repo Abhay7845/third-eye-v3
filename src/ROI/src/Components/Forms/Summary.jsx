@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import * as XLSX from "xlsx-js-style";
 import { BASE_URL } from "./data/baseUrl";
 import RoiPdfReport from "./RoiPdfReport";
-import { YEARS, r2, sum6y, fmt, fmtPct, parseApiRows } from "./roiFinancialSummary";
+import { YEARS, r2, sum6y, fmt, fmtWhole, fmtPct, parseApiRows } from "./roiFinancialSummary";
 import BPMFieldValuesTable from "../../../../BPMSummary/BPMFieldValuesTable";
 import SNVTurnoverYearWiseTbl from "../../../../BPMSummary/SNVTurnoverYearWiseTbl";
 import { mapBpmSummaryResponse } from "../../../../BPMSummary/BPMSummaryDataMapper";
@@ -76,7 +76,7 @@ function buildSubmitPayload(d) {
 
 // ─── Cell component ───────────────────────────────────────────────────────────
 function Num({ v, bold = false, highlight = false }) {
-  const text = fmt(v);
+  const text = fmtWhole(v);
   const isNeg = typeof v === "number" && v < 0;
   return (
     <td
@@ -135,13 +135,13 @@ function TotalRow({ label, values, color = "amber", total }) {
             key={i}
             className={`border px-3 py-2 text-xs text-right tabular-nums whitespace-nowrap ${cls} ${isNeg ? "text-red-700" : ""
               }`}>
-            {fmt(v)}
+            {fmtWhole(v)}
           </td>
         );
       })}
       <td className={`border px-3 py-2 text-xs text-right tabular-nums whitespace-nowrap font-bold ${total != null ? cls : "bg-gray-100 text-gray-500 border-gray-200"
         } ${typeof total === "number" && total < 0 ? "!text-red-700" : ""}`}>
-        {total != null ? fmt(total) : "0.0"}
+        {total != null ? fmtWhole(total) : "0.0"}
       </td>
     </tr>
   );
@@ -285,7 +285,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
             },
           };
           if (highlight) style.fill = { patternType: "solid", fgColor: { rgb: highlight } };
-          if (!isMetaRow && c >= 2) style.numFmt = "#,##0.00";
+          if (!isMetaRow && c >= 2) style.numFmt = "#,##0";
           setStyle(row, c, style);
         }
       });
@@ -315,7 +315,24 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
         );
         if (!res.ok) throw new Error("Failed to load summary data.");
         const json = await res.json();
-        const retailArea = parseFloat(roiContext?.historyRetailArea || roiContext?.existingRetailArea) || 0;
+        // Revenue per Sq.Ft. must use the same denominator as the truth workbook's
+        // "Revenue per Square Feet" formula (='3.Sales Planning'!C4), i.e. the
+        // Carpet Area entered on Sales Planning screen 1 (Reference Store) — NOT
+        // the Store Retail Specification's existing/new retail area, which is a
+        // different field entirely and was being used here before.
+        let retailArea = 0;
+        try {
+          const res0 = await fetch(`${BASE_URL}/sales_planning`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ screen: 1, roiid }),
+          });
+          if (res0.ok) {
+            const json0 = await res0.json();
+            const row0 = json0?.data?.[0] ?? {};
+            retailArea = parseFloat(row0["carpet area"] ?? row0["Carpet area"] ?? 0) || 0;
+          }
+        } catch (_) { /* fall through to 0 — revPerSqft just shows 0 */ }
         // Stock figures (used for BG cost / working capital) live in Sales
         // Planning screen 4 ("view_sales_planning_stock_summary_phase_2") —
         // screen 3 is Pricing Metrics only and has no Stock_* rows at all.
@@ -804,7 +821,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
                       <td
                         key={i}
                         className='border border-gray-200 px-3 py-2 text-right text-xs text-gray-600 bg-white'>
-                        {i === 0 ? fmt(d.storeInteriors) : "0.0"}
+                        {i === 0 ? fmtWhole(d.storeInteriors) : "0.0"}
                       </td>
                     ))}
                     <td className='border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50'>—</td>
@@ -1015,13 +1032,13 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
             </button>
           )}
           {/* Lets the ABM download this exact Summary page's data (not the full backend report) as an Excel file, once data has loaded */}
-          <button
+          {/* <button
             type='button'
             onClick={handleDownloadExcel}
             disabled={excelGenerating || !d}
             className={`px-5 py-3 rounded-xl font-bold text-sm shadow-lg transition text-white ${excelGenerating || !d ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}>
             {excelGenerating ? "Generating..." : "Download Page Excel"}
-          </button>
+          </button> */}
           {isRetailRole && (
             <button
               type='button'
