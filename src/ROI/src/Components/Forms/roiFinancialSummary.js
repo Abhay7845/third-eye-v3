@@ -222,17 +222,17 @@ export function parseApiRows(rows, opts = {}) {
   // Capital expenditure
   const calCapex = Array(7).fill(0);
   calCapex[0] = -currentValueOfInteriors[0];
-  calCapex[6] = calCapex[0] + calCapex[0] * 0.05;
+  // Yr6: 5% salvage value recovered as a positive cash inflow (was wrongly re-charging ~105% of Yr0 capex again)
+  calCapex[6] = -calCapex[0] * 0.05;
 
   // Sigin
   const calSigningFee = Array(7).fill(0)
   calSigningFee[0] = (by["ROI New Store"]?.Header ?? "") === "L1" ? 0 : -10;
 
   const calAdvanceRent = Array(7).fill(0)
-  calAdvanceRent[0] = secDep[0]
-  for (let i = 0; i <= 5; i++) {
-    calAdvanceRent[6] = calAdvanceRent[6] + calAdvanceRent[i]
-  }
+  // Yr0: paying the advance/security deposit is a cash outflow; Yr6: full recovery (positive inflow)
+  calAdvanceRent[0] = -secDep[0]
+  calAdvanceRent[6] = -calAdvanceRent.slice(0, 6).reduce((s, v) => s + v, 0)
 
   // Working Capital cash outflow
   const calIncWorkingCapitalCashOutflow = Array(7).fill(0)
@@ -251,12 +251,19 @@ export function parseApiRows(rows, opts = {}) {
     calCapexTotal[i] = calCapex[i] + calSigningFee[i] + calAdvanceRent[i] + calIncWorkingCapitalCashOutflow[i] + ebitda[i]
   }
 
-  // ROI %
+  // ROI % — matches Excel's "6. ROI%" row: EBITDA ÷ (cumulative investment-to-date, this year's own
+  // investment counted at half value). Investment here excludes EBITDA (Capex+SigningFee+AdvanceRent+IncWC).
+  // Stored as a percentage NUMBER (e.g. 8.92, not 0.0892) — same convention as IRR below — since it's
+  // rendered with the same whole-number formatter as the other table rows, not a %-aware formatter.
+  const investmentCashFlow = calCapexTotal.map((v, i) => v - ebitda[i])
   const roiPct = Array(7).fill(0)
+  let cumInvest = 0
   for (let i = 1; i <= 5; i++) {
-    roiPct[i] = ebitda[i] / (-calCapexTotal[i] - (roiPct[i - 1] / 2))
+    cumInvest += investmentCashFlow[i - 1]
+    roiPct[i] = (ebitda[i] / (-cumInvest - (investmentCashFlow[i] / 2))) * 100
   }
-  roiPct[6] = (ebitda[6] + calCapex[6] + calSigningFee[6] + calAdvanceRent[6]) / (-(calCapexTotal.slice(0, 5).reduce((s, v) => s + v, 0)))
+  const cumInvestYr0to5 = investmentCashFlow.slice(0, 6).reduce((s, v) => s + v, 0)
+  roiPct[6] = (calCapexTotal[6] / (-cumInvestYr0to5)) * 100
 
   // Rent / Revenue (5yr) — both sides must be in Lakhs
   const rentR = by["Rent"];
@@ -265,9 +272,12 @@ export function parseApiRows(rows, opts = {}) {
   const rev5 = ucpSales.slice(0, 6).reduce((s, v) => s + v, 0);
   const rentRev5 = rev5 > 0 ? r2(((rent5 / 100000) / rev5) * 100) : null;
 
-  // Rev per sqft — requires retailArea passed via opts
+  // Rev per sqft — matches Excel's "Revenue per Square Feet (Average)":
+  // =SUM(D8:I8)/(6*'3.Sales Planning'!C4) — Yr1-Yr6 UCP Sales only (not Yr0),
+  // divided by 6 × Carpet Area (retailArea, passed via opts from Sales Planning
+  // screen 1 — NOT the Store Retail Specification's area).
   const retailArea = opts.retailArea ?? 0;
-  const totalUCP = ucpSales.slice(0, 7).reduce((s, v) => s + v, 0);
+  const totalUCP = ucpSales.slice(1, 7).reduce((s, v) => s + v, 0);
   const revPerSqft = retailArea > 0 ? (totalUCP / (retailArea * 6)) : 0;
 
   // Revenue CAGR Yr1 → Yr6
@@ -349,4 +359,14 @@ export const fmt = (n) => {
 export const fmtPct = (n, decimals = 1) => {
   if (n === null || n === undefined) return "0.0";
   return `${Number(n).toFixed(decimals)}%`;
+};
+
+// Rounded, no-decimals version of fmt() — used for the main absolute-value table
+// rows/export so figures display as whole numbers, matching the business Excel.
+export const fmtWhole = (n) => {
+  if (n === null || n === undefined) return "0";
+  const rounded = Math.round(n);
+  if (rounded === 0) return " - ";
+  const abs = Math.abs(rounded).toLocaleString("en-IN");
+  return rounded < 0 ? `(${abs})` : abs;
 };

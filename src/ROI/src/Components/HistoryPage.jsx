@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { BASE_URL } from "./Forms/data/baseUrl";
 import RoiPdfReport from "./Forms/RoiPdfReport";
+import RoiSummaryExcelDownload from "./Forms/RoiSummaryExcelDownload";
 import BPMFieldValuesTable from "../../../BPMSummary/BPMFieldValuesTable";
 import SNVTurnoverYearWiseTbl from "../../../BPMSummary/SNVTurnoverYearWiseTbl";
 import { mapBpmSummaryResponse } from "../../../BPMSummary/BPMSummaryDataMapper";
@@ -825,6 +826,17 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     <span>{stats.total - stats.done} remaining</span>
                   </div>
                 </div>
+
+                {/* Summary Excel export — only once every section is completed (not
+                    gated on submission status, so it's still available after submit). */}
+                {isAllComplete && (
+                  <div className='mt-4 flex justify-end gap-2'>
+                    <RoiSummaryExcelDownload
+                      roiid={selectedRoi.roiid}
+                      className='inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow transition'
+                    />
+                  </div>
+                )}
 
                 {/* One-view report — only once the ROI has actually been submitted */}
                 {isSubmitted && (
