@@ -157,18 +157,19 @@ export function parseApiRows(rows, opts = {}) {
 
   // Total expenses — Excel formula:
   // L2.5 → 0; Yr0 = Staff/Electricity/Insurance (their own Yr0 if the API sent one,
-  // else Yr1×20% — not applicable to L2.5) + RegnCharges_Yr0; Yr1–6 = Σ all items
+  // else Staff/Electricity×20%, Insurance×30% — not applicable to L2.5) + RegnCharges_Yr0; Yr1–6 = Σ all items
   const isL2_5 = (by["ROI New Store"]?.Header ?? "") === "L2.5";
   const _staff = expenses.find(e => e.label === "Staff Salaries")?.values ?? Array(7).fill(0);
   const _elec = expenses.find(e => e.label === "Electricity")?.values ?? Array(7).fill(0);
   const _ins = expenses.find(e => e.label === "Insurance")?.values ?? Array(7).fill(0);
   const _regn = expenses.find(e => e.label === "Regn Charges / Temp Store Cost")?.values ?? Array(7).fill(0);
 
-  // Fall back to Yr1×20% whenever Yr0 wasn't actually supplied for these 3 items
+  // Fall back to Yr1×20% (Staff/Electricity) or Yr1×30% (Insurance) whenever Yr0 wasn't actually supplied
   if (!isL2_5) {
-    [_staff, _elec, _ins].forEach((vals) => {
+    [_staff, _elec].forEach((vals) => {
       if (!(vals[0] > 0)) vals[0] = r2((vals[1] ?? 0) * 0.2);
     });
+    if (!(_ins[0] > 0)) _ins[0] = r2((_ins[1] ?? 0) * 0.3);
   }
 
   const totExp = Array.from({ length: 7 }, (_, i) => {
