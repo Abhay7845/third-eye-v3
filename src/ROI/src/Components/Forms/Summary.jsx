@@ -285,7 +285,7 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
             },
           };
           if (highlight) style.fill = { patternType: "solid", fgColor: { rgb: highlight } };
-          if (!isMetaRow && c >= 2) style.numFmt = "#,##0";
+          if (!isMetaRow && c >= 2) style.numFmt = "#,##0.000";
           setStyle(row, c, style);
         }
       });
