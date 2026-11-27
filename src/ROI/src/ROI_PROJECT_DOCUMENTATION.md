@@ -1,6 +1,6 @@
 # ROI (Return on Investment) Application — Complete Project Documentation
 
-**Version:** As of October 2026 — updated with the approval-chain rewrite (stage-sequence resolution, security tightening), TOT business-formula fixes verified against the reference workbook, RBM Dashboard's rich Final Summary view, and several latent backend bugs fixed (missing `get_roi_current_status` proc, stale `get_roi_final_summary_screen` proc, misspelled DB column names)
+**Version:** As of November 2026 — updated with email-based, password-protected report delivery (PDF/Excel downloads replaced by `POST /roi/email_report`), richer status-change notification emails (request overview + IRR/NPV/Payback snapshot + next-approver), and a form-faithful PDF report redesign with a single shared IRR/NPV/Payback source across PDF/Excel/email. Also includes the approval-chain rewrite (stage-sequence resolution, security tightening), TOT business-formula fixes verified against the reference workbook, RBM Dashboard's rich Final Summary view, and several latent backend bugs fixed (missing `get_roi_current_status` proc, stale `get_roi_final_summary_screen` proc, misspelled DB column names)
 **Backend (active dev):** FastAPI (Python) · `f:\ROI\Dev_branch\ROI-Backend-python\server\`  
 **Backend (other copies — not kept in sync, do not edit blindly):** `f:\ROI\ROI_server\server\`, `f:\ROI\roi-be-og\roi-be-og\server\`  
 **Frontend:** React 18 embedded inside Third Eye (`third-eye-v3`) · `f:\ROI\git_ROI_THIRD_EYE\third-eye-v3\src\ROI\src\`  
@@ -33,6 +33,7 @@
 16. [Recent Changes (August 2026)](#16-recent-changes-august-2026)
 17. [Recent Changes (September 2026)](#17-recent-changes-september-2026)
 18. [Recent Changes (October 2026)](#18-recent-changes-october-2026)
+19. [Recent Changes (November 2026)](#19-recent-changes-november-2026)
 
 ---
 
@@ -671,6 +672,14 @@ Until this proc exists, the auth check is **gracefully skipped** (warning logged
 
 > All POST approval endpoints return **HTTP 403** if the actor is not authorised for the current stage.
 
+### Report Delivery (Email, Password-Protected)
+
+| Method | URL | Body | Purpose |
+|---|---|---|---|
+| POST | `/roi/email_report/{roiid}` | `{ report_type: "pdf_full_report" \| "summary_excel" \| "expense_summary_excel", to_email }` | Generates the report server-side, password-protects it, and emails it to `to_email` (must be the logged-in user's own address) — **this is the only "download" path the UI uses** for these three reports; see [§19](#19-recent-changes-november-2026) |
+| GET | `/roi_full_report/{roiid}` | — | Unprotected full PDF report — no longer called by any UI button, kept for internal reuse/back-compat |
+| GET | `/roi_summary_excel/{roiid}` | — | Password-protected Summary Excel (password = `<ROI creator's username>DDMMYYYY`) — no longer called by any UI button, kept for internal reuse/back-compat |
+
 ### Read Screen-3 Data
 
 | Method | URL | Body | Purpose |
@@ -1161,6 +1170,39 @@ Editing an earlier Sales Planning substep whose downstream substeps were already
 |---|---|
 | `store_format` always sent as `""` | `handleSelectRoi` read `basic.existing_store_format`/`basic.ty_history_id` from `/fetchScreen?parameter=roi_basic_store_details`, but the stored proc's real column names (confirmed via a live `CALL fetch_store_details(...)` dump) are `exsisting_store_format` (a genuine DB-side typo) and `TY_historyID` — neither ever matched. Fixed both lookups to the real column names; also fixes the "View New Store PDF" button, which depended on the same `TY_historyID` field |
 | Error messaging | `handleConfirmAction`/`handleViewPageData`/the ROI-list fetch now always parse the JSON body and surface the backend's own `message` (AuthorizationError text, 404 "No saved data found...", etc.) instead of hardcoded generic strings |
+
+---
+
+## 19. Recent Changes (November 2026)
+
+### Backend — Status-change notification emails enriched (`mail_service.py`, `main.py`)
+
+| Change | Detail |
+|---|---|
+| Richer email body | `_build_roi_status_email_html` now shows: who just acted (`Updated By`), who must act next (`Awaiting Action From` — stage label + the chain's raw contact, even when it's a non-email placeholder like "RBM of the Region"), a **Request Overview** card (City/State/Project Type/Store Format/Region/Reference Store), and a **Financial Snapshot** card (IRR/NPV/Payback Period), plus a button linking back into the app |
+| New context helpers | `_fetch_roi_overview_for_email` (store particulars + reference store code) and `_fetch_roi_kpis_for_email` (IRR/NPV/Payback, via `roi_report_pdf.compute_live_kpis`) added to `main.py`; `_notify_status_change` now takes an optional `db` to populate them — never raises, so a lookup failure just omits that section instead of blocking the status update |
+| `_get_ci` / case-tolerant lookups | Added to safely read both `existing_store_format`/`new_store_format` **and** the DB's own typo'd `exsisting_store_format` column (same for `exsisting_store_code`), since different procs alias it differently |
+| App link | `ROI_FRONTEND_URL` env var (new) + `_roi_app_link(roiid)` build the "Open ROI Application" link; recipients land on the ROI home page and look the ROI up by ID (there's no per-ROI deep-link route in the Third Eye shell to target directly) |
+
+### Backend — PDF/Excel downloads are now password-protected and delivered by email only (item 2)
+
+| Change | Detail |
+|---|---|
+| New endpoint | `POST /roi/email_report/{roiid}` with body `{report_type: "pdf_full_report" \| "summary_excel" \| "expense_summary_excel", to_email}` — generates the report server-side, password-protects it, and emails it (as an attachment) to `to_email`, which must be the **logged-in user's own address** (the frontend passes `redux state.user.user.email`). There is no direct browser download any more — the HTTP response's `success`/`message` is the only feedback, and the email body states the attachment's open password + a link back into the app |
+| PDF encryption | `roi_report_pdf.generate_roi_full_report_pdf` gained an optional `password` param using reportlab's own `StandardEncryption` (no new dependency) |
+| New Expense Summary generator | `roi_expense_summary_excel.py` (new file) rebuilds Subpage4_3.jsx's "Expense Summary" sheet **server-side from the saved `roi_expense_summary` rows** (`view_roi_expense_details(roiid, 'SUMMARY')`) instead of the client's in-memory recomputation — more reliable, since it reflects the authoritative saved figures, not whatever happens to be in the browser's component state at download time |
+| Password scheme | `roi_summary_excel.build_summary_password(<recipient's email local-part>)` — derived from the **recipient's** own identity (not the ROI creator's), since they're the one opening the file |
+| Frontend | `RoiPdfReport.jsx`, `RoiSummaryExcelDownload.jsx` (used from `Summary.jsx`, `HistoryPage.jsx`, `RBMDashboard.jsx`), and `Subpage4_3.jsx`'s "Download Excel" button were all switched from a direct blob-download `fetch` to a `POST /roi/email_report/{roiid}` call + toast feedback. The old direct-download endpoints (`/roi_full_report/{roiid}`, `/roi_summary_excel/{roiid}`) are left in place (now also reused internally by the new endpoint via `_build_roi_summary_excel_bytes`) but are no longer called by any UI button |
+
+### Backend — PDF report drafted to read like the actual on-screen forms (item 3)
+
+| Change | Detail |
+|---|---|
+| Form-faithful Sections 1 & 2 | Replaced the flat, alphabetically-unordered key/value dump with `_grouped_kv_section` + `SECTION1_GROUPS`/`SECTION2_GROUPS` — mirrors `BasicStoreRetailForm.jsx`'s own card groupings (Project Type / History & Location / Store Format / Franchise Details) and `StoreRetailSpecification.jsx`'s (Store Specification / Store Architecture), with the same on-screen labels. Anything not covered by a group still prints under a catch-all "Additional Details" sub-section, so nothing is silently dropped |
+| KPI highlight cards | Section 5 now opens with a prominent IRR / NPV @ 11% CoC / Payback Period callout (mirrors Summary.jsx's own KPI cards) ahead of the detailed year-wise table |
+| **Stale-proc bug fixed** | The PDF's Final Summary previously queried `get_roi_final_summary_screen` directly — the same known-stale proc documented in [§18](#18-recent-changes-october-2026) that's missing EBITDA/PBT/IRR/NPV/Payback entirely, so the PDF (and the email's KPI snapshot) could never have shown these figures at all. Extracted `/summary_screen_5/{roiid}`'s merge logic (live proc + saved snapshot + expense-summary overlay) into a new shared `roi_report_pdf.fetch_final_summary_rows(roiid, db)`, now used by **both** `main.py`'s endpoint and the PDF — single source of truth |
+| KPI consistency | `roi_report_pdf.compute_live_kpis` recomputes IRR/NPV/Payback the same way as `/roi_summary_excel` (`roi_summary_excel.parse_api_rows`), and is now used by **both** the PDF's KPI cards and the status-change email's Financial Snapshot, so the same ROI always shows the same figures everywhere |
+| Cover-page bug fixed | The cover-page overview card's "Store Format"/"Store Code" fields looked up `existing_store_format`/`existing_store_code`, which never matched the proc's actual (typo'd) `exsisting_store_format`/`exsisting_store_code` columns — always printed blank for non-New-Store project types. Fixed via the same `_ci_get` case-tolerant lookup used in the grouped sections |
 
 ---
 
