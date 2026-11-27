@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useSelector } from "react-redux";
 import { useSection4Context } from "./Section4Context";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../data/baseUrl";
-import * as XLSX from "xlsx-js-style";
 
 const YEARS = ["Yr. 1", "Yr. 2", "Yr. 3", "Yr. 4", "Yr. 5", "Yr. 6"];
 
@@ -126,6 +126,8 @@ function escalate(base, pct, years = 6) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Subpage4_3({ handlePrevious, onNext }) {
   const { storeData, subpage4_1Data, subpage4_2Data, markStepSaved } = useSection4Context();
+  const userLog = useSelector((state) => state?.user?.user);
+  const [emailingExpenseExcel, setEmailingExpenseExcel] = useState(false);
   // true once rent-restore runs; prevents the seed effect from overwriting restored values
   const isRestoredRef = useRef(false);
   // ── Rent inputs (6 years) ─────────────────────────────────────────────────
@@ -554,85 +556,35 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
     sba.every((v) => parseFloat(v) > 0) &&
     ratePerSqft.every((v) => parseFloat(v) > 0);
 
-  // Exports the Expense Summary table exactly as shown on screen to a styled .xlsx
-  const handleDownloadExpenseExcel = () => {
+  // Emails this Expense Summary (password-protected .xlsx, built server-side
+  // from the authoritative saved roi_expense_summary rows) to the logged-in
+  // user — there is no direct browser download; the password + a link back
+  // into the app arrive in the email.
+  const handleDownloadExpenseExcel = async () => {
+    const roiid = storeData?.roiid;
+    const to_email = userLog?.email;
+    if (!roiid) return;
+    if (!to_email) {
+      toast.error("Could not determine your logged-in email address.");
+      return;
+    }
+    setEmailingExpenseExcel(true);
     try {
-      const HEADERS = ["Expense Item", "Basis", "Escalation %", ...YEARS];
-      const COLS = HEADERS.length;
-      const dataRows = expenseRows.map(({ key, label, basis, escalation, values, locked, escKey }) => {
-        const escDisplay = locked
-          ? `${lockedRowEsc[escKey]}%`
-          : NO_ESCALATION_ROWS.has(key)
-          ? `${escalation}`
-          : `${editableRows[key]?.esc ?? ""}%`;
-        return [label, basis, escDisplay, ...values.map((v) => Math.round(parseFloat(v) || 0))];
+      const res = await fetch(`${BASE_URL}/roi/email_report/${roiid}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ report_type: "expense_summary_excel", to_email }),
       });
-      const totalRow = ["Total", "", "", ...totalExpenses.map((v) => Math.round(v))];
-
-      const TITLE_ROW = 0, HEADER_ROW = 2, DATA_START = 3;
-      const aoa = [
-        [`Expense Summary — Value in ₹ Terms — ROI ${storeData?.roiid ?? ""}`],
-        [],
-        HEADERS,
-        ...dataRows,
-        totalRow,
-      ];
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      ws["!merges"] = [{ s: { r: TITLE_ROW, c: 0 }, e: { r: TITLE_ROW, c: COLS - 1 } }];
-      ws["!cols"] = [{ wch: 32 }, { wch: 26 }, { wch: 14 }, ...Array(6).fill({ wch: 13 })];
-
-      const border = {
-        top: { style: "thin", color: { rgb: "BFBFBF" } },
-        bottom: { style: "thin", color: { rgb: "BFBFBF" } },
-        left: { style: "thin", color: { rgb: "BFBFBF" } },
-        right: { style: "thin", color: { rgb: "BFBFBF" } },
-      };
-      const setStyle = (r, c, style) => {
-        const addr = XLSX.utils.encode_cell({ r, c });
-        if (!ws[addr]) ws[addr] = { t: "s", v: "" };
-        ws[addr].s = style;
-      };
-
-      setStyle(TITLE_ROW, 0, {
-        font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
-        fill: { patternType: "solid", fgColor: { rgb: "92400E" } },
-        alignment: { horizontal: "left", vertical: "center" },
-      });
-      for (let c = 0; c < COLS; c++) {
-        setStyle(HEADER_ROW, c, {
-          font: { bold: true, color: { rgb: "FFFFFF" } },
-          fill: { patternType: "solid", fgColor: { rgb: "233044" } },
-          alignment: { horizontal: c <= 1 ? "left" : "center", vertical: "center" },
-          border,
-        });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.message || "Failed to generate/email the Expense Summary Excel.");
       }
-      dataRows.forEach((_, i) => {
-        const row = DATA_START + i;
-        for (let c = 0; c < COLS; c++) {
-          setStyle(row, c, {
-            border,
-            alignment: { horizontal: c <= 1 ? "left" : "right", vertical: "center" },
-            ...(c >= 3 ? { numFmt: "#,##0" } : {}),
-          });
-        }
-      });
-      const totalRowIdx = DATA_START + dataRows.length;
-      for (let c = 0; c < COLS; c++) {
-        setStyle(totalRowIdx, c, {
-          font: { bold: true, color: { rgb: "92400E" } },
-          fill: { patternType: "solid", fgColor: { rgb: "FEF3C7" } },
-          alignment: { horizontal: c <= 1 ? "left" : "right", vertical: "center" },
-          border,
-          ...(c >= 3 ? { numFmt: "#,##0" } : {}),
-        });
-      }
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Expense Summary");
-      XLSX.writeFile(wb, `Expense_Summary_${storeData?.roiid || "report"}.xlsx`);
+      toast.success(json.message || `The Expense Summary has been emailed to ${to_email}.`);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to generate the Expense Summary Excel export.");
+      toast.error(err.message || "Failed to generate/email the Expense Summary Excel export.");
+    } finally {
+      setEmailingExpenseExcel(false);
     }
   };
 
@@ -927,8 +879,9 @@ export default function Subpage4_3({ handlePrevious, onNext }) {
             <button
               type='button'
               onClick={handleDownloadExpenseExcel}
-              className='flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-300 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition'>
-              ⬇ Download Excel
+              disabled={emailingExpenseExcel}
+              className='flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-300 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition disabled:opacity-50 disabled:cursor-not-allowed'>
+              {emailingExpenseExcel ? "Sending…" : "📧 Email Excel"}
             </button>
           </div>
         </div>

@@ -56,6 +56,7 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
   } = useForm({
     defaultValues: {
       projectType: "",
+      projectStoreName: "",
       historyId: "",
       existingStoreCode: "",
       city: "",
@@ -117,6 +118,7 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
 
   // Watched values
   const selectedProjectType = useWatch({ control, name: "projectType" });
+  const selectedProjectStoreName = useWatch({ control, name: "projectStoreName" });
   const historyId = useWatch({ control, name: "historyId" });
   const existingStoreCode = useWatch({ control, name: "existingStoreCode" });
   const city = useWatch({ control, name: "city" });
@@ -157,9 +159,14 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
 
   // ── Completion flags ────────────────────────────────────────────────────────
   const projectTypeCompleted = !!selectedProjectType;
+  // Project/New_Store Name is mandatory — the rest of the form (Location,
+  // Store Format, Franchise, …) stays locked until both this and Project
+  // Type itself are filled in.
+  const projectStoreNameCompleted = !!selectedProjectStoreName?.trim();
+  const basicStepCompleted = projectTypeCompleted && projectStoreNameCompleted;
 
   const locationCompleted =
-    projectTypeCompleted &&
+    basicStepCompleted &&
     (isNewStore
       ? !!historyId && !!city && !!state && !!region
       : !!existingStoreCode && !!city && !!state && !!region && storeFound);
@@ -188,15 +195,20 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
     : storeFormatCompleted;
 
   // ── Auto-advance effects ────────────────────────────────────────────────────
-  useEffect(() => {
-    if (projectTypeCompleted) {
+  // Deliberately NOT a useEffect reacting to basicStepCompleted — that was
+  // re-firing (and collapsing the Project Type card) on every single
+  // keystroke in Project/New_Store Name, the instant it became non-empty.
+  // Instead this runs once, on blur of that field (see its onBlur prop
+  // below), so the card only advances once the user is actually done typing.
+  const handleProjectStoreNameBlur = () => {
+    if (basicStepCompleted) {
       setExpandedSections((prev) => ({
         ...prev,
         projectType: false,
         location: true,
       }));
     }
-  }, [projectTypeCompleted]);
+  };
 
   useEffect(() => {
     if (locationCompleted) {
@@ -255,9 +267,14 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
       setStoreFound(false);
       setFranchiseeFound(false);
       setIsSaved(false);
+      // Keep the Project Type card open (and Location collapsed) here — this
+      // effect only resets downstream field values on a project-type change,
+      // it shouldn't itself decide the accordion's step progression. The
+      // basicStepCompleted-gated effect above is what actually opens Location,
+      // once Project Type AND the mandatory Project/New_Store Name are both filled.
       setExpandedSections({
-        projectType: false,
-        location: true,
+        projectType: true,
+        location: false,
         storeFormat: false,
         franchise: false,
       });
@@ -486,6 +503,10 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
 
       const pType = d.project_type ?? d.projectType ?? roiContext.projectType ?? "";
       setValue("projectType", pType);
+      // Persisted via the "new_store_name" column (get_roi_basic_store_details's
+      // p_new_store_name param) — roiContext is kept as a same-session fallback
+      // in case this is reached before a fresh fetch reflects a just-added value.
+      setValue("projectStoreName", d.new_store_name ?? roiContext.projectStoreName ?? "");
       if (pType === "New Store") {
         setValue("historyId", d.TY_historyID ?? d.ty_history_id ?? d.history_id ?? roiContext.historyId ?? "");
       } else {
@@ -540,6 +561,7 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
         username: username,
         roiid: roiContext?.roiId || undefined,
         projectType: data.projectType,
+        projectStoreName: data.projectStoreName,
         historyId: data.historyId,
         existingStoreCode: data.existingStoreCode,
         city: data.city,
@@ -596,6 +618,7 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
   if (roiContext?.roiId && !isEditingLocked) {
     const lockedFields = [
       ["Project Type", roiContext.projectType],
+      ["Project/New_Store Name", roiContext.projectStoreName],
       ["History ID", roiContext.historyId],
       ["Ref Store Code", roiContext.refStoreCode || roiContext.existingStoreCode],
       ["City", roiContext.city],
@@ -665,7 +688,7 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
       <Section
         title='📋 Project Type'
         active={expandedSections.projectType}
-        completed={projectTypeCompleted}
+        completed={basicStepCompleted}
         isExpanded={expandedSections.projectType}
         onToggle={() =>
           setExpandedSections((prev) => ({
@@ -693,10 +716,33 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
             {errors.projectType.message}
           </p>
         )}
+        {/* Shown once a Project Type is picked — used as an alias PREFIX on
+            the generated ROI ID (e.g. "MyNewMall" + the existing
+            username+timestamp id), so it's locked the same way Project Type
+            itself is once the ROI actually exists. Mandatory: the rest of
+            the form stays locked (see basicStepCompleted) until this is filled in. */}
+        {projectTypeCompleted && (
+          <>
+            <Input
+              label='Project/New_Store Name: *'
+              name='projectStoreName'
+              register={register}
+              disabled={!!roiContext?.roiId}
+              rules={{ required: "Project/New_Store Name is required" }}
+              onBlur={handleProjectStoreNameBlur}
+              maxLength={50}
+            />
+            {errors?.projectStoreName && (
+              <p className='text-red-500 text-xs mt-1'>
+                {errors.projectStoreName.message}
+              </p>
+            )}
+          </>
+        )}
       </Section>
 
       {/* ── LOCATION ─────────────────────────────────────────────────────────── */}
-      {projectTypeCompleted && (
+      {basicStepCompleted && (
         <Section
           title={
             isNewStore
@@ -1157,6 +1203,10 @@ export default function BasicStoreDetails({ onNext, roiContext }) {
               <div className='grid grid-cols-2 gap-3'>
                 {[
                   ["Project Type", savedSummary.projectType],
+                  savedSummary.projectStoreName && [
+                    "Project/New_Store Name",
+                    savedSummary.projectStoreName,
+                  ],
                   ["City", savedSummary.city],
                   ["State", savedSummary.state],
                   ["Region", savedSummary.region],

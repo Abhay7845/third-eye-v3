@@ -92,6 +92,14 @@ export function parseApiRows(rows, opts = {}) {
   rows.forEach((r) => {
     by[r.Particulars] = r;
   });
+  // Summary.jsx sources `rows` from `/summary_screen_5`, which (as of the
+  // Rent/Staff-Salaries/Total-Expenses scale fix) now pre-converts those
+  // exact expense-line Particulars to Lakhs at the source. Without this
+  // flag, `toLakh()` below would divide them by 1,00,000 a SECOND time,
+  // collapsing Rent/Staff Salaries/Total Expenses to ~0 in the UI even
+  // though the API response itself has the correct figures — pass
+  // `rowsAlreadyInLakhs: true` whenever `rows` came from that endpoint.
+  const rowsAlreadyInLakhs = opts.rowsAlreadyInLakhs ?? false;
 
   const yrs = (name) => {
     const r = by[name];
@@ -112,6 +120,13 @@ export function parseApiRows(rows, opts = {}) {
   // Normalise expenses to Lakhs so EBITDA / PBT / IRR use consistent units.
   const LAKH = 100_000;
   const toLakh = (arr) => arr.map((v) => (v !== null ? r2((v ?? 0) / LAKH) : null));
+  // Used ONLY for the expense-line items below (+ "Regn Charges / Temp Store
+  // Cost") — the specific Particulars `/summary_screen_5` now pre-converts.
+  // Everything else `toLakh()` is used for further down (Security Deposit,
+  // Store Interiors) is NOT pre-converted by that endpoint, so those keep
+  // calling the unconditional `toLakh()` directly.
+  const toLakhIfRaw = (arr) =>
+    rowsAlreadyInLakhs ? arr.map((v) => (v !== null ? r2(v ?? 0) : null)) : toLakh(arr);
 
   const gross = yrs("Gross earnings/Commission"); // already in Lakhs
   const ucpSales = yrs("UCP Sales");
@@ -137,22 +152,22 @@ export function parseApiRows(rows, opts = {}) {
 
   // Build expense line items first — totExp is derived from these
   const expenses = [
-    { label: "Rent", values: toLakh(yrs("Rent")) },
-    { label: "Staff Salaries", values: toLakh(yrs("Staff Salaries")) },
-    { label: "Security & Housekeeping", values: toLakh(yrs("Security & Housekeeping")) },
-    { label: "Electricity", values: toLakh(yrs("Electricity")) },
-    { label: "Repairs & Maintenance", values: toLakh(yrs("Repairs & Maintenance")) },
-    { label: "Insurance", values: toLakh(yrs("Insurance")) },
-    { label: "BTL", values: toLakh(yrs("BTL")) },
-    { label: "Travel & Conveyance", values: toLakh(yrs("Travel & Conveyance")) },
-    { label: "Telephone / Internet", values: toLakh(yrs("Telephone/Internet")) },
-    { label: "Credit Card Commission", values: toLakh(yrs("Credit Card Commission")) },
-    { label: "GST (primarily rental)", values: toLakh(yrs("GST (primarily rental)")) },
-    { label: "Store \u2014 Printing / Pantry etc", values: toLakh(yrs("Store - Printing/Pantry etc")) },
-    { label: "Consumables, Safety, Cust Exp", values: toLakh(yrs("Consumables, Safety, Cust experience")) },
-    { label: "Other \u2014 Staff welfare/Uniforms", values: toLakh(yrs("Other - Staff welfare/Uniforms etc")) },
+    { label: "Rent", values: toLakhIfRaw(yrs("Rent")) },
+    { label: "Staff Salaries", values: toLakhIfRaw(yrs("Staff Salaries")) },
+    { label: "Security & Housekeeping", values: toLakhIfRaw(yrs("Security & Housekeeping")) },
+    { label: "Electricity", values: toLakhIfRaw(yrs("Electricity")) },
+    { label: "Repairs & Maintenance", values: toLakhIfRaw(yrs("Repairs & Maintenance")) },
+    { label: "Insurance", values: toLakhIfRaw(yrs("Insurance")) },
+    { label: "BTL", values: toLakhIfRaw(yrs("BTL")) },
+    { label: "Travel & Conveyance", values: toLakhIfRaw(yrs("Travel & Conveyance")) },
+    { label: "Telephone / Internet", values: toLakhIfRaw(yrs("Telephone/Internet")) },
+    { label: "Credit Card Commission", values: toLakhIfRaw(yrs("Credit Card Commission")) },
+    { label: "GST (primarily rental)", values: toLakhIfRaw(yrs("GST (primarily rental)")) },
+    { label: "Store \u2014 Printing / Pantry etc", values: toLakhIfRaw(yrs("Store - Printing/Pantry etc")) },
+    { label: "Consumables, Safety, Cust Exp", values: toLakhIfRaw(yrs("Consumables, Safety, Cust experience")) },
+    { label: "Other \u2014 Staff welfare/Uniforms", values: toLakhIfRaw(yrs("Other - Staff welfare/Uniforms etc")) },
     { label: "BG cost", values: bgCost },
-    { label: "Regn Charges / Temp Store Cost", values: toLakh(yrs("Registeration Charges/Temporary Store Cost")) },
+    { label: "Regn Charges / Temp Store Cost", values: toLakhIfRaw(yrs("Registeration Charges/Temporary Store Cost")) },
   ];
 
   // Total expenses — Excel formula:
@@ -271,7 +286,12 @@ export function parseApiRows(rows, opts = {}) {
   const rent5 = rentR
     ? [rentR.Yr1, rentR.Yr2, rentR.Yr3, rentR.Yr4, rentR.Yr5].reduce((s, v) => s + v, 0) : 0;
   const rev5 = ucpSales.slice(0, 6).reduce((s, v) => s + v, 0);
-  const rentRev5 = rev5 > 0 ? r2(((rent5 / 100000) / rev5) * 100) : null;
+  // Same scale rule as the `expenses` array above: Rent is one of the
+  // Particulars `/summary_screen_5` pre-converts to Lakhs — unconditionally
+  // dividing by 100,000 here (as before) corrupted this ratio to ~0 whenever
+  // `rows` came pre-converted (i.e. every time Summary.jsx loads it).
+  const rent5Lakh = rowsAlreadyInLakhs ? rent5 : rent5 / 100000;
+  const rentRev5 = rev5 > 0 ? r2((rent5Lakh / rev5) * 100) : null;
 
   // Rev per sqft — matches Excel's "Revenue per Square Feet (Average)":
   // =SUM(D8:I8)/(6*'3.Sales Planning'!C4) — Yr1-Yr6 UCP Sales only (not Yr0),

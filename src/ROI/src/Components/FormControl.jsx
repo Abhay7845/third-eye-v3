@@ -7,10 +7,11 @@ export function Input({
   rules,
   disabled = false,
   type = "text",
-  maxLength
+  maxLength,
+  onBlur,
 }) {
   const isNumber = type === "number";
-  const { onChange, ...fieldProps } = register(name, rules);
+  const { onChange, onBlur: rhfOnBlur, ...fieldProps } = register(name, rules);
 
   // Block "-" / "+" / "e" keystrokes so negative numbers can't be typed at all.
   const handleKeyDown = (e) => {
@@ -25,6 +26,15 @@ export function Input({
     onChange(e);
   };
 
+  // Composes react-hook-form's own onBlur (needed for validation/touched
+  // state) with an optional caller-supplied one — e.g. auto-advancing a
+  // multi-step form once the user is actually done typing (on blur), rather
+  // than reacting to every keystroke while they're still mid-entry.
+  const handleBlur = (e) => {
+    rhfOnBlur(e);
+    onBlur?.(e);
+  };
+
   return (
     <div>
       <label className="block mb-1 text-sm font-semibold text-gray-700">
@@ -37,6 +47,7 @@ export function Input({
         min={isNumber ? 0 : undefined}
         onKeyDown={handleKeyDown}
         onChange={handleChange}
+        onBlur={handleBlur}
         {...fieldProps}
         className={`w-full rounded-lg p-2.5 text-sm border transition-colors
           ${disabled

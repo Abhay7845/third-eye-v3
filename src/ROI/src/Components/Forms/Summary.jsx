@@ -353,7 +353,13 @@ export default function SummaryPage5({ roiContext, onPrevious, onHome }) {
         delete stockTotal[0].roiid
         delete stockTotal[0].status
         let finalDataToParse = [...json?.data, ...stockTotal]
-        setApiData(parseApiRows(finalDataToParse, { retailArea }));
+        // `json.data` comes straight from `/summary_screen_5`, which now
+        // pre-converts Rent/Staff Salaries/etc. to Lakhs at the source (see
+        // fetch_final_summary_rows) — without this flag, parseApiRows would
+        // divide them by 1,00,000 a second time and the whole Total Expenses
+        // breakdown (and everything derived from it) would collapse to ~0
+        // here even though the API response itself is correct.
+        setApiData(parseApiRows(finalDataToParse, { retailArea, rowsAlreadyInLakhs: true }));
       } catch (e) {
         setFetchError(e.message);
       } finally {

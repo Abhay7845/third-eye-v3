@@ -7,6 +7,10 @@ import RoiSummaryExcelDownload from "./Forms/RoiSummaryExcelDownload";
 import BPMFieldValuesTable from "../../../BPMSummary/BPMFieldValuesTable";
 import SNVTurnoverYearWiseTbl from "../../../BPMSummary/SNVTurnoverYearWiseTbl";
 import { mapBpmSummaryResponse } from "../../../BPMSummary/BPMSummaryDataMapper";
+// Shared "ROI_IRR_Details" view (same layout the ABM saw on Summary.jsx when
+// submitting to the RBM) — also used by RBMDashboard.jsx so both roles see it
+// identically instead of two independently-drifting "View" implementations.
+import { buildFinalSummaryView, FinalSummaryContent } from "./FinalSummaryView";
 
 // ─── Page definitions ─────────────────────────────────────────────────────────
 const PAGES = [
@@ -51,6 +55,7 @@ const PAGES = [
   { name: "Resource Expenses", icon: "👥", step: 4, group: "Expense Planning" },
   { name: "Other Expenses", icon: "📝", step: 4, group: "Expense Planning" },
   { name: "Summary Expenses", icon: "💼", step: 4, group: "Expense Planning" },
+  { name: "ROI_IRR_Details", icon: "📊", step: 5, group: "ROI_IRR_Details" },
 ];
 
 const GROUPS = ["Store Setup", "Sales Planning", "Expense Planning"];
@@ -149,20 +154,32 @@ function SkeletonCard() {
 const HIDDEN_MODAL_KEYS = new Set([
   "roiid",
   "roi_id",
-  "ROIID",
   "status",
   "inserted_date",
   "updated_date",
   "username",
   "created_date",
   "create_date",
+  "annual cost escalation",
 ]);
+// Case-insensitive membership check — some procs return these columns in
+// Title Case (e.g. Resource Expenses: "Status", "Inserted_date", "Updated_date")
+// instead of the lowercase/snake_case form `HIDDEN_MODAL_KEYS` lists, which a
+// plain `.has(k)` would silently miss and leak into the "View" table.
+const isHiddenModalKey = (k) => HIDDEN_MODAL_KEYS.has(String(k ?? "").toLowerCase());
 
 function fmtModalNum(value) {
   const n = parseFloat(value);
   if (isNaN(n) || value === "" || value === null || value === undefined)
     return "—";
-  return n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  return n.toLocaleString("en-IN", { maximumFractionDigits: 1 });
+}
+
+// 1-decimal percentage value — the DB already stores these as the percent
+// number itself (e.g. 70.10 means 70.1%, not a 0-1 fraction).
+function fmtModalPct(value) {
+  const txt = fmtModalNum(value);
+  return txt === "—" ? txt : `${txt}%`;
 }
 
 function formatModalLabel(key) {
@@ -290,6 +307,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
     return {
       roiId: selectedRoi.roiid,
       projectType,
+      projectStoreName: d1.new_store_name ?? "",
       historyId: d1.TY_historyID ?? d1.history_id ?? "",
       city: d1.city ?? "",
       state: d1.state ?? "",
@@ -331,6 +349,15 @@ export default function HistoryPage({ onBack, onContinueROI }) {
   // previously saved data intact (same context loader as Continue).
   const handleEditPage = async (pageName) => {
     if (!selectedRoi?.roiid || editingPage) return;
+    // Defense-in-depth: Discount is "edit once" — block it here too even if
+    // somehow triggered outside the (already-disabled) accordion button.
+    if (pageName === "Sales Planning - Discount") {
+      const discountRow = summary?.find((s) => (s.page_name ?? s.PageName) === pageName);
+      if (isPageFilled(discountRow?.status)) {
+        toast.error("Discount is locked after it's first saved — it cannot be edited again.");
+        return;
+      }
+    }
     const target = PAGE_STEP_MAP[pageName];
     if (!target) return;
     setEditingPage(pageName);
@@ -346,6 +373,13 @@ export default function HistoryPage({ onBack, onContinueROI }) {
   };
 
   const handleViewPage = async (pageName) => {
+    // Discount is restricted to Commercial and above — ABM (this page) never
+    // qualifies, so block it even if somehow triggered indirectly (e.g. a
+    // stale Prev/Next click) rather than relying solely on hiding the button.
+    if (pageName === "Sales Planning - Discount") {
+      toast.error("Discount details are visible to Commercial and above only.");
+      return;
+    }
     setViewModal({ open: true, pageName, data: null, loading: true });
     try {
       const roiid = selectedRoi?.roiid;
@@ -401,7 +435,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
             `${BASE_URL}/expense_details/${roiid}?expense_type=SUMMARY`,
           );
           break;
-        case "Final Summary":
+        case "ROI_IRR_Details":
           res = await fetch(`${BASE_URL}/summary_screen_5/${roiid}`);
           break;
         default:
@@ -709,7 +743,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
         </aside>
 
         {/* ── Right: Detail panel ─────────────────────────────────────── */}
-        <main className='flex-1 overflow-y-auto p-8'>
+        <main className='flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8'>
           {!selectedRoi && !summaryLoading && (
             <div className='flex flex-col items-center justify-center h-full text-center'>
               <span className='text-7xl mb-5'>👈</span>
@@ -751,19 +785,19 @@ export default function HistoryPage({ onBack, onContinueROI }) {
           )}
 
           {!summaryLoading && summary && (
-            <div className='max-w-2xl mx-auto space-y-5'>
+            <div className='space-y-5'>
               {/* ── ROI header card ───────────────────────────────────── */}
-              <div className='bg-white rounded-2xl shadow-sm border border-gray-100 p-6'>
-                <div className='flex items-start justify-between gap-4'>
-                  <div>
+              <div className='bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5'>
+                <div className='flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3'>
+                  <div className='min-w-0'>
                     <p className='text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1'>
                       ROI ID
                     </p>
-                    <p className='text-2xl font-extrabold text-gray-900 font-mono tracking-wide'>
+                    <p className='text-lg sm:text-xl font-extrabold text-gray-900 font-mono tracking-wide break-all'>
                       {selectedRoi.roiid}
                     </p>
                     <span
-                      className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full border mt-2 ${
+                      className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full border mt-1.5 ${
                         PROJECT_COLORS[
                           selectedRoi.project_type ?? selectedRoi.projectType
                         ] ?? "bg-gray-100 text-gray-500 border-gray-200"
@@ -775,8 +809,8 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                   </div>
 
                   {/* Circular progress ring */}
-                  <div className='flex flex-col items-center gap-1 flex-shrink-0'>
-                    <div className='relative w-20 h-20'>
+                  <div className='flex flex-row sm:flex-col items-center gap-2 sm:gap-1 flex-shrink-0'>
+                    <div className='relative w-14 h-14 sm:w-16 sm:h-16'>
                       <svg
                         className='w-full h-full -rotate-90'
                         viewBox='0 0 36 36'>
@@ -800,7 +834,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                         />
                       </svg>
                       <div className='absolute inset-0 flex items-center justify-center'>
-                        <span className='text-sm font-bold text-gray-700'>
+                        <span className='text-xs sm:text-sm font-bold text-gray-700'>
                           {stats.pct}%
                         </span>
                       </div>
@@ -812,8 +846,8 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 </div>
 
                 {/* Linear bar */}
-                <div className='mt-5'>
-                  <div className='h-2 bg-gray-100 rounded-full overflow-hidden'>
+                <div className='mt-3'>
+                  <div className='h-1.5 bg-gray-100 rounded-full overflow-hidden'>
                     <div
                       className={`h-full rounded-full transition-all duration-700 ${
                         isAllComplete ? "bg-green-500" : "bg-indigo-500"
@@ -827,20 +861,14 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                   </div>
                 </div>
 
-                {/* Summary Excel export — only once every section is completed (not
-                    gated on submission status, so it's still available after submit). */}
-                {isAllComplete && (
-                  <div className='mt-4 flex justify-end gap-2'>
-                    <RoiSummaryExcelDownload
-                      roiid={selectedRoi.roiid}
-                      className='inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow transition'
-                    />
-                  </div>
-                )}
-
-                {/* One-view report — only once the ROI has actually been submitted */}
+                {/* Full multi-tab ROI Report Excel + One-view PDF report —
+                    only once the ROI has actually been submitted for approval
+                    (previously the Excel button was gated on "all sections
+                    complete" instead, which let an ABM download it before
+                    submission; now both reports are available the same way,
+                    to every role, once the request has gone out for approval). */}
                 {isSubmitted && (
-                  <div className='mt-4 flex justify-end gap-2'>
+                  <div className='mt-3 flex flex-wrap justify-end gap-2'>
                     {isRetailRole && (
                       <button
                         onClick={handleViewBpmSummary}
@@ -848,6 +876,10 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                         📊 BPM Summary
                       </button>
                     )}
+                    <RoiSummaryExcelDownload
+                      roiid={selectedRoi.roiid}
+                      className='inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow transition'
+                    />
                     <RoiPdfReport
                       roiid={selectedRoi.roiid}
                       className='inline-flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow transition'
@@ -878,9 +910,9 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     )}
                   </div>
                   <button
-                    onClick={() => handleViewPage("Final Summary")}
+                    onClick={() => handleViewPage("ROI_IRR_Details")}
                     className='flex-shrink-0 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm shadow transition'>
-                    📊 View Final Summary
+                    📊 View ROI_IRR_Details
                   </button>
                 </div>
               )}
@@ -918,8 +950,76 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 </div>
               )}
 
-              {/* ── Section groups ────────────────────────────────────── */}
-              {groupedPages.map(({ group, pages }) => {
+              {/* ── Continue / View-only action card — moved above the section
+                  groups so it's visible without scrolling past every page list
+                  (Rejected & Clarification banners are shown above this) ── */}
+              {isSubmitted && !roiStatus.startsWith("Rejected_by") ? (
+                <div className='rounded-2xl border border-blue-200 bg-blue-50 p-6 flex items-center gap-4'>
+                  <span className='text-3xl flex-shrink-0'>🔒</span>
+                  <div className='flex-1'>
+                    <p className='font-bold text-blue-800'>
+                      {roiStatus === "BPM_Requestraised"
+                        ? "BPM Request Raised"
+                        : roiStatus.startsWith("Approved_by")
+                        ? `Approved by ${roiStatus.replace(
+                            "Approved_by",
+                            "",
+                          )} — Awaiting next approver`
+                        : "Submitted for Approval"}
+                    </p>
+                    <p className='text-xs text-blue-600 mt-1'>
+                      This ROI is with the approver. You can view each section
+                      below but cannot make changes.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleViewPage("ROI_IRR_Details")}
+                    className='flex-shrink-0 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm shadow transition'>
+                    📊 View ROI_IRR_Details
+                  </button>
+                </div>
+              ) : !isSubmitted && !isClarificationPending ? (
+                <div
+                  className={`rounded-2xl border p-6 flex items-center justify-between gap-4 ${
+                    isAllComplete
+                      ? "bg-green-50 border-green-200"
+                      : "bg-indigo-50 border-indigo-200"
+                  }`}>
+                  <div className='flex-1 min-w-0'>
+                    <p className='font-bold text-gray-800'>
+                      {isAllComplete
+                        ? "🎉 All sections complete"
+                        : `📍 Continue from Step ${firstIncompleteStep}`}
+                    </p>
+                    <p className='text-xs text-gray-500 mt-1'>
+                      {isAllComplete
+                        ? "Review all filled data and proceed to submit."
+                        : "Saved fields are editable — Project Type, History ID & Ref Store are locked."}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleContinue}
+                    disabled={continuing}
+                    className={`flex-shrink-0 px-6 py-3 rounded-xl font-semibold text-sm shadow transition ${
+                      continuing
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : isAllComplete
+                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                    }`}>
+                    {continuing
+                      ? "Loading…"
+                      : isAllComplete
+                      ? "Review & Submit"
+                      : "Continue ROI →"}
+                  </button>
+                </div>
+              ) : null}
+
+              {/* ── Section groups — responsive grid now that the page uses
+                  full width, instead of one long vertical stack ──────── */}
+              <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5'>
+                {groupedPages.map(({ group, pages }) => {
                 const groupDone = pages.filter((p) =>
                   isPageFilled(p.status),
                 ).length;
@@ -963,51 +1063,74 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                         const pageSubmitted =
                           page.status === "Submitted to RBM" ||
                           page.status === "Submitted_toRBM";
+                        // Discount is "edit once" — once saved, it can never be
+                        // reopened for editing again, whether the ABM is
+                        // responding to a RBM/Commercial "Seek Clarification"
+                        // (isClarificationPending) or simply continuing/
+                        // resuming an unsubmitted draft (isSubmitted===false
+                        // but the page itself is already done). Every other
+                        // section stays freely re-editable until the whole
+                        // ROI is submitted.
+                        const isDiscount = page.name === "Sales Planning - Discount";
+                        const discountLocked = isDiscount && done;
+                        const editDisabled = isSubmitted || pageSubmitted || !!editingPage || discountLocked;
                         return (
                           <div
                             key={page.name}
-                            className='flex items-center gap-3 px-6 py-3'>
-                            <span className='text-lg flex-shrink-0'>
-                              {page.icon}
-                            </span>
-                            <div className='flex-1 min-w-0'>
-                              <p
-                                className={`text-sm font-medium truncate ${
-                                  done ? "text-gray-800" : "text-gray-400"
-                                }`}>
-                                {page.name}
-                              </p>
-                              {done && page.inserted_date && (
-                                <p className='text-[10px] text-gray-400 mt-0.5'>
-                                  Saved: {page.inserted_date}
-                                  {page.updated_date
-                                    ? ` · Updated: ${page.updated_date}`
-                                    : ""}
+                            className='flex flex-col gap-2 px-5 py-3'>
+                            <div className='flex items-start gap-2.5'>
+                              <span className='text-lg flex-shrink-0 leading-none mt-0.5'>
+                                {page.icon}
+                              </span>
+                              <div className='min-w-0 flex-1'>
+                                <p
+                                  className={`text-sm font-medium leading-snug ${
+                                    done ? "text-gray-800" : "text-gray-400"
+                                  }`}>
+                                  {page.name}
                                 </p>
-                              )}
+                                {done && page.inserted_date && (
+                                  <p className='text-[10px] text-gray-400 mt-0.5'>
+                                    Saved: {page.inserted_date}
+                                    {page.updated_date
+                                      ? ` · Updated: ${page.updated_date}`
+                                      : ""}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <div className='flex items-center gap-2 flex-shrink-0'>
+                            <div className='flex items-center gap-2 flex-wrap pl-7'>
                               {done ? (
                                 <>
-                                  <button
-                                    onClick={() => handleViewPage(page.name)}
-                                    className='text-[10px] font-semibold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-2.5 py-1 rounded-full transition'>
-                                    View
-                                  </button>
+                                  {isDiscount ? (
+                                    <span
+                                      className='text-[10px] font-semibold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full'
+                                      title='Discount details are visible to Commercial and above only'>
+                                      🔒 Commercial+ only
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleViewPage(page.name)}
+                                      className='text-[10px] font-semibold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-2.5 py-1 rounded-full transition'>
+                                      View
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => handleEditPage(page.name)}
-                                    disabled={isSubmitted || pageSubmitted || !!editingPage}
+                                    disabled={editDisabled}
                                     title={
-                                      isSubmitted || pageSubmitted
+                                      discountLocked
+                                        ? "Discount is locked after it's first saved — it cannot be edited again"
+                                        : isSubmitted || pageSubmitted
                                         ? "Locked — ROI already submitted"
                                         : "Edit this section"
                                     }
                                     className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition ${
-                                      isSubmitted || pageSubmitted
+                                      editDisabled
                                         ? "text-gray-400 bg-gray-100 cursor-not-allowed"
                                         : "text-amber-700 bg-amber-100 hover:bg-amber-200"
                                     }`}>
-                                    {editingPage === page.name ? "Loading…" : "✎ Edit"}
+                                    {editingPage === page.name ? "Loading…" : discountLocked ? "🔒 Locked" : "✎ Edit"}
                                   </button>
                                   {!isSubmitted && !pageSubmitted && (
                                     <span className='flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2.5 py-1 rounded-full'>
@@ -1027,71 +1150,8 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     </div>
                   </div>
                 );
-              })}
-
-              {/* ── Continue / View-only action card (Rejected & Clarification now shown above) ── */}
-              {isSubmitted && !roiStatus.startsWith("Rejected_by") ? (
-                <div className='rounded-2xl border border-blue-200 bg-blue-50 p-6 flex items-center gap-4'>
-                  <span className='text-3xl flex-shrink-0'>🔒</span>
-                  <div className='flex-1'>
-                    <p className='font-bold text-blue-800'>
-                      {roiStatus === "BPM_Requestraised"
-                        ? "BPM Request Raised"
-                        : roiStatus.startsWith("Approved_by")
-                        ? `Approved by ${roiStatus.replace(
-                            "Approved_by",
-                            "",
-                          )} — Awaiting next approver`
-                        : "Submitted for Approval"}
-                    </p>
-                    <p className='text-xs text-blue-600 mt-1'>
-                      This ROI is with the approver. You can view each section
-                      below but cannot make changes.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleViewPage("Final Summary")}
-                    className='flex-shrink-0 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm shadow transition'>
-                    📊 View Final Summary
-                  </button>
-                </div>
-              ) : !isSubmitted && !isClarificationPending ? (
-                <div
-                  className={`rounded-2xl border p-6 flex items-center justify-between gap-4 ${
-                    isAllComplete
-                      ? "bg-green-50 border-green-200"
-                      : "bg-indigo-50 border-indigo-200"
-                  }`}>
-                  <div className='flex-1 min-w-0'>
-                    <p className='font-bold text-gray-800'>
-                      {isAllComplete
-                        ? "🎉 All sections complete"
-                        : `📍 Continue from Step ${firstIncompleteStep}`}
-                    </p>
-                    <p className='text-xs text-gray-500 mt-1'>
-                      {isAllComplete
-                        ? "Review all filled data and proceed to submit."
-                        : "Saved fields are editable — Project Type, History ID & Ref Store are locked."}
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleContinue}
-                    disabled={continuing}
-                    className={`flex-shrink-0 px-6 py-3 rounded-xl font-semibold text-sm shadow transition ${
-                      continuing
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : isAllComplete
-                        ? "bg-green-600 hover:bg-green-700 text-white"
-                        : "bg-indigo-600 hover:bg-indigo-700 text-white"
-                    }`}>
-                    {continuing
-                      ? "Loading…"
-                      : isAllComplete
-                      ? "Review & Submit"
-                      : "Continue ROI →"}
-                  </button>
-                </div>
-              ) : null}
+                })}
+              </div>
             </div>
           )}
         </main>
@@ -1099,17 +1159,26 @@ export default function HistoryPage({ onBack, onContinueROI }) {
 
       {/* ── View Page Modal ────────────────────────────────────── */}
       {viewModal.open && (() => {
-        // Sibling sections in the same group (Sales Planning / Expense Planning /
-        // Store Setup) so Prev/Next can flow through them without closing the modal.
-        const currentPageInfo = PAGES.find((p) => p.name === viewModal.pageName);
+        // Discount is restricted to Commercial and above — ABM (this page)
+        // never qualifies, so it's excluded from the navigable page list
+        // entirely (quick-jump pills + Prev/Next skip straight over it).
+        const navigablePages = PAGES.filter((p) => p.name !== "Sales Planning - Discount");
+        // Sibling pages in the same group — still used for the quick-jump
+        // pill bar directly below the header.
+        const currentPageInfo = navigablePages.find((p) => p.name === viewModal.pageName);
         const groupPages = currentPageInfo
-          ? PAGES.filter((p) => p.group === currentPageInfo.group)
+          ? navigablePages.filter((p) => p.group === currentPageInfo.group)
           : [];
         const groupIndex = groupPages.findIndex((p) => p.name === viewModal.pageName);
-        const prevPage = groupIndex > 0 ? groupPages[groupIndex - 1] : null;
+        // Prev/Next in the footer walk the ENTIRE form (all sections, Final
+        // Summary included) so reaching the last page of a section moves
+        // straight into the next section's first page instead of dead-ending
+        // — only disabled at the true first/last page of the whole ROI.
+        const globalIndex = navigablePages.findIndex((p) => p.name === viewModal.pageName);
+        const prevPage = globalIndex > 0 ? navigablePages[globalIndex - 1] : null;
         const nextPage =
-          groupIndex !== -1 && groupIndex < groupPages.length - 1
-            ? groupPages[groupIndex + 1]
+          globalIndex !== -1 && globalIndex < navigablePages.length - 1
+            ? navigablePages[globalIndex + 1]
             : null;
 
         return (
@@ -1125,6 +1194,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                       {currentPageInfo.group}
                       {groupPages.length > 1 &&
                         ` · Section ${groupIndex + 1} of ${groupPages.length}`}
+                      {` · Page ${globalIndex + 1} of ${navigablePages.length}`}
                     </p>
                   )}
                   <h2 className='text-base font-bold text-gray-900 truncate'>
@@ -1207,8 +1277,14 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                   if (v == null || v === '') return '—';
                   if (typeof v === 'boolean') return v ? 'Yes' : 'No';
                   const n = parseFloat(v);
-                  if (!isNaN(n) && String(v).trim() !== '') return n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+                  if (!isNaN(n) && String(v).trim() !== '') return n.toLocaleString('en-IN', { maximumFractionDigits: 1 });
                   return String(v);
+                };
+                // 1-decimal percentage value — the DB already stores these as the
+                // percent number itself (e.g. 70.10 means 70.1%, not a 0-1 fraction).
+                const fmtValPct = (v) => {
+                  const txt = fmtVal(v);
+                  return txt === '—' ? txt : `${txt}%`;
                 };
                 const fmtLabel = (k) => k.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 
@@ -1235,7 +1311,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     "Sales Plain share", "Sales Studded share", "Sales Coin Silver share",
                     "Inventory Plain share", "Inventory Studded share",
                     "Plain Stock Turns", "Studded Stock Turns",
-                    "LCG mix", "MCG mix", "HCG mix", "Btg AMC%", "City AMC%",
+                    "LCG mix", "MCG mix", "HCG mix", "Btq AMC%", "City AMC%",
                   ];
                   const REF_PARTICULARS_UNITS = {
                     "Super Built Up Area": "sqft", "Carpet area": "sqft",
@@ -1243,7 +1319,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     "Sales Plain share": "%", "Sales Studded share": "%", "Sales Coin Silver share": "%",
                     "Inventory Plain share": "%", "Inventory Studded share": "%",
                     "Plain Stock Turns": "×", "Studded Stock Turns": "×",
-                    "LCG mix": "%", "MCG mix": "%", "HCG mix": "%", "Btg AMC%": "%", "City AMC%": "%",
+                    "LCG mix": "%", "MCG mix": "%", "HCG mix": "%", "Btq AMC%": "%", "City AMC%": "%",
                   };
                   const REF_EXPENSE_FIELDS = [
                     "Rent", "Staff Salaries", "Security & Housekeeping", "Electricity",
@@ -1252,8 +1328,11 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     "Store - Printing/Pantry etc", "Consumables", "Other - Staff welfare/Uniforms etc",
                   ];
                   // Column names returned by the view proc don't always match these
-                  // human labels exactly — fall back to a case/punctuation-insensitive match.
-                  const normKey = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+                  // human labels exactly — fall back to a case/punctuation-insensitive match
+                  // that also treats the literal word "pct" as equivalent to a '%' sign (the
+                  // DB column is e.g. `btq amc pct`, not `btq amc%`) — without this, "Btq/City
+                  // AMC%" never resolved against their actual DB columns at all.
+                  const normKey = (s) => String(s).toLowerCase().replace(/%/g, '').replace(/pct/g, '').replace(/[^a-z0-9]/g, '');
                   const getField = (row, label) => {
                     if (row == null) return null;
                     if (label in row) return row[label];
@@ -1368,40 +1447,40 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 if (pageName === "Sales Planning - Sales Summary") {
                   const SALES_SUMMARY_SECTIONS = [
                     { title: 'Sales Planning', rows: [
-                        ['Total Area  ( SBA )', 'Total Area (SBA)'],
-                        ['Total Area - Carpet Sqft.', 'Total Area – Carpet Sqft.'],
-                        ['Walk-in per day', 'Walk-in per day'],
-                        ['Increase in Wallk ins per day', 'Increase in Walk-ins % per day'],
-                        ['Conv.%', 'Conv. %'],
-                        ['Buyers per day', 'Buyers per day'],
-                        ['Average Ticket Size (Rs)', 'Average Ticket Size (Rs)'],
-                        ['Growth in Ticket Size', 'Growth in Ticket Size %'],
-                        ['No. of store days in a year', 'No. of store days in a year'],
-                        ['Total Sales', 'Total Sales (in Lakhs)'],
-                        ['Sales Growth %', 'Sales Growth %'],
+                        ['Total Area  ( SBA )', 'Total Area (SBA)', false],
+                        ['Total Area - Carpet Sqft.', 'Total Area – Carpet Sqft.', false],
+                        ['Walk-in per day', 'Walk-in per day', false],
+                        ['Increase in Wallk ins per day', 'Increase in Walk-ins % per day', true],
+                        ['Conv.%', 'Conv. %', true],
+                        ['Buyers per day', 'Buyers per day', false],
+                        ['Average Ticket Size (Rs)', 'Average Ticket Size (Rs)', false],
+                        ['Growth in Ticket Size', 'Growth in Ticket Size %', true],
+                        ['No. of store days in a year', 'No. of store days in a year', false],
+                        ['Total Sales', 'Total Sales (in Lakhs)', false],
+                        ['Sales Growth %', 'Sales Growth %', true],
                       ]},
                     { title: 'Sales Mix %', rows: [
-                        ['Plain Share', 'Plain Share %'],
-                        ['Studded Share', 'Studded Share %'],
-                        ['Coins /Silver Share', 'Coins / Silver Share %'],
-                        ['Total share', 'Total Share'],
+                        ['Plain Share', 'Plain Share %', true],
+                        ['Studded Share', 'Studded Share %', true],
+                        ['Coins /Silver Share', 'Coins / Silver Share %', true],
+                        ['Total share', 'Total Share %', true],
                       ]},
                     { title: 'Plain Sales Mix %', rows: [
-                        ['LCG', 'LCG'],
-                        ['MCG', 'MCG'],
-                        ['HCG', 'HCG'],
-                        ['Gemstones', 'Gemstones'],
-                        ['Total plain mix', 'Total Plain Mix'],
-                        ['Stoneshare(HCG only)', 'Stone Share in Plain (HCG only)'],
+                        ['LCG', 'LCG %', true],
+                        ['MCG', 'MCG %', true],
+                        ['HCG', 'HCG %', true],
+                        ['Gemstones', 'Gemstones %', true],
+                        ['Total plain mix', 'Total Plain Mix %', true],
+                        ['Stoneshare(HCG only)', 'Stone Share in Plain (HCG only) %', true],
                       ]},
                     { title: 'Studded Sales Mix %', rows: [
-                        ['GIS', 'GIS'],
-                        ['Regular', 'Regular'],
-                        ['Solitaire A(<70C)', 'Solitaire A (<70C)'],
-                        ['Solitaire B(70-100C)', 'Solitaire B (70–100C)'],
-                        ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+)'],
-                        ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+)'],
-                        ['Totalstuddedmix', 'Total Studded Mix'],
+                        ['GIS', 'GIS %', true],
+                        ['Regular', 'Regular %', true],
+                        ['Solitaire A(<70C)', 'Solitaire A (<70C) %', true],
+                        ['Solitaire B(70-100C)', 'Solitaire B (70–100C) %', true],
+                        ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+) %', true],
+                        ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+) %', true],
+                        ['Totalstuddedmix', 'Total Studded Mix %', true],
                       ]},
                   ];
                   // Robust match against DB header quirks (trailing period, HTML-encoded "<", prefix)
@@ -1428,14 +1507,15 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                             </tr>
                           </thead>
                           <tbody>
-                            {rows.map(({ label, row }, i) => {
+                            {rows.map(({ label, row, isPct }, i) => {
                               const tot = isTotalLabel(label);
+                              const fmt = isPct ? fmtValPct : fmtVal;
                               return (
                                 <tr key={i} className={tot ? 'bg-amber-50' : i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
                                   <td className={`px-4 py-2.5 border-b border-gray-100 ${tot ? 'font-bold text-amber-900' : 'font-medium text-gray-700'}`}>{label}</td>
                                   {YR_KEYS.map((y) => (
                                     <td key={y} className={`px-4 py-2.5 text-right border-b border-gray-100 tabular-nums ${tot ? 'font-bold text-amber-800' : 'text-gray-700'}`}>
-                                      {row[y] != null ? fmtVal(row[y]) : '—'}
+                                      {row[y] != null ? fmt(row[y]) : '—'}
                                     </td>
                                   ))}
                                 </tr>
@@ -1449,11 +1529,11 @@ export default function HistoryPage({ onBack, onContinueROI }) {
 
                   const sectionsRendered = SALES_SUMMARY_SECTIONS.map(({ title, rows }) => {
                     const resolved = rows
-                      .map(([key, label]) => {
+                      .map(([key, label, isPct]) => {
                         const row = findRow(key);
                         if (!row) return null;
                         usedHeaders.add(row.Header);
-                        return { label, row };
+                        return { label, row, isPct };
                       })
                       .filter(Boolean);
                     return renderSection(title, resolved);
@@ -1461,7 +1541,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
 
                   const otherRows = data
                     .filter((r) => !usedHeaders.has(r.Header))
-                    .map((r) => ({ label: stripSP(r.Header), row: r }));
+                    .map((r) => ({ label: stripSP(r.Header), row: r, isPct: false }));
 
                   return (
                     <div className='p-5 space-y-5'>
@@ -1474,15 +1554,17 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 // ── Sectioned view for Stock Summary Phase 1/2 — mirrors the form's
                 // own sections (Pricing Metrics / Stock Turn / Stock / Stock UCP Terms /
                 // Stock Turn Brand Guidelines) instead of one flat Header/Yr table.
+                // Row tuples are [rawKey, label, isPercent].
                 const STOCK_SUMMARY_SECTIONS = {
                   "Sales Planning - Stock Summary - Phase 1": [
                     { title: "Pricing Metrics", prefix: "Pricing Metrics_", rows: [
-                        ["BaseRate", "Retail Gold Rate – 22K (in Rs)"],
-                        ["LCG", "LCG"],
-                        ["MCG", "MCG"],
-                        ["HCG", "HCG"],
-                        ["Gemstones", "Gemstones"],
-                        ["Coins AMC%", "Coins AMC%"],
+                        ["BaseRate", "Retail Gold Rate – 22K (in Rs)", false],
+                        ["LCG", "LCG AMC%", true],
+                        ["MCG", "MCG AMC%", true],
+                        ["HCG", "HCG AMC%", true],
+                        ["Gemstones", "Gemstones AMC%", true],
+                        ["PlaingroupAMC%", "Plain Group AMC%", true],
+                        ["Coins AMC%", "Coins AMC%", true],
                       ] },
                   ],
                   "Sales Planning - Stock Summary - Phase 2": [
@@ -1506,14 +1588,14 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                         const { title, prefix } = section;
                         const sectionRows = section.rows
                           ? section.rows
-                              .map(([key, label]) => {
+                              .map(([key, label, isPct]) => {
                                 const r = data.find((d) => d.Header?.startsWith(prefix) && normKey(d.Header.slice(prefix.length)) === normKey(key));
-                                return r ? { ...r, _label: label } : null;
+                                return r ? { ...r, _label: label, _pct: !!isPct } : null;
                               })
                               .filter(Boolean)
                           : data
                               .filter((r) => section.test(r.Header))
-                              .map((r) => ({ ...r, _label: r.Header.slice(prefix.length) }))
+                              .map((r) => ({ ...r, _label: r.Header.slice(prefix.length), _pct: false }))
                               .sort((a, b) => rowRank(a._label) - rowRank(b._label));
                         if (!sectionRows.length) return null;
                         return (
@@ -1533,12 +1615,13 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                               <tbody>
                                 {sectionRows.map((row, i) => {
                                   const tot = row._label.toLowerCase().includes('total');
+                                  const fmt = row._pct ? fmtValPct : fmtVal;
                                   return (
                                     <tr key={i} className={tot ? 'bg-amber-50' : i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
                                       <td className={`px-4 py-2.5 border-b border-gray-100 ${tot ? 'font-bold text-amber-900' : 'font-medium text-gray-700'}`}>{row._label}</td>
                                       {YR_KEYS.map((y) => (
                                         <td key={y} className={`px-4 py-2.5 text-right border-b border-gray-100 tabular-nums ${tot ? 'font-bold text-amber-800' : 'text-gray-700'}`}>
-                                          {row[y] != null ? fmtVal(row[y]) : '—'}
+                                          {row[y] != null ? fmt(row[y]) : '—'}
                                         </td>
                                       ))}
                                     </tr>
@@ -1554,18 +1637,19 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 }
 
                 // ── Sectioned view for Discount — mirrors Subpage3_4.jsx's own
-                // sections (Total Customer Discount / Total GHS Discount).
+                // sections (Total Customer Discount / Total GHS Discount). Row
+                // tuples are [rawKey, label, isPercent].
                 if (pageName === "Sales Planning - Discount") {
                   const DISCOUNT_ROWS = [
-                    ['LCG', 'LCG'], ['MCG', 'MCG'], ['HCG', 'HCG'], ['Gemstones', 'Gemstones'],
-                    ['GIS', 'GIS'], ['Regular', 'Regular'],
-                    ['Solitaire A(<70C)', 'Solitaire A (<70C)'],
-                    ['Solitaire B(70-100C)', 'Solitaire B (70–100C)'],
-                    ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+)'],
-                    ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+)'],
-                    ['Coins', 'Coins'],
-                    ['Total', 'Total'],
-                    ['% of UCP', '% of UCP'],
+                    ['LCG', 'LCG', false], ['MCG', 'MCG', false], ['HCG', 'HCG', false], ['Gemstones', 'Gemstones', false],
+                    ['GIS', 'GIS', false], ['Regular', 'Regular', false],
+                    ['Solitaire A(<70C)', 'Solitaire A (<70C)', false],
+                    ['Solitaire B(70-100C)', 'Solitaire B (70–100C)', false],
+                    ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+)', false],
+                    ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+)', false],
+                    ['Coins', 'Coins', false],
+                    ['Total', 'Total', false],
+                    ['% of UCP', '% of UCP', true],
                   ];
                   const DISCOUNT_SECTIONS = [
                     { title: 'Total Customer Discount', prefix: 'TCD_', rows: DISCOUNT_ROWS },
@@ -1592,14 +1676,15 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                             </tr>
                           </thead>
                           <tbody>
-                            {rows.map(({ label, row }, i) => {
+                            {rows.map(({ label, row, isPct }, i) => {
                               const hl = isHighlight(label);
+                              const fmt = isPct ? fmtValPct : fmtVal;
                               return (
                                 <tr key={i} className={hl ? 'bg-amber-50' : i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
                                   <td className={`px-4 py-2.5 border-b border-gray-100 ${hl ? 'font-bold text-amber-900' : 'font-medium text-gray-700'}`}>{label}</td>
                                   {YR_KEYS.map((y) => (
                                     <td key={y} className={`px-4 py-2.5 text-right border-b border-gray-100 tabular-nums ${hl ? 'font-bold text-amber-800' : 'text-gray-700'}`}>
-                                      {row[y] != null ? fmtVal(row[y]) : '—'}
+                                      {row[y] != null ? fmt(row[y]) : '—'}
                                     </td>
                                   ))}
                                 </tr>
@@ -1613,18 +1698,18 @@ export default function HistoryPage({ onBack, onContinueROI }) {
 
                   const sectionsRendered = DISCOUNT_SECTIONS.map(({ title, prefix, rows: defs }) => {
                     const resolved = defs
-                      .map(([key, label]) => {
+                      .map(([key, label, isPct]) => {
                         const row = data.find((d) => d.Header?.startsWith(prefix) && normKey(d.Header.slice(prefix.length)) === normKey(key));
                         if (!row) return null;
                         usedHeaders.add(row.Header);
-                        return { label, row };
+                        return { label, row, isPct };
                       })
                       .filter(Boolean);
                     return renderSection(title, resolved);
                   });
                   const otherRows = data
                     .filter((r) => !usedHeaders.has(r.Header))
-                    .map((r) => ({ label: r.Header, row: r }));
+                    .map((r) => ({ label: r.Header, row: r, isPct: false }));
 
                   return (
                     <div className='p-5 space-y-5'>
@@ -1678,91 +1763,13 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                   );
                 }
 
-                // ── Financial statement (Final Summary / Particulars + Yr1-Yr6) ─────
+                // -- ROI_IRR_Details (formerly "Final Summary") -- shared with
+                // RBMDashboard.jsx so the ABM sees the exact same KPI cards +
+                // Income/Expense/Profit/Investment/Cash-Flow table they
+                // submitted to the RBM with (see FinalSummaryView.jsx).
                 if ('Particulars' in first) {
-                  const scalarRows = data.filter(r => YR_KEYS.every(y => r[y] == null));
-                  const yearRows   = data.filter(r => YR_KEYS.some(y => r[y] != null));
-                  const INCOME_KEYS = ['ucp', 'nsv', 'gross', 'commission', 'discount'];
-                  const EXPENSE_KEYS = ['expense', 'rent', 'salary', 'electric', 'repair', 'insurance', 'btl', 'travel', 'gst', 'credit', 'printing', 'consumable', 'staff', 'welfare', 'bg cost', 'regn'];
-                  const PROFIT_KEYS = ['ebitda', 'pbt', 'roi', 'depreciation', 'profit', 'operating'];
-                  const INVEST_KEYS = ['investment', 'interior', 'depreciation', 'working capital', 'security deposit', 'current value'];
-                  const sectionOf = (label) => {
-                    const l = (label ?? '').toLowerCase();
-                    if (INVEST_KEYS.some(k => l.includes(k))) return 'Investment';
-                    if (PROFIT_KEYS.some(k => l.includes(k))) return 'Profitability';
-                    if (EXPENSE_KEYS.some(k => l.includes(k))) return 'Expenses';
-                    if (INCOME_KEYS.some(k => l.includes(k))) return 'Income';
-                    return 'Other';
-                  };
-                  const SECTION_COLORS = {
-                    Income: 'bg-green-50 text-green-900',
-                    Expenses: 'bg-amber-50 text-amber-900',
-                    Profitability: 'bg-blue-50 text-blue-900',
-                    Investment: 'bg-purple-50 text-purple-900',
-                    Other: 'bg-gray-50 text-gray-800',
-                  };
-                  const SECTION_HEADER_COLORS = {
-                    Income: 'bg-green-700',
-                    Expenses: 'bg-amber-700',
-                    Profitability: 'bg-blue-700',
-                    Investment: 'bg-purple-700',
-                    Other: 'bg-[#1e3a5f]',
-                  };
-                  // Group year rows by section
-                  let lastSection = null;
-                  const groupedRows = yearRows.map(r => ({ ...r, _section: sectionOf(r.Particulars) }));
-
-                  return (
-                    <div className='p-5 space-y-5'>
-                      {scalarRows.length > 0 && (
-                        <div className='grid grid-cols-2 sm:grid-cols-3 gap-3'>
-                          {scalarRows.map((r, i) => <InfoCard key={i} label={r.Particulars} value={r.Header} accent />)}
-                        </div>
-                      )}
-                      {yearRows.length > 0 && (
-                        <div className='overflow-x-auto rounded-2xl border border-gray-200 shadow-md bg-white'>
-                          <table className='min-w-full border-collapse text-xs'>
-                            <thead>
-                              <tr className='bg-[#1e3a5f] text-white'>
-                                <th className='px-4 py-3.5 text-left font-bold text-sm min-w-[240px] sticky left-0 bg-[#1e3a5f] z-10'>Particulars</th>
-                                {YR_LABELS.map(y => <th key={y} className='px-4 py-3.5 text-right font-bold min-w-[90px]'>{y}</th>)}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {groupedRows.map((row, i) => {
-                                const isNewSection = row._section !== lastSection;
-                                lastSection = row._section;
-                                const isTotalRow = ['total', 'ebitda', 'pbt', 'roi', 'net'].some(k => row.Particulars?.toLowerCase().includes(k));
-                                const secCls = SECTION_COLORS[row._section] ?? 'bg-white';
-                                const secHdrCls = SECTION_HEADER_COLORS[row._section] ?? 'bg-[#1e3a5f]';
-                                return (
-                                  <>
-                                    {isNewSection && i > 0 && (
-                                      <tr key={`sec-${row._section}`}>
-                                        <td colSpan={7} className={`${secHdrCls} text-white text-[10px] font-black uppercase tracking-widest px-4 py-2`}>{row._section}</td>
-                                      </tr>
-                                    )}
-                                    <tr key={i} className={`transition-colors ${isTotalRow ? `${secCls} font-bold` : 'hover:bg-gray-50'}`}>
-                                      <td className={`px-4 py-2.5 border-b border-gray-100 sticky left-0 z-10 ${isTotalRow ? `${secCls} font-bold` : 'bg-white font-medium text-gray-700'}`}>
-                                        {row.Particulars}
-                                      </td>
-                                      {YR_KEYS.map(y => (
-                                        <td key={y} className={`px-4 py-2.5 text-right border-b border-gray-100 tabular-nums ${isTotalRow ? 'font-bold' : 'text-gray-700'} ${(row[y] ?? 0) < 0 ? 'text-red-600' : ''}`}>
-                                          {row[y] != null ? fmtModalNum(row[y]) : '—'}
-                                        </td>
-                                      ))}
-                                    </tr>
-                                  </>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  );
+                  return <FinalSummaryContent d={buildFinalSummaryView(data)} />;
                 }
-
                 // ── Flat key-value pages (Store Details, Expense Details) ────────────
                 // Smart section map per page
                 const PAGE_SECTIONS = {
@@ -1832,7 +1839,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                     return fmtVal(v);
                   };
 
-                  const topEntries = Object.entries(row).filter(([k]) => !HIDDEN_MODAL_KEYS.has(k));
+                  const topEntries = Object.entries(row).filter(([k]) => !isHiddenModalKey(k));
                   const scalarEntries = topEntries.filter(([, v]) => typeof v !== 'object' || v == null);
                   const objEntries = topEntries.filter(([, v]) => typeof v === 'object' && v !== null);
 
@@ -1857,7 +1864,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                                   <table className='min-w-full text-xs border-collapse'>
                                     <thead>
                                       <tr className='bg-slate-100'>
-                                        {Object.keys(v[0]).filter(k2 => !HIDDEN_MODAL_KEYS.has(k2)).map(k2 => (
+                                        {Object.keys(v[0]).filter(k2 => !isHiddenModalKey(k2)).map(k2 => (
                                           <th key={k2} className='px-3 py-2 text-left font-bold text-gray-500 uppercase tracking-wide text-[9px]'>{fmtLabel(k2)}</th>
                                         ))}
                                       </tr>
@@ -1865,7 +1872,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                                     <tbody>
                                       {v.map((item, i) => (
                                         <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                                          {Object.entries(item).filter(([k2]) => !HIDDEN_MODAL_KEYS.has(k2)).map(([k2, v2]) => (
+                                          {Object.entries(item).filter(([k2]) => !isHiddenModalKey(k2)).map(([k2, v2]) => (
                                             <td key={k2} className='px-3 py-2 border-b border-gray-100 text-gray-700 font-medium'>{fmtVal(v2)}</td>
                                           ))}
                                         </tr>
@@ -1884,7 +1891,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                               )
                             ) : typeof v === 'object' && v !== null ? (
                               <div className='grid grid-cols-2 sm:grid-cols-3 gap-2'>
-                                {Object.entries(v).filter(([k2, val]) => !HIDDEN_MODAL_KEYS.has(k2) && val != null && val !== '').map(([k2, v2]) => (
+                                {Object.entries(v).filter(([k2, val]) => !isHiddenModalKey(k2) && val != null && val !== '').map(([k2, v2]) => (
                                   <InfoCard key={k2} label={fmtLabel(k2)} value={typeof v2 === 'object' ? JSON.stringify(v2) : fmtVal(v2)} />
                                 ))}
                               </div>
@@ -1929,7 +1936,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                       })}
                       {/* Ungrouped remainder */}
                       {(() => {
-                        const rem = Object.entries(row).filter(([k, v]) => !HIDDEN_MODAL_KEYS.has(k) && !usedKeys.has(k) && v != null && v !== '');
+                        const rem = Object.entries(row).filter(([k, v]) => !isHiddenModalKey(k) && !usedKeys.has(k) && v != null && v !== '');
                         return rem.length > 0 ? (
                           <div className='bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden'>
                             <div className='px-5 py-3 bg-slate-100 border-b border-gray-200'>
@@ -1955,7 +1962,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 {
                   const flatRows = data.map((r) =>
                     Object.fromEntries(
-                      Object.entries(r).filter(([k]) => !HIDDEN_MODAL_KEYS.has(k)),
+                      Object.entries(r).filter(([k]) => !isHiddenModalKey(k)),
                     ),
                   );
                   const isFlatRow = (r) =>
@@ -1978,6 +1985,10 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                       !isDateCol(k) &&
                       flatRows.some((r) => r[k] != null && r[k] !== "" && !isNaN(parseFloat(r[k])));
                     const isSummableCol = (k) => isNumericCol(k) && !NON_SUMMABLE.test(k);
+                    // Columns whose own name already signals a percentage (e.g.
+                    // "Annual cost escalation" on Expense Summary rows) get the
+                    // '%' appended to the value itself too, not just the header.
+                    const isPctCol = (k) => /escalation/i.test(k) || k.trim().endsWith('%');
 
                     return (
                       <div className='p-5'>
@@ -1999,7 +2010,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                                   <td className='px-4 py-2.5 border-b border-gray-100 font-bold text-gray-400 sticky left-0 bg-inherit z-10'>{i + 1}</td>
                                   {colKeys.map((k) => (
                                     <td key={k} className={`px-4 py-2.5 border-b border-gray-100 whitespace-nowrap ${isNumericCol(k) ? "text-right tabular-nums text-gray-700" : "font-medium text-gray-700"}`}>
-                                      {isNumericCol(k) ? fmtModalNum(row[k]) : fmtVal(row[k])}
+                                      {isNumericCol(k) ? (isPctCol(k) ? fmtModalPct(row[k]) : fmtModalNum(row[k])) : fmtVal(row[k])}
                                     </td>
                                   ))}
                                 </tr>
@@ -2030,7 +2041,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                 return (
                   <div className='p-5 space-y-4'>
                     {data.map((row, rowIdx) => {
-                      const entries = Object.entries(row).filter(([k, v]) => !HIDDEN_MODAL_KEYS.has(k) && v != null && v !== '');
+                      const entries = Object.entries(row).filter(([k, v]) => !isHiddenModalKey(k) && v != null && v !== '');
                       if (!entries.length) return null;
                       const scalarE = entries.filter(([, v]) => typeof v !== 'object');
                       const objE    = entries.filter(([, v]) => typeof v === 'object' && v !== null);
@@ -2053,7 +2064,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                             <div key={k} className='border-t border-gray-100 px-5 py-4'>
                               <p className='text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2'>{fmtLabel(k)}</p>
                               <div className='grid grid-cols-2 sm:grid-cols-3 gap-2'>
-                                {Object.entries(v).filter(([k2, v2]) => !HIDDEN_MODAL_KEYS.has(k2) && v2 != null && v2 !== '').map(([k2, v2]) => (
+                                {Object.entries(v).filter(([k2, v2]) => !isHiddenModalKey(k2) && v2 != null && v2 !== '').map(([k2, v2]) => (
                                   <InfoCard key={k2} label={fmtLabel(k2)} value={Array.isArray(v2) ? v2.map(n => fmtModalNum(n)).join(' · ') : fmtVal(v2)} />
                                 ))}
                               </div>
@@ -2067,8 +2078,10 @@ export default function HistoryPage({ onBack, onContinueROI }) {
               })()}
             </div>
 
-            {/* Footer navigation — move between sections without closing the modal */}
-            {groupPages.length > 1 && (
+            {/* Footer navigation — move between ALL sections (including Final
+                Summary) without closing the modal; only disabled at the very
+                first/last page of the whole ROI. */}
+            {navigablePages.length > 1 && (
               <div className='flex items-center justify-between gap-3 px-6 py-3 border-t border-gray-100 bg-white rounded-b-2xl flex-shrink-0'>
                 <button
                   onClick={() => prevPage && handleViewPage(prevPage.name)}
@@ -2081,7 +2094,7 @@ export default function HistoryPage({ onBack, onContinueROI }) {
                   ← {prevPage ? prevPage.name.replace(/^.*?-\s*/, "") : "Previous"}
                 </button>
                 <span className='text-xs text-gray-400 font-medium whitespace-nowrap'>
-                  Section {groupIndex + 1} of {groupPages.length}
+                  Page {globalIndex + 1} of {navigablePages.length}
                 </span>
                 <button
                   onClick={() => nextPage && handleViewPage(nextPage.name)}

@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { FiFileText, FiGrid, FiExternalLink } from "react-icons/fi";
 import { BASE_URL } from "./Forms/data/baseUrl";
 import RoiPdfReport from "./Forms/RoiPdfReport";
+import RoiSummaryExcelDownload from "./Forms/RoiSummaryExcelDownload";
 import { routes } from "../../../routes";
-// Shared formatters from the ABM-facing Summary.jsx (Screen 5) calc module —
-// reused so Final Summary figures render identically, never hand-duplicated.
-import { YEARS as FS_YEARS, sum6y, fmt, fmtPct } from "./Forms/roiFinancialSummary";
+// Shared "ROI_IRR_Details" view (same layout the ABM saw on Summary.jsx when
+// submitting) — also used by HistoryPage.jsx so both roles see it identically.
+import { buildFinalSummaryView, FinalSummaryContent } from "./FinalSummaryView";
 
 // ─── Page definitions ─────────────────────────────────────────────────────────
 const PAGES = [
@@ -22,14 +24,14 @@ const PAGES = [
   { name: "Resource Expenses", group: "Expense Planning", icon: "👥" },
   { name: "Other Expenses", group: "Expense Planning", icon: "📝" },
   { name: "Summary Expenses", group: "Expense Planning", icon: "💼" },
-  { name: "Final Summary", group: "Final Summary", icon: "📊" },
+  { name: "ROI_IRR_Details", group: "ROI_IRR_Details", icon: "📊" },
 ];
 
 const GROUP_COLORS = {
   "Store Setup": "bg-blue-50 text-blue-700 border-blue-200",
   "Sales Planning": "bg-green-50 text-green-700 border-green-200",
   "Expense Planning": "bg-amber-50 text-amber-700 border-amber-200",
-  "Final Summary": "bg-indigo-50 text-indigo-700 border-indigo-200",
+  "ROI_IRR_Details": "bg-indigo-50 text-indigo-700 border-indigo-200",
 };
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -84,36 +86,51 @@ function formatValue(v) {
   if (typeof v === "boolean") return v ? "Yes" : "No";
   if (typeof v === "object") return null;
   const n = parseFloat(v);
-  if (!isNaN(n) && String(v).trim() !== "") return n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+  if (!isNaN(n) && String(v).trim() !== "") return n.toLocaleString("en-IN", { maximumFractionDigits: 1 });
   return String(v);
 }
 
-const HIDDEN = new Set(["roiid", "roi_id", "ROIID", "status", "inserted_date", "updated_date", "username", "created_date"]);
+const HIDDEN = new Set(["roiid", "roi_id", "status", "inserted_date", "updated_date", "username", "created_date", "annual cost escalation"]);
+// Case-insensitive membership check — some procs return these columns in
+// Title Case (e.g. Resource Expenses: "Status", "Inserted_date", "Updated_date")
+// instead of the lowercase/snake_case form `HIDDEN` lists, which a plain
+// `HIDDEN.has(k)` would silently miss and leak into the "View" table.
+const isHiddenKey = (k) => HIDDEN.has(String(k ?? "").toLowerCase());
 
-// ─── PageRow ──────────────────────────────────────────────────────────────────
-function PageRow({ page, status, onViewData, expanded, onToggle }) {
+// ─── PageCard ─────────────────────────────────────────────────────────────────
+// Card grid (not an accordion) — every page's primary action is visible at a
+// glance without an extra click to expand each row. Per-page status isn't
+// shown here — it's already surfaced once via the overall ROI status badge
+// in the header above, and was otherwise identical on nearly every card.
+function PageCard({ page, onViewData, restricted }) {
   const groupCls = GROUP_COLORS[page.group] ?? "bg-gray-50 text-gray-600 border-gray-200";
+  const grad = GROUP_GRADIENT[page.group] ?? "from-slate-500 to-slate-600";
   return (
-    <div className={`bg-white rounded-xl border transition-all ${expanded ? "border-indigo-200 shadow-md" : "border-slate-200 hover:border-slate-300"}`}>
-      <button type="button" onClick={onToggle} className="w-full text-left px-5 py-4 flex items-center gap-3">
-        <span className="text-xl">{page.icon}</span>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm text-slate-800 truncate">{page.name}</p>
-          <span className={`text-xs font-medium px-2 py-0.5 rounded border mt-0.5 inline-block ${groupCls}`}>{page.group}</span>
+    <div className="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden flex flex-col">
+      <div className={`h-1.5 bg-gradient-to-r ${grad}`} />
+      <div className="p-4 flex-1 flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl shrink-0 leading-none mt-0.5">{page.icon}</span>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-sm text-slate-800 leading-snug" title={page.name}>{page.name}</p>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border mt-1.5 inline-block ${groupCls}`}>{page.group}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <StatusBadge status={status} />
-          <span className={`text-slate-400 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}>▼</span>
+        <div className="mt-auto pt-1">
+          {restricted ? (
+            <span
+              className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 text-slate-400 text-xs font-semibold rounded-lg border border-slate-200"
+              title="Discount details are visible to Commercial and above only">
+              🔒 Commercial and above only
+            </span>
+          ) : (
+            <button type="button" onClick={onViewData}
+              className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white text-xs font-bold rounded-lg transition border border-indigo-200 hover:border-indigo-600">
+              🔍 View Page Data
+            </button>
+          )}
         </div>
-      </button>
-      {expanded && (
-        <div className="px-5 pb-5 border-t border-slate-100 pt-4">
-          <button type="button" onClick={onViewData}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-lg transition border border-indigo-200">
-            🔍 View Page Data
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -123,7 +140,7 @@ const GROUP_GRADIENT = {
   "Store Setup": "from-blue-600 to-cyan-600",
   "Sales Planning": "from-emerald-600 to-green-700",
   "Expense Planning": "from-amber-500 to-orange-600",
-  "Final Summary": "from-indigo-600 to-purple-700",
+  "ROI_IRR_Details": "from-indigo-600 to-purple-700",
 };
 
 const YEARS = ["Yr 1", "Yr 2", "Yr 3", "Yr 4", "Yr 5", "Yr 6"];
@@ -139,20 +156,27 @@ function parseYearly(val) {
 
 const fmtN = (n) =>
   n === null || n === undefined || isNaN(n) ? "—"
-    : Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+    : Number(n).toLocaleString("en-IN", { maximumFractionDigits: 1 });
+
+// 1-decimal percentage value — the DB already stores these as the percent
+// number itself (e.g. 70.10 means 70.1%, not a 0-1 fraction).
+const fmtPctN = (n) =>
+  n === null || n === undefined || isNaN(n) ? "—" : `${fmtN(n)}%`;
 
 // Groups Sales Planning Stock Summary Phase 1/2 rows into the same sections
 // shown on Subpage3_3.jsx (Pricing Metrics / Stock Turn / Stock / Stock UCP
 // Terms / Stock Turn Brand Guidelines) instead of one flat Header/Yr table.
+// Row tuples are [rawKey, label, isPercent].
 const STOCK_SUMMARY_SECTIONS = {
   "Sales Planning - Stock Summary - Phase 1": [
     { title: "Pricing Metrics", prefix: "Pricing Metrics_", rows: [
-        ["BaseRate", "Retail Gold Rate – 22K (in Rs)"],
-        ["LCG", "LCG"],
-        ["MCG", "MCG"],
-        ["HCG", "HCG"],
-        ["Gemstones", "Gemstones"],
-        ["Coins AMC%", "Coins AMC%"],
+        ["BaseRate", "Retail Gold Rate – 22K (in Rs)", false],
+        ["LCG", "LCG AMC%", true],
+        ["MCG", "MCG AMC%", true],
+        ["HCG", "HCG AMC%", true],
+        ["Gemstones", "Gemstones AMC%", true],
+        ["PlaingroupAMC%", "Plain Group AMC%", true],
+        ["Coins AMC%", "Coins AMC%", true],
       ] },
   ],
   "Sales Planning - Stock Summary - Phase 2": [
@@ -178,14 +202,14 @@ function StockSummarySectionedContent({ pageName, rows }) {
         const { title, prefix } = section;
         const sectionRows = section.rows
           ? section.rows
-              .map(([key, label]) => {
+              .map(([key, label, isPct]) => {
                 const r = rows.find((d) => d.Header?.startsWith(prefix) && normStockKey(d.Header.slice(prefix.length)) === normStockKey(key));
-                return r ? { ...r, _label: label } : null;
+                return r ? { ...r, _label: label, _pct: !!isPct } : null;
               })
               .filter(Boolean)
           : rows
               .filter((r) => section.test(r.Header))
-              .map((r) => ({ ...r, _label: r.Header.slice(prefix.length) }))
+              .map((r) => ({ ...r, _label: r.Header.slice(prefix.length), _pct: false }))
               .sort((a, b) => rowRank(a._label) - rowRank(b._label));
         if (!sectionRows.length) return null;
         return (
@@ -205,12 +229,13 @@ function StockSummarySectionedContent({ pageName, rows }) {
               <tbody>
                 {sectionRows.map((row, i) => {
                   const tot = row._label.toLowerCase().includes("total");
+                  const fmt = row._pct ? fmtPctN : fmtN;
                   return (
                     <tr key={i} className={tot ? "bg-amber-50" : i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
                       <td className={`px-3 py-2 border-b border-slate-100 ${tot ? "font-bold text-amber-900" : "font-medium text-slate-700"}`}>{row._label}</td>
                       {[1, 2, 3, 4, 5, 6].map((n) => (
                         <td key={n} className={`px-3 py-2 text-right border-b border-slate-100 tabular-nums ${tot ? "font-bold text-amber-800" : "text-slate-700"}`}>
-                          {row[`Yr${n}`] != null ? fmtN(row[`Yr${n}`]) : "—"}
+                          {row[`Yr${n}`] != null ? fmt(row[`Yr${n}`]) : "—"}
                         </td>
                       ))}
                     </tr>
@@ -227,43 +252,44 @@ function StockSummarySectionedContent({ pageName, rows }) {
 
 // Groups Sales Planning Sales Summary rows into the same sections shown on
 // Subpage3_2.jsx (Sales Planning / Sales Mix % / Plain Sales Mix % / Studded
-// Sales Mix %) instead of one flat Header/Yr table.
+// Sales Mix %) instead of one flat Header/Yr table. Row tuples are
+// [rawKey, label, isPercent].
 const SALES_SUMMARY_SECTIONS = [
   { title: 'Sales Planning', rows: [
-      ['Total Area  ( SBA )', 'Total Area (SBA)'],
-      ['Total Area - Carpet Sqft.', 'Total Area – Carpet Sqft.'],
-      ['Walk-in per day', 'Walk-in per day'],
-      ['Increase in Wallk ins per day', 'Increase in Walk-ins % per day'],
-      ['Conv.%', 'Conv. %'],
-      ['Buyers per day', 'Buyers per day'],
-      ['Average Ticket Size (Rs)', 'Average Ticket Size (Rs)'],
-      ['Growth in Ticket Size', 'Growth in Ticket Size %'],
-      ['No. of store days in a year', 'No. of store days in a year'],
-      ['Total Sales', 'Total Sales (in Lakhs)'],
-      ['Sales Growth %', 'Sales Growth %'],
+      ['Total Area  ( SBA )', 'Total Area (SBA)', false],
+      ['Total Area - Carpet Sqft.', 'Total Area – Carpet Sqft.', false],
+      ['Walk-in per day', 'Walk-in per day', false],
+      ['Increase in Wallk ins per day', 'Increase in Walk-ins % per day', true],
+      ['Conv.%', 'Conv. %', true],
+      ['Buyers per day', 'Buyers per day', false],
+      ['Average Ticket Size (Rs)', 'Average Ticket Size (Rs)', false],
+      ['Growth in Ticket Size', 'Growth in Ticket Size %', true],
+      ['No. of store days in a year', 'No. of store days in a year', false],
+      ['Total Sales', 'Total Sales (in Lakhs)', false],
+      ['Sales Growth %', 'Sales Growth %', true],
     ]},
   { title: 'Sales Mix %', rows: [
-      ['Plain Share', 'Plain Share %'],
-      ['Studded Share', 'Studded Share %'],
-      ['Coins /Silver Share', 'Coins / Silver Share %'],
-      ['Total share', 'Total Share'],
+      ['Plain Share', 'Plain Share %', true],
+      ['Studded Share', 'Studded Share %', true],
+      ['Coins /Silver Share', 'Coins / Silver Share %', true],
+      ['Total share', 'Total Share %', true],
     ]},
   { title: 'Plain Sales Mix %', rows: [
-      ['LCG', 'LCG'],
-      ['MCG', 'MCG'],
-      ['HCG', 'HCG'],
-      ['Gemstones', 'Gemstones'],
-      ['Total plain mix', 'Total Plain Mix'],
-      ['Stoneshare(HCG only)', 'Stone Share in Plain (HCG only)'],
+      ['LCG', 'LCG %', true],
+      ['MCG', 'MCG %', true],
+      ['HCG', 'HCG %', true],
+      ['Gemstones', 'Gemstones %', true],
+      ['Total plain mix', 'Total Plain Mix %', true],
+      ['Stoneshare(HCG only)', 'Stone Share in Plain (HCG only) %', true],
     ]},
   { title: 'Studded Sales Mix %', rows: [
-      ['GIS', 'GIS'],
-      ['Regular', 'Regular'],
-      ['Solitaire A(<70C)', 'Solitaire A (<70C)'],
-      ['Solitaire B(70-100C)', 'Solitaire B (70–100C)'],
-      ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+)'],
-      ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+)'],
-      ['Totalstuddedmix', 'Total Studded Mix'],
+      ['GIS', 'GIS %', true],
+      ['Regular', 'Regular %', true],
+      ['Solitaire A(<70C)', 'Solitaire A (<70C) %', true],
+      ['Solitaire B(70-100C)', 'Solitaire B (70–100C) %', true],
+      ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+) %', true],
+      ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+) %', true],
+      ['Totalstuddedmix', 'Total Studded Mix %', true],
     ]},
 ];
 // Robust match against DB header quirks (trailing period, HTML-encoded "<", prefix)
@@ -290,14 +316,15 @@ function SalesSummarySectionedContent({ rows }) {
             </tr>
           </thead>
           <tbody>
-            {sectionRows.map(({ label, row }, i) => {
+            {sectionRows.map(({ label, row, isPct }, i) => {
               const tot = label.toLowerCase().includes('total');
+              const fmt = isPct ? fmtPctN : fmtN;
               return (
                 <tr key={i} className={tot ? "bg-amber-50" : i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
                   <td className={`px-3 py-2 border-b border-slate-100 ${tot ? "font-bold text-amber-900" : "font-medium text-slate-700"}`}>{label}</td>
                   {[1, 2, 3, 4, 5, 6].map((n) => (
                     <td key={n} className={`px-3 py-2 text-right border-b border-slate-100 tabular-nums ${tot ? "font-bold text-amber-800" : "text-slate-700"}`}>
-                      {row[`Yr${n}`] != null ? fmtN(row[`Yr${n}`]) : "—"}
+                      {row[`Yr${n}`] != null ? fmt(row[`Yr${n}`]) : "—"}
                     </td>
                   ))}
                 </tr>
@@ -311,18 +338,18 @@ function SalesSummarySectionedContent({ rows }) {
 
   const sectionsRendered = SALES_SUMMARY_SECTIONS.map(({ title, rows: defs }) => {
     const resolved = defs
-      .map(([key, label]) => {
+      .map(([key, label, isPct]) => {
         const row = findRow(key);
         if (!row) return null;
         usedHeaders.add(row.Header);
-        return { label, row };
+        return { label, row, isPct };
       })
       .filter(Boolean);
     return renderSection(title, resolved);
   });
   const otherRows = rows
     .filter((r) => !usedHeaders.has(r.Header))
-    .map((r) => ({ label: stripSalesPrefix(r.Header), row: r }));
+    .map((r) => ({ label: stripSalesPrefix(r.Header), row: r, isPct: false }));
 
   return (
     <div className="p-6 space-y-5">
@@ -334,16 +361,17 @@ function SalesSummarySectionedContent({ rows }) {
 
 // Groups Discount rows into the same sections shown on Subpage3_4.jsx (Total
 // Customer Discount / Total GHS Discount) instead of one flat Header/Yr table.
+// Row tuples are [rawKey, label, isPercent].
 const DISCOUNT_ROWS = [
-  ['LCG', 'LCG'], ['MCG', 'MCG'], ['HCG', 'HCG'], ['Gemstones', 'Gemstones'],
-  ['GIS', 'GIS'], ['Regular', 'Regular'],
-  ['Solitaire A(<70C)', 'Solitaire A (<70C)'],
-  ['Solitaire B(70-100C)', 'Solitaire B (70–100C)'],
-  ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+)'],
-  ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+)'],
-  ['Coins', 'Coins'],
-  ['Total', 'Total'],
-  ['% of UCP', '% of UCP'],
+  ['LCG', 'LCG', false], ['MCG', 'MCG', false], ['HCG', 'HCG', false], ['Gemstones', 'Gemstones', false],
+  ['GIS', 'GIS', false], ['Regular', 'Regular', false],
+  ['Solitaire A(<70C)', 'Solitaire A (<70C)', false],
+  ['Solitaire B(70-100C)', 'Solitaire B (70–100C)', false],
+  ['Solitaire C(1CRT+)', 'Solitaire C (1 CRT+)', false],
+  ['Solitaire D(2CRT+)', 'Solitaire D (2 CRT+)', false],
+  ['Coins', 'Coins', false],
+  ['Total', 'Total', false],
+  ['% of UCP', '% of UCP', true],
 ];
 const DISCOUNT_SECTIONS = [
   { title: 'Total Customer Discount', prefix: 'TCD_', rows: DISCOUNT_ROWS },
@@ -370,14 +398,15 @@ function DiscountSectionedContent({ rows }) {
             </tr>
           </thead>
           <tbody>
-            {sectionRows.map(({ label, row }, i) => {
+            {sectionRows.map(({ label, row, isPct }, i) => {
               const hl = isHighlight(label);
+              const fmt = isPct ? fmtPctN : fmtN;
               return (
                 <tr key={i} className={hl ? "bg-amber-50" : i % 2 === 0 ? "bg-white" : "bg-slate-50/60"}>
                   <td className={`px-3 py-2 border-b border-slate-100 ${hl ? "font-bold text-amber-900" : "font-medium text-slate-700"}`}>{label}</td>
                   {[1, 2, 3, 4, 5, 6].map((n) => (
                     <td key={n} className={`px-3 py-2 text-right border-b border-slate-100 tabular-nums ${hl ? "font-bold text-amber-800" : "text-slate-700"}`}>
-                      {row[`Yr${n}`] != null ? fmtN(row[`Yr${n}`]) : "—"}
+                      {row[`Yr${n}`] != null ? fmt(row[`Yr${n}`]) : "—"}
                     </td>
                   ))}
                 </tr>
@@ -391,18 +420,18 @@ function DiscountSectionedContent({ rows }) {
 
   const sectionsRendered = DISCOUNT_SECTIONS.map(({ title, prefix, rows: defs }) => {
     const resolved = defs
-      .map(([key, label]) => {
+      .map(([key, label, isPct]) => {
         const row = rows.find((d) => d.Header?.startsWith(prefix) && normStockKey(d.Header.slice(prefix.length)) === normStockKey(key));
         if (!row) return null;
         usedHeaders.add(row.Header);
-        return { label, row };
+        return { label, row, isPct };
       })
       .filter(Boolean);
     return renderSection(title, resolved);
   });
   const otherRows = rows
     .filter((r) => !usedHeaders.has(r.Header))
-    .map((r) => ({ label: r.Header, row: r }));
+    .map((r) => ({ label: r.Header, row: r, isPct: false }));
 
   return (
     <div className="p-6 space-y-5">
@@ -445,7 +474,7 @@ const PAGE_SECTIONS = {
 function SingleRowContent({ row, pageName }) {
   const simple = [], yearly = [], nested = [];
   for (const [k, v] of Object.entries(row)) {
-    if (HIDDEN.has(k)) continue;
+    if (isHiddenKey(k)) continue;
     if (typeof v === "object" && v !== null) { nested.push({ key: k, value: v }); continue; }
     const yv = parseYearly(String(v ?? ""));
     if (yv) yearly.push({ key: k, values: yv });
@@ -565,7 +594,7 @@ function SingleRowContent({ row, pageName }) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {typeof value === "object" && !Array.isArray(value)
               ? Object.entries(value)
-                .filter(([k]) => !HIDDEN.has(k))
+                .filter(([k]) => !isHiddenKey(k))
                 .map(([k, v]) => {
                   const fv = formatValue(v);
                   return fv === null ? null : (
@@ -592,7 +621,7 @@ function MultiRowContent({ rows }) {
     "Monthly Fixed", "Annual Fixed", "Variable Component",
     "Annual Variable", "Annual Total", "Status", "Inserted_date", "Updated_date",
   ];
-  const rawKeys = [...new Set(rows.flatMap(r => Object.keys(r)))].filter(k => !HIDDEN.has(k));
+  const rawKeys = [...new Set(rows.flatMap(r => Object.keys(r)))].filter(k => !isHiddenKey(k));
   const allKeys = [
     ...PREFERRED_ORDER.filter(k => rawKeys.includes(k)),
     ...rawKeys.filter(k => !PREFERRED_ORDER.includes(k)),
@@ -602,6 +631,10 @@ function MultiRowContent({ rows }) {
   const isNumericCol = (k) => !isDateCol(k) && rows.some(r => { const v = r[k]; return v != null && v !== "" && !parseYearly(String(v ?? "")) && !isNaN(parseFloat(v)); });
   const isSummableCol = (k) => isNumericCol(k) && !NON_SUMMABLE.test(k);
   const colTotal = (k) => rows.reduce((s, r) => s + (parseFloat(r[k]) || 0), 0);
+  // Columns whose own name already signals a percentage (e.g. "Annual cost
+  // escalation" on Expense Summary rows) get the '%' appended to the value
+  // itself too, not just the header.
+  const isPctCol = (k) => /escalation/i.test(k) || k.trim().endsWith("%");
 
   return (
     <div className="p-6">
@@ -627,7 +660,7 @@ function MultiRowContent({ rows }) {
                   const yv = !isDateCol(k) && parseYearly(String(v ?? ""));
                   const display = yv
                     ? yv.slice(0, 6).map(n => fmtN(n)).join(" │ ")
-                    : (formatValue(v) ?? "—");
+                    : (isNumericCol(k) && isPctCol(k) ? fmtPctN(parseFloat(v)) : (formatValue(v) ?? "—"));
                   const isNum = !yv && isNumericCol(k) && !isNaN(parseFloat(v)) && String(v ?? "").trim() !== "";
                   return (
                     <td key={k} className={`px-3 py-2 border-b border-slate-100 whitespace-nowrap ${isNum ? "text-right tabular-nums text-indigo-700 font-bold" : "text-slate-700"}`}>
@@ -657,336 +690,8 @@ function MultiRowContent({ rows }) {
 }
 
 
-// ─── Final Summary rich view ──────────────────────────────────────────────────
-// Reads the already-computed figures straight off the saved /summary_screen_5
-// snapshot instead of recomputing via roiFinancialSummary.js's parseApiRows —
-// that function's internal lookup keys (e.g. "Telephone/Internet", "Store -
-// Printing/Pantry etc") are the RAW per-screen Particulars text, which differs
-// from the friendlier labels actually saved for ~5 expense rows (e.g. saved as
-// "Telephone / Internet", "Store — Printing / Pantry etc") — re-running it
-// against the saved snapshot silently zeroed those specific expense rows.
-// Reading the saved Particulars at face value sidesteps the mismatch entirely
-// and is more faithful anyway (shows exactly what was submitted, no re-derive).
-function buildFinalSummaryView(rows) {
-  if (!rows?.length) return null;
-  const by = {};
-  rows.forEach(r => { by[r.Particulars] = r; });
-  const yrs = (particulars) => {
-    const r = by[particulars];
-    if (!r) return [0, 0, 0, 0, 0, 0, 0];
-    return [r.Yr0 ?? 0, r.Yr1 ?? 0, r.Yr2 ?? 0, r.Yr3 ?? 0, r.Yr4 ?? 0, r.Yr5 ?? 0, r.Yr6 ?? 0];
-  };
-  const num = (particulars) => {
-    const v = by[particulars]?.Header;
-    if (v === undefined || v === null || v === "") return null;
-    const n = parseFloat(v);
-    return isNaN(n) ? null : n;
-  };
-
-  // Exact saved labels (buildSubmitPayload's e.label in Summary.jsx) — must
-  // match verbatim, not the raw-screen Particulars text `yrs()` elsewhere uses.
-  const EXPENSE_LABELS = [
-    "Rent", "Staff Salaries", "Security & Housekeeping", "Electricity",
-    "Repairs & Maintenance", "Insurance", "BTL", "Travel & Conveyance",
-    "Telephone / Internet", "Credit Card Commission", "GST (primarily rental)",
-    "Store — Printing / Pantry etc", "Consumables, Safety, Cust Exp",
-    "Other — Staff welfare/Uniforms", "BG cost", "Regn Charges / Temp Store Cost",
-  ];
-
-  return {
-    roiType: by["ROI New Store"]?.Header ?? "",
-    cityName: by["City Name"]?.Header ?? "",
-    ucpSales: yrs("UCP Sales"),
-    customerDiscount: yrs("Customer Discount"),
-    nsvSales: yrs("NSV Sales"),
-    grossEarnings: yrs("Gross earnings/Commission"),
-    totalExpenses: yrs("Total expenses"),
-    expenses: EXPENSE_LABELS.map(label => ({ label, values: yrs(label) })),
-    ebitda: yrs("EBITDA / Cash Profit / Operating Profit"),
-    depreciation: yrs("Depreciation"),
-    pbt: yrs("PBT"),
-    roiPct: yrs("ROI%"),
-    storeInteriors: num("Store Interiors value on Set Up") ?? 0,
-    totalInvestment: yrs("Total Investment"),
-    cumDeprn: yrs("Cumulative Depreciation (incl current yr)"),
-    currentInteriors: yrs("Current Value of Interiors"),
-    workingCapital: yrs("Working Capital / Petty cash @ 1% sale"),
-    securityDeposit: yrs("Security deposit"),
-    capex: yrs("Capital Expenditure"),
-    signingFee: yrs("Signing Fee"),
-    advRent: yrs("Advance paid ( Rent )"),
-    cashOutflow: yrs("Incremental Working capital - Cash outflow"),
-    capexTotal: yrs("Total"),
-    kpis: {
-      rentRevenue5yr: num("Rent to revenue ratio (5 yr)"),
-      revPerSqft: num("Revenue per Square Feet (Average)"),
-      revenueCAGR: num("Revenue - CAGR"),
-      payout5yr: num("Payout % (5 yr)"),
-      irr: num("Internal Rate of Return (IRR)"),
-      npv: num("Net Present Value (NPV) @11% cost of capital"),
-      paybackCapex: num("Payback period (years) - for only Capex"),
-    },
-  };
-}
-
-function FSKpiCard({ label, value, sub, color = "indigo" }) {
-  const palette = {
-    indigo: "from-indigo-500 to-indigo-700",
-    green: "from-green-500 to-emerald-600",
-    amber: "from-amber-500 to-orange-600",
-    blue: "from-blue-500 to-blue-700",
-  };
-  return (
-    <div className={`rounded-xl bg-gradient-to-br ${palette[color]} text-white p-5 shadow-md`}>
-      <p className="text-xs font-semibold text-white/70 uppercase tracking-wide mb-1">{label}</p>
-      <p className="text-2xl font-extrabold">{value}</p>
-      {sub && <p className="text-xs text-white/60 mt-1">{sub}</p>}
-    </div>
-  );
-}
-
-function FSNum({ v, bold = false }) {
-  const isNeg = typeof v === "number" && v < 0;
-  return (
-    <td className={`border border-gray-200 px-3 py-2 text-right text-xs tabular-nums whitespace-nowrap bg-white ${bold ? "font-bold" : ""} ${isNeg ? "text-red-600" : "text-gray-800"}`}>
-      {fmt(v)}
-    </td>
-  );
-}
-
-function FSLabel({ children, indent = false, bold = false, muted = false }) {
-  return (
-    <td className={`border border-gray-200 px-3 py-2 text-xs min-w-[230px] sticky left-0 z-10 bg-white ${indent ? "pl-6" : ""} ${bold ? "font-bold text-gray-900" : muted ? "text-gray-500" : "text-gray-700"}`}>
-      {children}
-    </td>
-  );
-}
-
-function FSSectionHead({ children }) {
-  return (
-    <tr>
-      <td colSpan={9} className="border border-indigo-200 bg-indigo-700 text-white text-xs font-bold px-3 py-2 sticky left-0">
-        {children}
-      </td>
-    </tr>
-  );
-}
-
-function FSTotalRow({ label, values, color = "amber", total }) {
-  const palette = {
-    amber: "bg-amber-100 font-bold text-amber-900 border-amber-300",
-    green: "bg-green-100 font-bold text-green-900 border-green-300",
-    blue: "bg-blue-100 font-bold text-blue-900 border-blue-300",
-  };
-  const cls = palette[color] ?? palette.amber;
-  return (
-    <tr>
-      <td className={`border px-3 py-2 text-xs sticky left-0 z-10 ${cls}`}>{label}</td>
-      {values.map((v, i) => {
-        const isNeg = typeof v === "number" && v < 0;
-        return (
-          <td key={i} className={`border px-3 py-2 text-xs text-right tabular-nums whitespace-nowrap ${cls} ${isNeg ? "text-red-700" : ""}`}>
-            {fmt(v)}
-          </td>
-        );
-      })}
-      <td className={`border px-3 py-2 text-xs text-right tabular-nums whitespace-nowrap font-bold ${total != null ? cls : "bg-gray-100 text-gray-500 border-gray-200"}`}>
-        {total != null ? fmt(total) : "0.0"}
-      </td>
-    </tr>
-  );
-}
-
-function FinalSummaryContent({ d }) {
-  const [expExpanded, setExpExpanded] = useState(false);
-  const [invExpanded, setInvExpanded] = useState(false);
-  const [cashExpanded, setCashExpanded] = useState(false);
-
-  if (!d) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
-        <span className="text-5xl">📭</span>
-        <p className="text-sm font-medium">No Final Summary data submitted for this ROI yet.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-6 space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <FSKpiCard label="NPV @ 11% CoC" value={`₹ ${fmt(d.kpis.npv)} L`} sub="Net Present Value" color="green" />
-        <FSKpiCard label="Payback Period" value={d.kpis.paybackCapex !== null ? `${d.kpis.paybackCapex} yr` : "0.0"} sub="For Capex only" color="blue" />
-        <FSKpiCard label="IRR" value={d.kpis.irr !== null ? fmtPct(d.kpis.irr) : "0.0"} sub="Internal Rate of Return" color="indigo" />
-        <FSKpiCard label="Rev / Sq.Ft" value={d.kpis.revPerSqft ? `₹ ${d.kpis.revPerSqft.toFixed(2)}` : "0.0"} sub="Average across 6 years" color="amber" />
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <h4 className="text-sm font-bold text-slate-700">ROI Summary — {d.roiType}</h4>
-            <p className="text-xs text-slate-400 mt-0.5">All figures in ₹ Lacs</p>
-          </div>
-          <span className="text-xs text-slate-400 bg-slate-100 px-3 py-1 rounded-full">{d.roiType} · {d.cityName}</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse text-xs">
-            <thead>
-              <tr className="bg-indigo-700 text-white text-xs font-semibold">
-                <th className="border border-indigo-600 px-3 py-3 text-left min-w-[230px] sticky left-0 bg-indigo-700 z-20">Particulars</th>
-                {FS_YEARS.map(yr => (
-                  <th key={yr} className="border border-indigo-600 px-3 py-3 text-center min-w-[90px]">{yr}</th>
-                ))}
-                <th className="border border-amber-500 px-3 py-3 text-center min-w-[100px] bg-amber-600">6Y Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <FSSectionHead>Income</FSSectionHead>
-              <tr>
-                <FSLabel>UCP Sales</FSLabel>
-                {d.ucpSales.map((v, i) => <FSNum key={i} v={v} />)}
-                <FSNum v={sum6y(d.ucpSales)} bold />
-              </tr>
-              <tr>
-                <FSLabel indent>Customer Discount</FSLabel>
-                {d.customerDiscount.map((v, i) => <FSNum key={i} v={v} />)}
-                <FSNum v={sum6y(d.customerDiscount)} />
-              </tr>
-              <FSTotalRow label="NSV Sales" values={d.nsvSales} color="blue" total={sum6y(d.nsvSales)} />
-              <FSTotalRow label="Gross Earnings / Commission" values={d.grossEarnings} color="green" total={sum6y(d.grossEarnings)} />
-
-              <FSSectionHead>
-                <button type="button" className="flex items-center gap-2 w-full text-left" onClick={() => setExpExpanded(e => !e)}>
-                  <span>{expExpanded ? "▼" : "▶"}</span> Total Expenses
-                </button>
-              </FSSectionHead>
-              <FSTotalRow label="Total Expenses" values={d.totalExpenses} color="amber" total={sum6y(d.totalExpenses)} />
-              {expExpanded && d.expenses.map(({ label, values }) => (
-                <tr key={label}>
-                  <FSLabel indent>{label}</FSLabel>
-                  {values.map((v, i) => <FSNum key={i} v={v} />)}
-                  <FSNum v={sum6y(values)} />
-                </tr>
-              ))}
-
-              <FSSectionHead>Profitability</FSSectionHead>
-              <FSTotalRow label="EBITDA / Cash Profit / Operating Profit" values={d.ebitda} color="green" total={sum6y(d.ebitda)} />
-              <tr>
-                <FSLabel indent muted>Depreciation</FSLabel>
-                {d.depreciation.map((v, i) => <FSNum key={i} v={v} />)}
-                <FSNum v={sum6y(d.depreciation)} />
-              </tr>
-              <FSTotalRow label="PBT (Profit Before Tax)" values={d.pbt} color="green" total={sum6y(d.pbt)} />
-              <tr>
-                <FSLabel bold>ROI %</FSLabel>
-                {d.roiPct.map((v, i) => <FSNum key={i} v={v} />)}
-                <td className="border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50">—</td>
-              </tr>
-
-              <FSSectionHead>
-                <button type="button" className="flex items-center gap-2 w-full text-left" onClick={() => setInvExpanded(e => !e)}>
-                  <span>{invExpanded ? "▼" : "▶"}</span> Total Investment
-                </button>
-              </FSSectionHead>
-              <FSTotalRow label="Total Investment" values={d.totalInvestment} color="amber" />
-              {invExpanded && (
-                <>
-                  <tr>
-                    <FSLabel indent>Store Interiors value on Set Up</FSLabel>
-                    {FS_YEARS.map((_, i) => (
-                      <td key={i} className="border border-gray-200 px-3 py-2 text-right text-xs text-gray-600 bg-white">
-                        {i === 0 ? fmt(d.storeInteriors) : "0.0"}
-                      </td>
-                    ))}
-                    <td className="border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50">—</td>
-                  </tr>
-                  <tr>
-                    <FSLabel indent>Cumulative Depreciation (incl. current yr)</FSLabel>
-                    {d.cumDeprn.map((v, i) => <FSNum key={i} v={v} />)}
-                    <td className="border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50">—</td>
-                  </tr>
-                  <tr>
-                    <FSLabel indent>Current Value of Interiors</FSLabel>
-                    {d.currentInteriors.map((v, i) => <FSNum key={i} v={v} />)}
-                    <td className="border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50">—</td>
-                  </tr>
-                  <tr>
-                    <FSLabel indent>Working Capital / Petty Cash @ 1% sale</FSLabel>
-                    {d.workingCapital.map((v, i) => <FSNum key={i} v={v} />)}
-                    <td className="border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50">—</td>
-                  </tr>
-                  <tr>
-                    <FSLabel indent>Security Deposit</FSLabel>
-                    {d.securityDeposit.map((v, i) => <FSNum key={i} v={v} />)}
-                    <td className="border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50">—</td>
-                  </tr>
-                </>
-              )}
-
-              <FSSectionHead>
-                <button type="button" className="flex items-center gap-2 w-full text-left" onClick={() => setCashExpanded(e => !e)}>
-                  <span>{cashExpanded ? "▼" : "▶"}</span> Cash Outflow (−) / Inflow (+)
-                </button>
-              </FSSectionHead>
-              <FSTotalRow label="Net Cash Flow" values={d.capexTotal} color="blue" />
-              {cashExpanded && (
-                <>
-                  <tr>
-                    <FSLabel indent>Capital Expenditure</FSLabel>
-                    {d.capex.map((v, i) => <FSNum key={i} v={v} />)}
-                    <td className="border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50">—</td>
-                  </tr>
-                  <tr>
-                    <FSLabel indent muted>Signing Fee</FSLabel>
-                    {d.signingFee.map((v, i) => <FSNum key={i} v={v} />)}
-                    <td className="border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50">—</td>
-                  </tr>
-                  <tr>
-                    <FSLabel indent muted>Advance paid (Rent)</FSLabel>
-                    {d.advRent.map((v, i) => <FSNum key={i} v={v} />)}
-                    <td className="border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50">—</td>
-                  </tr>
-                  <tr>
-                    <FSLabel indent muted>Incremental Working capital - Cash outflow</FSLabel>
-                    {d.cashOutflow.map((v, i) => <FSNum key={i} v={v} />)}
-                    <td className="border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50">—</td>
-                  </tr>
-                  <tr>
-                    <FSLabel indent muted>Operating profit (Before Interest & Deprn)</FSLabel>
-                    {d.ebitda.map((v, i) => <FSNum key={i} v={v} />)}
-                    <td className="border border-gray-100 px-3 py-2 text-right text-xs text-gray-400 bg-gray-50">—</td>
-                  </tr>
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-100">
-          <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Key Metrics</h4>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
-          {[
-            { label: "Rent to Revenue Ratio (5 yr)", value: d.kpis.rentRevenue5yr !== null ? fmtPct(d.kpis.rentRevenue5yr) : "0.0" },
-            { label: "Revenue per Sq. Ft. (Average)", value: d.kpis.revPerSqft ? `₹ ${d.kpis.revPerSqft.toFixed(2)}` : "0.0" },
-            { label: "Revenue — CAGR", value: d.kpis.revenueCAGR !== null ? fmtPct(d.kpis.revenueCAGR) : "0.0" },
-            { label: "Payout % (5 yr)", value: d.kpis.payout5yr !== null ? fmtPct(d.kpis.payout5yr) : "0.0" },
-            { label: "IRR", value: d.kpis.irr !== null ? fmtPct(d.kpis.irr) : "0.0" },
-            { label: "NPV @ 11% Cost of Capital", value: d.kpis.npv !== null ? `₹ ${fmt(d.kpis.npv)} L` : "0.0" },
-            { label: "Payback Period (Capex)", value: d.kpis.paybackCapex !== null ? `${d.kpis.paybackCapex} years` : "0.0" },
-          ].map(({ label, value }) => (
-            <div key={label} className="px-5 py-4">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{label}</p>
-              <p className={`text-lg font-extrabold mt-1 ${value === "0.0" ? "text-slate-300" : "text-slate-900"}`}>{value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
+// ROI_IRR_Details rich view (KPI cards + Income/Expense/Profit/Investment/Cash-
+// Flow table) is now shared with HistoryPage.jsx — see FinalSummaryView.jsx.
 // ─ Sales Planning - Ref Store Code Details: two-section layout mirroring
 // Subpage3_1.jsx — Store Particulars (ref data) + Key Expenses, side by side.
 const REF_PARTICULARS_FIELDS = [
@@ -994,7 +699,7 @@ const REF_PARTICULARS_FIELDS = [
   "Sales Plain share", "Sales Studded share", "Sales Coin Silver share",
   "Inventory Plain share", "Inventory Studded share",
   "Plain Stock Turns", "Studded Stock Turns",
-  "LCG mix", "MCG mix", "HCG mix", "Btg AMC%", "City AMC%",
+  "LCG mix", "MCG mix", "HCG mix", "Btq AMC%", "City AMC%",
 ];
 const REF_PARTICULARS_UNITS = {
   "Super Built Up Area": "sqft", "Carpet area": "sqft",
@@ -1002,7 +707,7 @@ const REF_PARTICULARS_UNITS = {
   "Sales Plain share": "%", "Sales Studded share": "%", "Sales Coin Silver share": "%",
   "Inventory Plain share": "%", "Inventory Studded share": "%",
   "Plain Stock Turns": "×", "Studded Stock Turns": "×",
-  "LCG mix": "%", "MCG mix": "%", "HCG mix": "%", "Btg AMC%": "%", "City AMC%": "%",
+  "LCG mix": "%", "MCG mix": "%", "HCG mix": "%", "Btq AMC%": "%", "City AMC%": "%",
 };
 const REF_EXPENSE_FIELDS = [
   "Rent", "Staff Salaries", "Security & Housekeeping", "Electricity",
@@ -1011,8 +716,11 @@ const REF_EXPENSE_FIELDS = [
   "Store - Printing/Pantry etc", "Consumables", "Other - Staff welfare/Uniforms etc",
 ];
 // Column names returned by the view proc don't always match these human
-// labels exactly — fall back to a case/punctuation-insensitive match.
-const normRefKey = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, "");
+// labels exactly — fall back to a case/punctuation-insensitive match that
+// also treats the literal word "pct" as equivalent to a '%' sign (the DB
+// column is e.g. `btq amc pct`, not `btq amc%`) — without this, "Btq/City
+// AMC%" never resolved against their actual DB columns at all.
+const normRefKey = (s) => String(s).toLowerCase().replace(/%/g, "").replace(/pct/g, "").replace(/[^a-z0-9]/g, "");
 function getRefField(row, label) {
   if (row == null) return null;
   if (label in row) return row[label];
@@ -1120,24 +828,34 @@ function RefStoreCodeContent({ row }) {
   );
 }
 
-function PageDataModal({ pageName, data, loading, onClose, onNavigate }) {
+function PageDataModal({ pageName, data, loading, onClose, onNavigate, canViewDiscount = true }) {
   const pageInfo = PAGES.find(p => p.name === pageName);
   const grad = GROUP_GRADIENT[pageInfo?.group] ?? "from-indigo-600 to-blue-700";
-  const isFinalSummary = pageName === "Final Summary";
+  const isFinalSummary = pageName === "ROI_IRR_Details";
   // data is the full array of rows from the API
   const rows = Array.isArray(data) ? data : (data ? [data] : []);
-  const totalFields = rows[0] ? Object.keys(rows[0]).filter(k => !HIDDEN.has(k)).length : 0;
+  const totalFields = rows[0] ? Object.keys(rows[0]).filter(k => !isHiddenKey(k)).length : 0;
   const finalSummaryData = useMemo(
     () => (isFinalSummary ? buildFinalSummaryView(rows) : null),
     [isFinalSummary, rows]
   );
 
-  // Sibling sections in the same group (Sales Planning / Expense Planning /
-  // Store Setup) so Prev/Next can flow through them without closing the modal.
-  const groupPages = pageInfo ? PAGES.filter(p => p.group === pageInfo.group) : [];
+  // Discount is restricted to Commercial and above — excluded from the
+  // navigable page list entirely (quick-jump pills + Prev/Next) so a
+  // restricted viewer can't reach it even indirectly.
+  const navigablePages = canViewDiscount ? PAGES : PAGES.filter(p => p.name !== "Sales Planning - Discount");
+  // Sibling pages in the same group (Sales Planning / Expense Planning /
+  // Store Setup) — still used for the quick-jump pill bar below the header.
+  const groupPages = pageInfo ? navigablePages.filter(p => p.group === pageInfo.group) : [];
   const groupIndex = groupPages.findIndex(p => p.name === pageName);
-  const prevPage = groupIndex > 0 ? groupPages[groupIndex - 1] : null;
-  const nextPage = groupIndex !== -1 && groupIndex < groupPages.length - 1 ? groupPages[groupIndex + 1] : null;
+  // Prev/Next in the footer walk the ENTIRE form (all sections, not just the
+  // current one) so reaching the last page of a section (e.g. "Sales
+  // Planning - Discount") moves straight into the next section's first page
+  // ("Capex Expenses") instead of dead-ending — only disabled at the true
+  // first/last page of the whole ROI.
+  const globalIndex = navigablePages.findIndex(p => p.name === pageName);
+  const prevPage = globalIndex > 0 ? navigablePages[globalIndex - 1] : null;
+  const nextPage = globalIndex !== -1 && globalIndex < navigablePages.length - 1 ? navigablePages[globalIndex + 1] : null;
   const shortLabel = (n) => n.replace(/^.*?-\s*/, "");
   const isRefStoreCode = pageName === "Sales Planning - Ref Store Code Details";
   const isStockSummary = Object.prototype.hasOwnProperty.call(STOCK_SUMMARY_SECTIONS, pageName);
@@ -1158,6 +876,7 @@ function PageDataModal({ pageName, data, loading, onClose, onNavigate }) {
                 <p className="text-white/60 text-xs font-semibold uppercase tracking-widest">
                   {pageInfo?.group}
                   {groupPages.length > 1 && ` · Section ${groupIndex + 1} of ${groupPages.length}`}
+                  {` · Page ${globalIndex + 1} of ${navigablePages.length}`}
                 </p>
                 <h3 className="text-white font-bold text-xl leading-tight truncate">{pageName}</h3>
                 {rows.length > 1 && <p className="text-white/60 text-xs mt-0.5">{rows.length} records</p>}
@@ -1352,76 +1071,6 @@ function ActionModal({ action, roiid, userRole, onConfirm, onCancel, loading }) 
   );
 }
 // ─── New Store PDF Modal ──────────────────────────────────────────────────────────────────
-function NewStorePDFModal({ historyId, onClose }) {
-  const [pdfUrl, setPdfUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [errMsg, setErrMsg]   = useState(null);
-
-  useEffect(() => {
-    if (!historyId) return;
-    (async () => {
-      try {
-        const res = await fetch(`${BASE_URL}/history/${encodeURIComponent(historyId)}`);
-        if (!res.ok) throw new Error("Failed to fetch history details.");
-        const json = await res.json();
-        const d = json.data?.[0] ?? {};
-        // Scan all string values for a URL that looks like a PDF / document
-        const url = d.pdf_url ?? d.document_url ?? d.pdf_link ?? d.file_url ??
-          Object.values(d).find(v =>
-            typeof v === "string" && v.startsWith("http") &&
-            (v.includes(".pdf") || v.includes("blob") || v.includes("drive") || v.includes("/document"))
-          ) ?? null;
-        if (!url) setErrMsg("No PDF document is linked to this History ID.");
-        setPdfUrl(url);
-      } catch (e) {
-        setErrMsg(e.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [historyId]);
-
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-700 to-indigo-600 px-6 py-4 shrink-0 flex items-center justify-between">
-          <div>
-            <h3 className="text-white font-bold text-lg">📄 New Store Document</h3>
-            <p className="text-blue-200 text-xs mt-0.5">History ID: {historyId}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {pdfUrl && (
-              <a href={pdfUrl} target="_blank" rel="noopener noreferrer"
-                className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-semibold rounded-lg transition">
-                ↗ Open in new tab
-              </a>
-            )}
-            <button onClick={onClose}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 text-white text-xl font-bold transition">
-              ×
-            </button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center h-full gap-3">
-              <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-              <p className="text-slate-400 text-sm">Loading document…</p>
-            </div>
-          ) : errMsg ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
-              <span className="text-4xl">📭</span>
-              <p className="text-sm">{errMsg}</p>
-            </div>
-          ) : (
-            <iframe src={pdfUrl} className="w-full h-full" title="New Store Document" />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── TOT Section (Commercial role only) ────────────────────────────────────────────────────────────
 const TOT_TABS = [
   { key: "Plain_TOT_Final", label: "Plain Final" },
@@ -1561,6 +1210,11 @@ function TOTSection({ roiid, onClose }) {
 export default function RBMDashboard({ userRole = "RBM" }) {
   const userLog = useSelector((state) => state?.user?.user);
   const navigate = useNavigate();
+  // Sales Planning - Discount is only visible to Commercial and above in the
+  // "View" screens (ABM never sees it here at all — HistoryPage.jsx hides it
+  // unconditionally — and RBM is likewise excluded, one rung below Commercial
+  // in the ABM → RBM → Commercial → Admin → Retail approval chain).
+  const canViewDiscount = (userRole || "").toUpperCase() !== "RBM";
 
   // Left panel state
   const [roiList, setRoiList] = useState([]);
@@ -1573,9 +1227,6 @@ export default function RBMDashboard({ userRole = "RBM" }) {
   const [pageStatuses, setPageStatuses] = useState([]);
   const [pagesLoading, setPagesLoading] = useState(false);
 
-  // Expanded page accordion
-  const [expandedPage, setExpandedPage] = useState(null);
-
   // Page data modal
   const [pageModal, setPageModal] = useState({ open: false, pageName: "", data: [], loading: false });
 
@@ -1584,7 +1235,7 @@ export default function RBMDashboard({ userRole = "RBM" }) {
   const [actionLoading, setActionLoading] = useState(false);
   const [showTotModal, setShowTotModal] = useState(false);
   const [roiHistoryId, setRoiHistoryId] = useState(null);
-  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [pdfLinkLoading, setPdfLinkLoading] = useState(false);
 
   // ── Fetch ROI list ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1627,7 +1278,6 @@ export default function RBMDashboard({ userRole = "RBM" }) {
     if (selectedRoi?.roiid === roiid) return;
     setSelectedRoi({ ...roi, roiid });
     setPageStatuses([]);
-    setExpandedPage(null);
     setRoiHistoryId(null);
     setPagesLoading(true);
     try {
@@ -1666,8 +1316,40 @@ export default function RBMDashboard({ userRole = "RBM" }) {
     }
   };
 
+  // ── View New Store PDF — navigates straight to the resolved document link
+  // in a new tab instead of opening an in-page modal/iframe preview. ───────
+  const handleViewNewStorePdf = async () => {
+    if (!roiHistoryId || pdfLinkLoading) return;
+    setPdfLinkLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/history/${encodeURIComponent(roiHistoryId)}`);
+      if (!res.ok) throw new Error("Failed to fetch history details.");
+      const json = await res.json();
+      const d = json.data?.[0] ?? {};
+      // Scan all string values for a URL that looks like a PDF / document
+      const url = d.pdf_url ?? d.document_url ?? d.pdf_link ?? d.file_url ??
+        Object.values(d).find(v =>
+          typeof v === "string" && v.startsWith("http") &&
+          (v.includes(".pdf") || v.includes("blob") || v.includes("drive") || v.includes("/document"))
+        ) ?? null;
+      if (!url) {
+        toast.error("No PDF document is linked to this History ID.");
+        return;
+      }
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      toast.error(err.message || "Failed to open the New Store PDF.");
+    } finally {
+      setPdfLinkLoading(false);
+    }
+  };
+
   // ── View page data ─────────────────────────────────────────────────────────
   const handleViewPageData = async (pageName) => {
+    if (pageName === "Sales Planning - Discount" && !canViewDiscount) {
+      toast.error("Discount details are visible to Commercial and above only.");
+      return;
+    }
     const roiid = selectedRoi?.roiid;
     setPageModal({ open: true, pageName, data: null, loading: true });
     try {
@@ -1687,7 +1369,7 @@ export default function RBMDashboard({ userRole = "RBM" }) {
         "Resource Expenses": () => ed("RESOURCE"),
         "Other Expenses": () => ed("OTHER"),
         "Summary Expenses": () => ed("SUMMARY"),
-        "Final Summary": () => fetch(`${BASE_URL}/summary_screen_5/${roiid}`),
+        "ROI_IRR_Details": () => fetch(`${BASE_URL}/summary_screen_5/${roiid}`),
       };
 
       const res = await fetchers[pageName]?.();
@@ -1775,14 +1457,15 @@ export default function RBMDashboard({ userRole = "RBM" }) {
   const isActionable = (ACTIONABLE_STATUS_BY_ROLE[userRole?.toUpperCase()] ?? []).includes(roiStatus);
 
   const getPageStatus = (pageName) => {
-    // Final Summary has no page-level status row of its own — it mirrors the
-    // ROI's own overall status (Submitted to RBM/Approved_by*/etc.), not a
-    // fixed "Completed" badge, since that's what the approval list actually shows.
-    if (pageName === "Final Summary") return roiStatus;
+    // ROI_IRR_Details (formerly "Final Summary") has no page-level status row
+    // of its own — it mirrors the ROI's own overall status (Submitted to
+    // RBM/Approved_by*/etc.), not a fixed "Completed" badge, since that's
+    // what the approval list actually shows.
+    if (pageName === "ROI_IRR_Details") return roiStatus;
     const row = pageStatuses.find(p => (p.page_name ?? p.PageName) === pageName);
     return row?.status ?? "Not Available";
   };
-  // Counted via getPageStatus (not the raw pageStatuses array) so Final Summary —
+  // Counted via getPageStatus (not the raw pageStatuses array) so ROI_IRR_Details —
   // which has no row of its own and always mirrors roiStatus — counts as filled too.
   const completedCount = PAGES.filter(p => getPageStatus(p.name) !== "Not Available").length;
 
@@ -1892,39 +1575,58 @@ export default function RBMDashboard({ userRole = "RBM" }) {
             </p>
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto p-6 space-y-5">
+          <div className="p-6 space-y-5">
 
             {/* ─── ROI Header card ─────────────────────────────────────── */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-indigo-700 to-blue-600 px-6 py-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="text-indigo-300 text-xs font-semibold uppercase tracking-widest">ROI ID</span>
-                      <span className="text-white font-extrabold text-xl tracking-widest">{selectedRoi.roiid}</span>
+              <div className="bg-gradient-to-r from-indigo-700 to-blue-600 px-5 py-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-indigo-300 text-[10px] font-semibold uppercase tracking-widest shrink-0">ROI ID</span>
+                      <span className="text-white font-extrabold text-base tracking-wide truncate">{selectedRoi.roiid}</span>
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-sm text-indigo-100">
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-indigo-100">
                       {selectedRoi.project_type && <span>📁 {selectedRoi.project_type}</span>}
                       {selectedRoi.city && <span>📍 {selectedRoi.city}{selectedRoi.state ? `, ${selectedRoi.state}` : ""}</span>}
                       {selectedRoi.username && <span>👤 {selectedRoi.username}</span>}
                       {selectedRoi.inserted_date && <span>📅 {new Date(selectedRoi.inserted_date).toLocaleDateString("en-IN")}</span>}
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <StatusBadge status={roiStatus} size="md" />
-                    {/* Every ROI reaching this dashboard has already been submitted */}
+                  <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                    <StatusBadge status={roiStatus} size="sm" />
+                    {/* Every ROI reaching this dashboard has already been submitted.
+                        Solid white pill (not a ghost bg-white/20 overlay) so these
+                        read clearly as clickable buttons against the blue header,
+                        with a visible focus ring for keyboard navigation. Short
+                        icon + label (not an emoji + full sentence) so each reads
+                        like a compact link/chip rather than a wordy button. */}
                     {!!roiStatus && (
                       <RoiPdfReport
                         roiid={selectedRoi.roiid}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition"
+                        label={<><FiFileText size={13} /> PDF Report</>}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 text-[11px] font-bold rounded-lg shadow-sm transition whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-700"
                       />
                     )}
-                    {/* PDF button shown to all roles for New Store projects */}
+                    {/* Full multi-tab ROI Report Excel — same as HistoryPage.jsx's
+                        button, now also available to every approver role once
+                        the ROI has reached this dashboard (i.e. already submitted). */}
+                    {!!roiStatus && (
+                      <RoiSummaryExcelDownload
+                        roiid={selectedRoi.roiid}
+                        label={<><FiGrid size={13} /> Excel Report</>}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 text-[11px] font-bold rounded-lg shadow-sm transition whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-700"
+                      />
+                    )}
+                    {/* PDF button shown to all roles for New Store projects —
+                        navigates straight to the resolved document URL in a new
+                        tab instead of opening an in-page modal/iframe preview. */}
                     {selectedRoi.project_type === "New Store" && roiHistoryId && (
                       <button
-                        onClick={() => setShowPdfModal(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold rounded-lg transition">
-                        📄 View New Store PDF
+                        onClick={handleViewNewStorePdf}
+                        disabled={pdfLinkLoading}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 text-[11px] font-bold rounded-lg shadow-sm transition whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-700">
+                        <FiExternalLink size={13} /> {pdfLinkLoading ? "Opening…" : "New Store PDF"}
                       </button>
                     )}
                   </div>
@@ -1932,45 +1634,45 @@ export default function RBMDashboard({ userRole = "RBM" }) {
               </div>
 
               {/* Progress */}
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="font-medium text-slate-600">Form Completion</span>
-                  <span className="text-slate-500 font-semibold">{completedCount} / {PAGES.length} pages filled</span>
-                </div>
-                <div className="h-2.5 bg-slate-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${(completedCount / PAGES.length) * 100}%`,
-                      background: "linear-gradient(90deg,#6366f1,#3b82f6)",
-                    }}
-                  />
+              <div className="px-5 py-2.5 border-b border-slate-100 bg-slate-50 flex items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-medium text-slate-600">Form Completion</span>
+                    <span className="text-slate-500 font-semibold">{completedCount} / {PAGES.length} pages filled</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${(completedCount / PAGES.length) * 100}%`,
+                        background: "linear-gradient(90deg,#6366f1,#3b82f6)",
+                      }}
+                    />
+                  </div>
                 </div>
                 {/* ─── TOT Analysis button (Commercial only) ──────────────── */}
                 {userRole?.toUpperCase() === "COMMERCIAL" && (
-                  <div className="flex justify-end mt-2">
-                    <button
-                      onClick={() => setShowTotModal(true)}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold text-sm shadow-sm transition active:scale-95">
-                      📊 View TOT Analysis
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setShowTotModal(true)}
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-bold text-xs shadow-sm transition active:scale-95">
+                    📊 View TOT Analysis
+                  </button>
                 )}
               </div>
 
               {/* Action buttons */}
               {isActionable && (
-                <div className="px-6 py-4 flex flex-wrap items-center gap-3">
+                <div className="px-5 py-3 flex flex-wrap items-center gap-2.5">
                   <button onClick={() => setConfirmAction("approve")}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-sm transition active:scale-95">
+                    className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-sm transition active:scale-95">
                     ✓ Approve
                   </button>
                   <button onClick={() => setConfirmAction("clarify")}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold text-sm shadow-sm transition active:scale-95">
+                    className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-bold text-xs shadow-sm transition active:scale-95">
                     💬 Seek Clarification
                   </button>
                   <button onClick={() => setConfirmAction("reject")}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-sm transition active:scale-95">
+                    className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs shadow-sm transition active:scale-95">
                     ✗ Reject
                   </button>
                 </div>
@@ -1978,8 +1680,8 @@ export default function RBMDashboard({ userRole = "RBM" }) {
 
               {/* Non-actionable status banner with remark */}
               {!isActionable && (
-                <div className={`px-6 py-3 border-t border-slate-100 ${getCfg(roiStatus).bg}`}>
-                  <p className={`text-sm font-medium ${getCfg(roiStatus).text}`}>
+                <div className={`px-5 py-2.5 border-t border-slate-100 ${getCfg(roiStatus).bg}`}>
+                  <p className={`text-xs font-medium ${getCfg(roiStatus).text}`}>
                     {roiStatus === "Approved" && "✓ This ROI has been approved."}
                     {roiStatus === "Rejected" && "✗ This ROI has been rejected."}
                     {roiStatus === "BPM_Requestraised" && "🏭 BPM request raised — forwarded to Retail."}
@@ -2004,23 +1706,22 @@ export default function RBMDashboard({ userRole = "RBM" }) {
               )}
             </div>
 
-            {/* ─── Pages Accordion ─────────────────────────────────────── */}
+            {/* ─── Pages — card grid (everything visible at a glance, no
+                accordion click needed to reach the View action) ─────────── */}
             <div>
               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Submitted Pages</h3>
               {pagesLoading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3, 4].map(i => <div key={i} className="h-16 bg-white rounded-xl animate-pulse border border-slate-200" />)}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-28 bg-white rounded-2xl animate-pulse border border-slate-200" />)}
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
                   {PAGES.map(page => (
-                    <PageRow
+                    <PageCard
                       key={page.name}
                       page={page}
-                      status={getPageStatus(page.name)}
                       onViewData={() => handleViewPageData(page.name)}
-                      expanded={expandedPage === page.name}
-                      onToggle={() => setExpandedPage(prev => prev === page.name ? null : page.name)}
+                      restricted={page.name === "Sales Planning - Discount" && !canViewDiscount}
                     />
                   ))}
                 </div>
@@ -2038,13 +1739,7 @@ export default function RBMDashboard({ userRole = "RBM" }) {
           loading={pageModal.loading}
           onClose={() => setPageModal({ open: false, pageName: "", data: [], loading: false })}
           onNavigate={handleViewPageData}
-        />
-      )}
-
-      {showPdfModal && (
-        <NewStorePDFModal
-          historyId={roiHistoryId}
-          onClose={() => setShowPdfModal(false)}
+          canViewDiscount={canViewDiscount}
         />
       )}
 
